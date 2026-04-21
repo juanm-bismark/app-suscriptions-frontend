@@ -1,0 +1,95 @@
+"use client"
+
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { updateCompany } from "@/app/actions/company"
+
+const companySchema = z.object({
+  name: z.string().min(2, "El nombre de la empresa debe tener al menos 2 caracteres"),
+})
+
+type CompanyFormData = z.infer<typeof companySchema>
+
+export default function CompanyForm({
+  initialName, subscriptionStatus
+}: {
+  initialName: string,
+  subscriptionStatus: string
+}) {
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const form = useForm<CompanyFormData>({
+    resolver: zodResolver(companySchema),
+    defaultValues: { name: initialName },
+  })
+
+  async function onSubmit(data: CompanyFormData) {
+    setError(null)
+    setSuccess(null)
+
+    const fd = new FormData()
+    fd.append("name", data.name)
+
+    const res = await updateCompany(fd)
+    if (res.error) {
+      setError(res.error)
+    } else if (res.success) {
+      setSuccess(res.message || "Empresa guardada")
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-muted mb-1">Estado de suscripción</label>
+        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 uppercase tracking-wide">
+          {subscriptionStatus}
+        </div>
+      </div>
+
+      <hr className="border-border my-6" />
+
+      {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
+      {success && <div className="text-sm bg-green-100 text-green-800 p-3 rounded-md">{success}</div>}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre de la Empresa</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Ej. Bismark" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            disabled={form.formState.isSubmitting}
+            className="bg-header-accent hover:bg-header-accent/90"
+          >
+            {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  )
+}
