@@ -41,8 +41,8 @@ export function HeroSection() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
         <div className="text-center">
-          <div className="flex justify-center mb-8">
-            <Logo size="lg" />
+          <div className="flex justify-center mb-6">
+            <Logo size="md" />
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-header-text mb-4 tracking-tight">
