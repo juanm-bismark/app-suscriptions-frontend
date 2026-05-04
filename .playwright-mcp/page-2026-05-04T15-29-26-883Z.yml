@@ -1,0 +1,65 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e5]:
+        - link "Logo" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "Logo" [ref=e7]
+        - generic [ref=e8]:
+          - link "Inicia sesión" [ref=e9] [cursor=pointer]:
+            - /url: /login
+            - button "Inicia sesión" [ref=e10]
+          - link "Registrate" [ref=e11] [cursor=pointer]:
+            - /url: /register
+            - button "Registrate" [ref=e12]
+    - generic [ref=e18]:
+      - img "Logo" [ref=e20]
+      - heading "Gestiona tus suscripciones" [level=1] [ref=e21]:
+        - text: Gestiona tus
+        - text: suscripciones
+      - paragraph [ref=e22]: Controla costos, fechas de renovación y nunca olvides una suscripción importante
+      - generic [ref=e23]:
+        - link "Comenzar Ahora" [ref=e24] [cursor=pointer]:
+          - /url: /register
+          - button "Comenzar Ahora" [ref=e25]
+        - link "Inicia sesión" [ref=e26] [cursor=pointer]:
+          - /url: /login
+          - button "Inicia sesión" [ref=e27]
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - heading "¿Por qué App Suscripciones?" [level=2] [ref=e31]
+        - paragraph [ref=e32]: Todas las herramientas que necesitas en un solo lugar
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e36]: 📊
+          - heading "Seguimiento completo" [level=3] [ref=e37]
+          - paragraph [ref=e38]: De todas tus suscripciones en un solo lugar
+        - generic [ref=e39]:
+          - generic [ref=e41]: 🔔
+          - heading "Recordatorios" [level=3] [ref=e42]
+          - paragraph [ref=e43]: De renovaciones antes de que lleguen
+        - generic [ref=e44]:
+          - generic [ref=e46]: 💰
+          - heading "Análisis de gastos" [level=3] [ref=e47]
+          - paragraph [ref=e48]: Visualiza cuánto gastas mensualmente
+        - generic [ref=e49]:
+          - generic [ref=e51]: 🔄
+          - heading "Sincronización" [level=3] [ref=e52]
+          - paragraph [ref=e53]: Accede desde cualquier dispositivo
+    - generic [ref=e55]:
+      - heading "Comienza a gestionar tus suscripciones hoy" [level=2] [ref=e56]
+      - paragraph [ref=e57]: Sin tarjeta de crédito. Sin compromiso. Acceso instantáneo a tu dashboard.
+      - generic [ref=e58]:
+        - link "Crear cuenta gratis" [ref=e59] [cursor=pointer]:
+          - /url: /register
+          - button "Crear cuenta gratis" [ref=e60]
+        - link "Inicia sesión" [ref=e61] [cursor=pointer]:
+          - /url: /login
+          - button "Inicia sesión" [ref=e62]
+    - contentinfo [ref=e63]:
+      - generic [ref=e64]:
+        - img "Logo" [ref=e66]
+        - paragraph [ref=e67]: Gestiona tus suscripciones con confianza
+        - paragraph [ref=e69]: © 2026 App Suscripciones. Todos los derechos reservados.
+  - button "Open Next.js Dev Tools" [ref=e75] [cursor=pointer]:
+    - img [ref=e76]

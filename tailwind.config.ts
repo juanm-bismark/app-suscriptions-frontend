@@ -69,6 +69,17 @@ const config: Config = {
         body: "Arial, Helvetica, sans-serif",
         mono: "'Courier New', Courier, monospace",
       },
+      opacity: {
+        // Semantic opacity values
+        "translucent-nav": "0.95", // Navigation backdrop
+        "hover-emphasis": "0.90", // Button hover states
+        "soft-bg": "0.50", // Soft background overlays
+        "badge": "0.10", // Badge backgrounds
+        "disabled": "0.50", // Disabled state
+        "subtle": "0.60", // Subtle text/elements
+        "strong": "0.85", // Strong emphasis
+        "blob": "0.20", // Background blob decorations
+      },
       animation: {
         blob: "blob 7s infinite",
       },

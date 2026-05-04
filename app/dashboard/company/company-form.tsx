@@ -84,7 +84,6 @@ export default function CompanyForm({
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="bg-header-accent hover:bg-header-accent/90"
           >
             {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
           </Button>

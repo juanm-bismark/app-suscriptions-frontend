@@ -1,0 +1,212 @@
+@import "tailwindcss";
+
+/* ============================================================
+   DESIGN TOKENS — globals.css
+   ============================================================
+   En Tailwind v4 el sistema de tokens vive aquí, no en
+   tailwind.config.js. Esto centraliza diseño y código.
+
+   FILOSOFÍA DE COLORES:
+   - Usa color como SEÑAL, no decoración.
+   - La interfaz base es casi monocromática.
+   - Color aparece para comunicar: acción, estado, feedback.
+   - Si todo tiene color, nada llama la atención.
+
+   FILOSOFÍA DE ESPACIADO:
+   - Espaciado generoso reduce carga cognitiva.
+   - Agrupa elementos relacionados con menos espacio,
+     separa grupos distintos con más.
+   - "Ley de Proximidad" de Gestalt aplicada.
+============================================================ */
+
+@theme {
+  /* --- Tipografía ----------------------------------------- */
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Fira Code", ui-monospace, monospace;
+
+  /* --- Escala tipográfica fluida -------------------------- */
+  /* clamp(min, preferred, max) → se adapta al viewport
+     sin media queries. El rem-base respeta zoom del usuario. */
+  --text-xs:   clamp(0.70rem, 0.68rem + 0.1vw, 0.75rem);
+  --text-sm:   clamp(0.80rem, 0.78rem + 0.11vw, 0.875rem);
+  --text-base: clamp(0.90rem, 0.88rem + 0.13vw, 1rem);
+  --text-lg:   clamp(1.05rem, 1rem + 0.25vw, 1.125rem);
+  --text-xl:   clamp(1.15rem, 1.05rem + 0.5vw, 1.25rem);
+  --text-2xl:  clamp(1.35rem, 1.2rem + 0.75vw, 1.5rem);
+  --text-3xl:  clamp(1.6rem, 1.4rem + 1vw, 1.875rem);
+  --text-4xl:  clamp(2rem, 1.7rem + 1.5vw, 2.25rem);
+
+  /* --- Paleta primitiva (OKLCH) --------------------------- */
+  /* OKLCH: perceptualmente uniforme. Cambiar L (lightness)
+     de 0.1 a 0.9 sube el brillo de forma pareja en todos
+     los matices. Ideal para escalas consistentes. */
+
+  /* Neutros: base de toda la UI */
+  --color-gray-0:   oklch(1    0    0);
+  --color-gray-50:  oklch(0.98 0.003 264);
+  --color-gray-100: oklch(0.96 0.004 264);
+  --color-gray-200: oklch(0.92 0.006 264);
+  --color-gray-300: oklch(0.86 0.008 264);
+  --color-gray-400: oklch(0.70 0.012 264);
+  --color-gray-500: oklch(0.55 0.015 264);
+  --color-gray-600: oklch(0.42 0.016 264);
+  --color-gray-700: oklch(0.32 0.014 264);
+  --color-gray-800: oklch(0.22 0.012 264);
+  --color-gray-900: oklch(0.15 0.010 264);
+  --color-gray-950: oklch(0.10 0.008 264);
+
+  /* Brand: acción principal */
+  --color-brand-50:  oklch(0.97 0.02  264);
+  --color-brand-100: oklch(0.93 0.05  264);
+  --color-brand-200: oklch(0.86 0.09  264);
+  --color-brand-300: oklch(0.75 0.13  264);
+  --color-brand-400: oklch(0.62 0.17  264);
+  --color-brand-500: oklch(0.52 0.20  264);
+  --color-brand-600: oklch(0.44 0.20  264);
+  --color-brand-700: oklch(0.36 0.18  264);
+  --color-brand-800: oklch(0.28 0.14  264);
+  --color-brand-900: oklch(0.22 0.10  264);
+
+  /* Semánticos de estado — usa con moderación */
+  --color-success-50:  oklch(0.97 0.03 155);
+  --color-success-500: oklch(0.55 0.18 155);
+  --color-success-700: oklch(0.38 0.15 155);
+
+  --color-warning-50:  oklch(0.98 0.04 85);
+  --color-warning-500: oklch(0.75 0.18 85);
+  --color-warning-700: oklch(0.52 0.16 85);
+
+  --color-danger-50:  oklch(0.97 0.03 25);
+  --color-danger-500: oklch(0.56 0.22 25);
+  --color-danger-700: oklch(0.40 0.18 25);
+
+  /* --- Tokens semánticos (los que usas en componentes) ---- */
+  /* REGLA: Los componentes nunca consumen colores primitivos.
+     Siempre usan tokens semánticos. Así, cambiar el tema
+     solo requiere tocar este bloque. */
+
+  /* Superficies */
+  --color-bg-page:      var(--color-gray-50);
+  --color-bg-surface:   var(--color-gray-0);
+  --color-bg-elevated:  var(--color-gray-0);
+  --color-bg-subtle:    var(--color-gray-100);
+  --color-bg-muted:     var(--color-gray-200);
+
+  /* Bordes */
+  --color-border:       var(--color-gray-200);
+  --color-border-strong: var(--color-gray-300);
+
+  /* Texto */
+  --color-text-primary:   var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-600);
+  --color-text-muted:     var(--color-gray-400);
+  --color-text-inverted:  var(--color-gray-0);
+  --color-text-link:      var(--color-brand-600);
+
+  /* Interactivos */
+  --color-action-bg:        var(--color-brand-600);
+  --color-action-bg-hover:  var(--color-brand-700);
+  --color-action-text:      var(--color-gray-0);
+  --color-focus-ring:       var(--color-brand-500);
+
+  /* --- Radios de borde ------------------------------------- */
+  /* Sistema de 4 niveles. No uses valores arbitrarios.
+     Consistencia = menor carga cognitiva. */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* --- Sombras -------------------------------------------- */
+  /* Sombras sutiles crean jerarquía sin ruido visual. */
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px oklch(0 0 0 / 0.08), 0 1px 2px oklch(0 0 0 / 0.06);
+  --shadow-md: 0 4px 6px oklch(0 0 0 / 0.07), 0 2px 4px oklch(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px oklch(0 0 0 / 0.08), 0 4px 6px oklch(0 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px oklch(0 0 0 / 0.09), 0 8px 10px oklch(0 0 0 / 0.04);
+
+  /* --- Duración de animaciones ---------------------------- */
+  --duration-fast:   100ms;
+  --duration-normal: 200ms;
+  --duration-slow:   300ms;
+  --duration-slower: 500ms;
+
+  /* --- Z-index -------------------------------------------- */
+  /* Siempre nombra los z-index. Nunca escribas z-50 suelto. */
+  --z-base:    0;
+  --z-raised:  10;
+  --z-dropdown: 100;
+  --z-sticky:  200;
+  --z-modal:   300;
+  --z-toast:   400;
+  --z-tooltip: 500;
+}
+
+/* ============================================================
+   ESTILOS BASE
+============================================================ */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    font-size: 16px;
+    scroll-behavior: smooth;
+  }
+
+  /* Reduce motion para usuarios que lo prefieren */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    html { scroll-behavior: auto; }
+  }
+
+  body {
+    background-color: var(--color-bg-page);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus visible: accesible pero discreto con mouse */
+  :focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Elimina el outline en click/touch */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Tipografía de encabezados */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  /* Links accesibles */
+  a {
+    color: var(--color-text-link);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  /* Imágenes responsivas por defecto */
+  img, video, svg {
+    display: block;
+    max-width: 100%;
+  }
+}

@@ -1,28 +1,8 @@
-import { auth } from "@/auth"
-import { SignOutButton } from "@/app/components/sign-out-button"
-import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import Link from "next/link"
-import { fetchApi } from "@/lib/api-client"
-
-// Componente para actualizar el perfil desde el cliente
+import { requireProfile } from "@/lib/auth/current-user"
 import ProfileForm from "./profile-form"
 
 export default async function ProfilePage() {
-  const session = await auth()
-
-  if (!session?.user) {
-    redirect("/login")
-  }
-
-  // Fetch user profile
-  let profile = null
-  try {
-    profile = await fetchApi<any>("/me")
-  } catch (error) {
-    console.error("Error fetching profile:", error)
-  }
+  const profile = await requireProfile()
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -33,9 +13,9 @@ export default async function ProfilePage() {
 
       <div className="bg-card rounded-lg shadow border border-border p-6 sm:p-8">
         <ProfileForm
-          initialName={profile?.full_name || session.user.name || ""}
-          email={profile?.email || session.user.email || ""}
-          role={profile?.role || "Usuario"}
+          initialName={profile.full_name || ""}
+          email={profile.email}
+          role={profile.role}
         />
       </div>
     </div>

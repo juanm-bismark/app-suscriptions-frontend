@@ -7,7 +7,6 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import {
   Form,
   FormControl,
@@ -18,10 +17,11 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/app/components/logo"
 
 const loginSchema = z.object({
-  email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "Mínimo 6 caracteres"),
+  email: z.string().min(1, "Correo requerido"),
+  password: z.string().min(1, "Contraseña requerida"),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -60,14 +60,7 @@ export default function LoginPage() {
       <div className="bg-header-bg border-b border-header-info-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
-            <Image
-              src="https://bismark.net.co/wp-content/uploads/2020/02/bismark-logo.png"
-              alt="Logo"
-              width={32}
-              height={32}
-              className="w-8 h-8"
-            />
-            <span className="text-header-text font-semibold hidden sm:block">App Suscripciones</span>
+            <Logo size="md" />
           </Link>
         </div>
       </div>
@@ -130,7 +123,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={form.formState.isSubmitting}
-                  className="w-full mt-6 bg-header-accent hover:bg-header-accent/90 text-white font-medium"
+                  className="w-full mt-6 py-6 text-lg font-bold shadow-md transition-all duration-200 hover:shadow-lg"
                 >
                   {form.formState.isSubmitting ? "Iniciando..." : "Iniciar sesión"}
                 </Button>
@@ -139,11 +132,11 @@ export default function LoginPage() {
 
             <div className="mt-8 text-center border-t border-border pt-6">
               <p className="text-muted text-sm mb-3">¿No tienes cuenta?</p>
-              <Link href="/register">
-                <Button variant="ghost" className="w-full text-header-accent hover:bg-page">
+              <Button asChild variant="ghost" className="w-full font-semibold">
+                <Link href="/register">
                   Crear cuenta
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

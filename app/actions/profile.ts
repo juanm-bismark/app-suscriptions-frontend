@@ -16,7 +16,7 @@ export async function updateProfile(formData: FormData) {
 
     const parsed = updateProfileSchema.safeParse(rawData)
     if (!parsed.success) {
-      return { error: parsed.error.errors[0].message }
+      return { error: parsed.error.issues[0].message }
     }
 
     await fetchApi("/me", {

@@ -7,7 +7,6 @@ import { registerUser } from "@/app/actions/auth"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { signIn } from "next-auth/react"
 import {
   Form,
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/app/components/logo"
 
 const registerSchema = z
   .object({
@@ -83,14 +83,7 @@ export default function RegisterPage() {
       <div className="bg-header-bg border-b border-header-info-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
-            <Image
-              src="https://bismark.net.co/wp-content/uploads/2020/02/bismark-logo.png"
-              alt="Logo"
-              width={32}
-              height={32}
-              className="w-8 h-8"
-            />
-            <span className="text-header-text font-semibold hidden sm:block">App Suscripciones</span>
+            <Logo size="md" />
           </Link>
         </div>
       </div>
@@ -208,7 +201,7 @@ export default function RegisterPage() {
                 <Button
                   type="submit"
                   disabled={form.formState.isSubmitting}
-                  className="w-full mt-6 bg-header-accent hover:bg-header-accent/90 text-white font-medium"
+                  className="w-full mt-6 font-semibold"
                 >
                   {form.formState.isSubmitting ? "Creando..." : "Crear cuenta"}
                 </Button>
@@ -217,11 +210,11 @@ export default function RegisterPage() {
 
             <div className="mt-8 text-center border-t border-border pt-6">
               <p className="text-muted text-sm mb-3">¿Ya tienes cuenta?</p>
-              <Link href="/login">
-                <Button variant="ghost" className="w-full text-header-accent hover:bg-page">
+              <Button asChild variant="ghost" className="w-full font-semibold">
+                <Link href="/login">
                   Inicia sesión aquí
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

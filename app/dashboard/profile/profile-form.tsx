@@ -59,13 +59,13 @@ export default function ProfileForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-muted mb-1">Correo electrónico</label>
-          <div className="px-3 py-2 bg-gray-100 dark:bg-zinc-800 border border-border rounded-md text-sm text-zinc-500 cursor-not-allowed">
+          <div className="px-3 py-2 bg-page border border-border rounded-md text-sm text-muted cursor-not-allowed">
             {email}
           </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-muted mb-1">Rol</label>
-          <div className="px-3 py-2 bg-gray-100 dark:bg-zinc-800 border border-border rounded-md text-sm text-zinc-500 cursor-not-allowed uppercase">
+          <div className="px-3 py-2 bg-page border border-border rounded-md text-sm text-muted cursor-not-allowed uppercase">
             {role}
           </div>
         </div>
@@ -96,7 +96,6 @@ export default function ProfileForm({
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="bg-header-accent hover:bg-header-accent/90"
           >
             {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
           </Button>

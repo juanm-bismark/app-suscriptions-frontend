@@ -65,7 +65,7 @@ export default async function DashboardPage() {
         <p className="text-muted mb-6 text-sm sm:text-base">
           Comienza agregando tus suscripciones para mantenerlas bajo control
         </p>
-        <Button className="bg-header-accent hover:bg-header-accent/90 text-white px-6">
+        <Button className="bg-header-accent hover:bg-header-accent/hover-emphasis text-white px-6">
           Agregar Suscripción
         </Button>
       </div>
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
           {profile?.role && (
             <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
               <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Rol</label>
-              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-header-accent/10 text-header-accent uppercase">
+              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-header-accent/badge text-header-accent uppercase">
                 {profile.role}
               </div>
             </div>

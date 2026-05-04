@@ -5,12 +5,10 @@ import { fetchApi } from "@/lib/api-client"
 import { z } from "zod"
 
 const createUserSchema = z.object({
-  email: z.string().email("Correo inválido"),
+  email: z.email("Correo inválido"),
   password: z.string().min(6, "Contraseña de al menos 6 caracteres"),
   full_name: z.string().min(2, "Mínimo 2 caracteres"),
-  role: z.enum(["admin", "manager", "member"], {
-    errorMap: () => ({ message: "Rol inválido" }),
-  }),
+  role: z.enum(["admin", "manager", "member"], { error: "Rol inválido" }),
 })
 
 export async function createUser(formData: FormData) {
@@ -24,7 +22,7 @@ export async function createUser(formData: FormData) {
 
     const parsed = createUserSchema.safeParse(rawData)
     if (!parsed.success) {
-      return { error: parsed.error.errors[0].message }
+      return { error: parsed.error.issues[0].message }
     }
 
     await fetchApi("/users", {

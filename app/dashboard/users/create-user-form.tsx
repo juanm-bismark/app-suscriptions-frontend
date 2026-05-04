@@ -20,9 +20,7 @@ const createUserSchema = z.object({
   email: z.string().email("Correo inválido"),
   password: z.string().min(6, "Contraseña de al menos 6 caracteres"),
   full_name: z.string().min(2, "Mínimo 2 caracteres"),
-  role: z.enum(["admin", "manager", "member"], {
-    errorMap: () => ({ message: "Rol inválido" }),
-  }),
+  role: z.enum(["admin", "manager", "member"], { error: "Rol inválido" }),
 })
 
 type CreateUserFormData = z.infer<typeof createUserSchema>
@@ -132,7 +130,7 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="w-full bg-header-accent hover:bg-header-accent/90"
+            className="w-full"
           >
             {form.formState.isSubmitting ? "Añadiendo..." : "Añadir usuario"}
           </Button>

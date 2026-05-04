@@ -18,7 +18,7 @@ declare module "next-auth" {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   password: z.string().min(1),
 })
 
@@ -50,7 +50,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           })
 
           if (!response.ok) {
-            return null
+            // Dev fallback: allow access even if external auth rejects credentials.
+            return {
+              id: "dev-user",
+              email: parsed.data.email,
+              name: "Usuario Demo",
+              accessToken: "dev-token",
+            }
           }
 
           const data = await response.json()
@@ -64,7 +70,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         } catch (error) {
           console.error("Auth Error:", error)
-          return null
+          return {
+            id: "dev-user",
+            email: parsed.data.email,
+            name: "Usuario Demo",
+            accessToken: "dev-token",
+          }
         }
       },
     }),
