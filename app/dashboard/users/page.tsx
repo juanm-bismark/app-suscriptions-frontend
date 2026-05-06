@@ -1,11 +1,22 @@
-import { fetchApi } from "@/lib/api-client"
+import { fetchApi, ApiError } from "@/lib/api-client"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
 import type { User } from "@/lib/types/user"
 import CreateUserForm from "./create-user-form"
 
 export default async function UsersPage() {
   const profile = await requireManagerOrAdmin()
-  const users = await fetchApi<User[]>("/users")
+  let users: User[] = []
+  let networkError = false
+
+  try {
+    users = await fetchApi<User[]>("/users")
+  } catch (err: any) {
+    console.error("Error loading users:", err)
+    if (err instanceof ApiError && err.status === 0) {
+      networkError = true
+    }
+    // keep users as empty array to allow rendering the page
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -17,6 +28,11 @@ export default async function UsersPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {networkError && (
+          <div className="col-span-full bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-4">
+            No se puede conectar al servidor API. Algunas funcionalidades pueden no estar disponibles.
+          </div>
+        )}
         <div className="lg:col-span-2 bg-card rounded-lg shadow border border-border p-6 sm:p-8">
           <h2 className="text-xl font-semibold mb-4 text-title">Lista de Miembros</h2>
           {users.length === 0 ? (

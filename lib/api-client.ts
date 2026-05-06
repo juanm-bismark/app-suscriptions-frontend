@@ -1,6 +1,6 @@
 import { auth } from "@/auth"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -27,12 +27,20 @@ export async function fetchApi<T>(
     headers.set("Authorization", `Bearer ${token}`)
   }
 
-  const url = `${API_URL}${path.startsWith("/") ? path : `/${path}`}`
+  const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const url = `${baseUrl}${normalizedPath}`
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Network error"
+    throw new ApiError(0, `Network error calling ${url}: ${msg}`)
+  }
 
   // Si es error de credenciales, puedes querer manejar refresh tokens si los tienes,
   // por ahora si es 401 simplemente lanzamos el error o se redirige a login.

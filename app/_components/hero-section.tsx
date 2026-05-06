@@ -56,7 +56,7 @@ export function HeroSection() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center px-4 mb-16">
             <Link href="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full bg-header-accent hover:bg-header-accent/hover-emphasis text-white">
+              <Button size="lg" className="w-full bg-header-accent hover:bg-header-accent/hover-emphasis">
                 Comenzar Ahora
               </Button>
             </Link>

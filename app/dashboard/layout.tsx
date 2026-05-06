@@ -3,6 +3,7 @@ import { SignOutButton } from "@/app/components/sign-out-button"
 import { getProfile } from "@/lib/auth/current-user"
 import { canManageUsers, isAdmin, type UserRole } from "@/lib/types/user"
 import { Logo } from "@/app/components/logo"
+import { DashboardNavLink } from "./_components/dashboard-nav-link"
 
 interface NavItem {
   href: string
@@ -28,38 +29,37 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-page">
-      <nav className="sticky top-0 z-50 border-b border-divider bg-card shadow-sm">
+      <nav
+        className="sticky top-0 z-[60] border-b border-divider bg-card/95 backdrop-blur-md shadow-sm"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
-            <div className="flex items-center gap-6 min-w-0">
+          <div className="flex items-center justify-between h-14 gap-3">
+            <div className="flex items-center gap-5 min-w-0">
               <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
                 <Logo size="md" />
               </Link>
 
-              <div className="hidden md:flex items-center gap-4 text-sm text-title">
+              <div className="hidden md:flex self-stretch items-center gap-3 text-sm text-title">
                 {items.map((item) => (
-                  <Link
+                  <DashboardNavLink
                     key={item.href}
                     href={item.href}
-                    className="text-muted hover:text-title transition-colors"
-                  >
-                    {item.label}
-                  </Link>
+                    label={item.label}
+                  />
                 ))}
               </div>
             </div>
             {profile && <SignOutButton />}
           </div>
 
-          <div className="md:hidden flex overflow-x-auto gap-4 py-2 pb-3 px-1 text-sm text-title no-scrollbar">
+          <div className="md:hidden flex overflow-x-auto gap-3 py-1 pb-2 px-1 text-sm text-title no-scrollbar">
             {items.map((item) => (
-              <Link
+              <DashboardNavLink
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap text-muted"
-              >
-                {item.label}
-              </Link>
+                label={item.label}
+                variant="mobile"
+              />
             ))}
           </div>
         </div>

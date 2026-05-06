@@ -1,29 +1,29 @@
-"use client";
+"use client"
 
-import { useSearchParams } from "next/navigation";
-import { CSSProperties, useMemo, useState } from "react";
-import { DATA, fmtCOP, fmtShortDate, NOW_REFERENCE, SubscriptionRecord } from "./data";
-import { DetailModal } from "./detail-modal";
-import { Btn, Chip, Icon, SourceBadge, StatusPillWithNative, UsageBar } from "./primitives";
-import { EmptyState, ErrorState, LoadingState } from "./state-views";
-import { SOURCES, SourceId, STATUS_META, StatusId, T } from "./tokens";
+import { useSearchParams } from "next/navigation"
+import { CSSProperties, useEffect, useMemo, useState } from "react"
+import { DATA, fmtCOP, fmtShortDate, NOW_REFERENCE, SubscriptionRecord } from "./data"
+import { DetailModal } from "./detail-modal"
+import { Btn, Chip, Icon, SourceBadge, StatusPillWithNative, UsageBar } from "./primitives"
+import { EmptyState, ErrorState, LoadingState } from "./state-views"
+import { SOURCES, SourceId, STATUS_META, StatusId, T } from "./tokens"
 
-const GRID_COLS = "4px 150px 1.1fr 0.95fr 130px 110px 130px 110px 100px 110px";
+const GRID_COLS = "4px 150px 1.1fr 0.95fr 130px 110px 130px 110px 100px 110px"
 
-const cellH: CSSProperties = { padding: "9px 12px" };
-const cell: CSSProperties = { padding: "9px 12px", minWidth: 0 };
+const cellH: CSSProperties = { padding: "9px 12px" }
+const cell: CSSProperties = { padding: "9px 12px", minWidth: 0 }
 
-type SourceFilter = SourceId | "all";
-type StatusFilter = StatusId | "all";
+type SourceFilter = SourceId | "all"
+type StatusFilter = StatusId | "all"
 
 export function SubscriptionsClient() {
-  const searchParams = useSearchParams();
-  const stateOverride = searchParams.get("state");
-  if (stateOverride === "loading") return <LoadingState />;
-  if (stateOverride === "error") return <ErrorState />;
-  if (stateOverride === "empty") return <ListEmptyShell />;
+  const searchParams = useSearchParams()
+  const stateOverride = searchParams.get("state")
+  if (stateOverride === "loading") return <LoadingState />
+  if (stateOverride === "error") return <ErrorState />
+  if (stateOverride === "empty") return <ListEmptyShell />
 
-  return <SubscriptionsList />;
+  return <SubscriptionsList />
 }
 
 // Used when ?state=empty — wraps EmptyState in the same chrome the live list uses.
@@ -44,42 +44,51 @@ function ListEmptyShell() {
       </div>
       <EmptyState />
     </div>
-  );
+  )
 }
 
 function SubscriptionsList() {
-  const [q, setQ] = useState("");
-  const [activeSrc, setActiveSrc] = useState<SourceFilter>("all");
-  const [activeStatus, setActiveStatus] = useState<StatusFilter>("all");
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [openRecord, setOpenRecord] = useState<SubscriptionRecord | null>(null);
+  const [q, setQ] = useState("")
+  const [activeSrc, setActiveSrc] = useState<SourceFilter>("all")
+  const [activeStatus, setActiveStatus] = useState<StatusFilter>("all")
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [openRecord, setOpenRecord] = useState<SubscriptionRecord | null>(null)
 
   // Advanced filters drawer state
-  const [advOpen, setAdvOpen] = useState(false);
-  const [advSrcs, setAdvSrcs] = useState<Set<SourceId> | null>(null);
-  const [advStatuses, setAdvStatuses] = useState<Set<StatusId> | null>(null);
-  const [advCycles, setAdvCycles] = useState<Set<string> | null>(null);
-  const [advAmount, setAdvAmount] = useState<{ min: string; max: string }>({ min: "", max: "" });
-  const [advRenewal, setAdvRenewal] = useState<"any" | "7d" | "30d" | "overdue">("any");
+  const [advOpen, setAdvOpen] = useState(false)
+  const [advSrcs, setAdvSrcs] = useState<Set<SourceId> | null>(null)
+  const [advStatuses, setAdvStatuses] = useState<Set<StatusId> | null>(null)
+  const [advCycles, setAdvCycles] = useState<Set<string> | null>(null)
+  const [advAmount, setAdvAmount] = useState<{ min: string; max: string }>({ min: "", max: "" })
+  const [advRenewal, setAdvRenewal] = useState<"any" | "7d" | "30d" | "overdue">("any")
+
+  useEffect(() => {
+    if (!advOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [advOpen])
 
   const matchesAdv = (r: SubscriptionRecord) => {
-    if (advSrcs && advSrcs.size > 0 && !advSrcs.has(r.source)) return false;
-    if (advStatuses && advStatuses.size > 0 && !advStatuses.has(r.status)) return false;
-    if (advCycles && advCycles.size > 0 && !advCycles.has(r.cycle)) return false;
-    if (advAmount.min !== "" && r.amount < Number(advAmount.min)) return false;
-    if (advAmount.max !== "" && r.amount > Number(advAmount.max)) return false;
+    if (advSrcs && advSrcs.size > 0 && !advSrcs.has(r.source)) return false
+    if (advStatuses && advStatuses.size > 0 && !advStatuses.has(r.status)) return false
+    if (advCycles && advCycles.size > 0 && !advCycles.has(r.cycle)) return false
+    if (advAmount.min !== "" && r.amount < Number(advAmount.min)) return false
+    if (advAmount.max !== "" && r.amount > Number(advAmount.max)) return false
     if (advRenewal !== "any") {
-      if (advRenewal === "overdue" && r.status !== "overdue") return false;
+      if (advRenewal === "overdue" && r.status !== "overdue") return false
       if (advRenewal === "7d" || advRenewal === "30d") {
-        const d = r.nextRenewal && r.nextRenewal !== "—" ? new Date(r.nextRenewal) : null;
-        if (!d) return false;
-        const days = (d.getTime() - new Date(NOW_REFERENCE).getTime()) / 86_400_000;
-        if (advRenewal === "7d" && (days < 0 || days > 7)) return false;
-        if (advRenewal === "30d" && (days < 0 || days > 30)) return false;
+        const d = r.nextRenewal && r.nextRenewal !== "—" ? new Date(r.nextRenewal) : null
+        if (!d) return false
+        const days = (d.getTime() - new Date(NOW_REFERENCE).getTime()) / 86_400_000
+        if (advRenewal === "7d" && (days < 0 || days > 7)) return false
+        if (advRenewal === "30d" && (days < 0 || days > 30)) return false
       }
     }
-    return true;
-  };
+    return true
+  }
 
   const rows = useMemo(
     () =>
@@ -92,29 +101,29 @@ function SubscriptionsList() {
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [q, activeSrc, activeStatus, advSrcs, advStatuses, advCycles, advAmount, advRenewal],
-  );
+  )
 
   const advCount =
     (advSrcs && advSrcs.size > 0 ? 1 : 0) +
     (advStatuses && advStatuses.size > 0 ? 1 : 0) +
     (advCycles && advCycles.size > 0 ? 1 : 0) +
     (advAmount.min !== "" || advAmount.max !== "" ? 1 : 0) +
-    (advRenewal !== "any" ? 1 : 0);
+    (advRenewal !== "any" ? 1 : 0)
 
   const clearAdv = () => {
-    setAdvSrcs(null);
-    setAdvStatuses(null);
-    setAdvCycles(null);
-    setAdvAmount({ min: "", max: "" });
-    setAdvRenewal("any");
-  };
+    setAdvSrcs(null)
+    setAdvStatuses(null)
+    setAdvCycles(null)
+    setAdvAmount({ min: "", max: "" })
+    setAdvRenewal("any")
+  }
 
   const toggleInSet = <V,>(set: Set<V> | null, key: V): Set<V> => {
-    const next = new Set(set ?? []);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    return next;
-  };
+    const next = new Set(set ?? [])
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  }
 
   const sourceTabs = [
     { id: "all" as const, name: "Todas", color: T.headerBg, count: DATA.length },
@@ -124,14 +133,14 @@ function SubscriptionsList() {
       color: s.color,
       count: DATA.filter((r) => r.source === s.id).length,
     })),
-  ];
+  ]
 
   const conicGradient =
     "conic-gradient(" +
     Object.values(SOURCES)
       .map((s, i, a) => `${s.color} ${(i * 100) / a.length}% ${((i + 1) * 100) / a.length}%`)
       .join(",") +
-    ")";
+    ")"
 
   return (
     <div
@@ -234,8 +243,8 @@ function SubscriptionsList() {
             Fuente
           </div>
           {sourceTabs.map((t) => {
-            const active = activeSrc === t.id;
-            const isAll = t.id === "all";
+            const active = activeSrc === t.id
+            const isAll = t.id === "all"
             return (
               <button
                 key={t.id}
@@ -315,7 +324,7 @@ function SubscriptionsList() {
                   {t.count}
                 </span>
               </button>
-            );
+            )
           })}
         </div>
 
@@ -423,8 +432,8 @@ function SubscriptionsList() {
         {rows.length === 0 && <EmptyState query={q || "tus filtros"} />}
 
         {rows.map((r, i) => {
-          const src = SOURCES[r.source];
-          const isHov = hovered === r.id;
+          const src = SOURCES[r.source]
+          const isHov = hovered === r.id
           return (
             <div
               key={r.id}
@@ -545,8 +554,8 @@ function SubscriptionsList() {
               </div>
               <div
                 onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenRecord(r);
+                  e.stopPropagation()
+                  setOpenRecord(r)
                 }}
                 title="Ver detalle"
                 style={{
@@ -576,7 +585,7 @@ function SubscriptionsList() {
                 </span>
               </div>
             </div>
-          );
+          )
         })}
       </div>
 
@@ -585,19 +594,19 @@ function SubscriptionsList() {
         <>
           <div
             onClick={() => setAdvOpen(false)}
-            style={{ position: "absolute", inset: 0, background: "rgba(15,30,40,.28)", zIndex: 8 }}
+            style={{ position: "fixed", inset: 0, background: "rgba(15,30,40,.28)", zIndex: 60 }}
           />
           <aside
             style={{
-              position: "absolute",
+              position: "fixed",
               top: 0,
               left: 0,
               bottom: 0,
-              width: 320,
+              width: "min(320px, 92vw)",
               background: T.cardBg,
               borderRight: `1px solid ${T.border}`,
               boxShadow: "12px 0 32px rgba(20,40,50,.10)",
-              zIndex: 9,
+              zIndex: 61,
               display: "flex",
               flexDirection: "column",
               fontFamily: T.fontBody,
@@ -663,16 +672,16 @@ function SubscriptionsList() {
                     ? advSrcs
                     : activeSrc !== "all"
                       ? new Set([activeSrc as SourceId])
-                      : new Set();
-                const allChecked = drawerSel.size === 0 || drawerSel.size === Object.keys(SOURCES).length;
+                      : new Set()
+                const allChecked = drawerSel.size === 0 || drawerSel.size === Object.keys(SOURCES).length
                 const toggleSrc = (id: SourceId) => {
-                  const next = new Set(drawerSel);
-                  if (next.has(id)) next.delete(id);
-                  else next.add(id);
-                  setActiveSrc("all");
-                  if (next.size === 0 || next.size === Object.keys(SOURCES).length) setAdvSrcs(null);
-                  else setAdvSrcs(next);
-                };
+                  const next = new Set(drawerSel)
+                  if (next.has(id)) next.delete(id)
+                  else next.add(id)
+                  setActiveSrc("all")
+                  if (next.size === 0 || next.size === Object.keys(SOURCES).length) setAdvSrcs(null)
+                  else setAdvSrcs(next)
+                }
                 return (
                   <>
                     <label
@@ -690,8 +699,8 @@ function SubscriptionsList() {
                         type="checkbox"
                         checked={allChecked}
                         onChange={() => {
-                          setActiveSrc("all");
-                          setAdvSrcs(null);
+                          setActiveSrc("all")
+                          setAdvSrcs(null)
                         }}
                         style={{ accentColor: T.headerBg }}
                       />
@@ -707,7 +716,7 @@ function SubscriptionsList() {
                       <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>{DATA.length}</span>
                     </label>
                     {Object.values(SOURCES).map((s) => {
-                      const checked = drawerSel.has(s.id) && !allChecked;
+                      const checked = drawerSel.has(s.id) && !allChecked
                       return (
                         <label
                           key={s.id}
@@ -733,10 +742,10 @@ function SubscriptionsList() {
                             {DATA.filter((r) => r.source === s.id).length}
                           </span>
                         </label>
-                      );
+                      )
                     })}
                   </>
-                );
+                )
               })()}
 
               <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
@@ -746,22 +755,22 @@ function SubscriptionsList() {
                 ESTADO
               </div>
               {(() => {
-                const allKeys: StatusId[] = ["active", "paused", "overdue", "trial", "pending", "canceled"];
+                const allKeys: StatusId[] = ["active", "paused", "overdue", "trial", "pending", "canceled"]
                 const drawerSel: Set<StatusId> =
                   advStatuses && advStatuses.size > 0
                     ? advStatuses
                     : activeStatus !== "all"
                       ? new Set([activeStatus as StatusId])
-                      : new Set();
-                const allChecked = drawerSel.size === 0 || drawerSel.size === allKeys.length;
+                      : new Set()
+                const allChecked = drawerSel.size === 0 || drawerSel.size === allKeys.length
                 const toggleSt = (k: StatusId) => {
-                  const next = new Set(drawerSel);
-                  if (next.has(k)) next.delete(k);
-                  else next.add(k);
-                  setActiveStatus("all");
-                  if (next.size === 0 || next.size === allKeys.length) setAdvStatuses(null);
-                  else setAdvStatuses(next);
-                };
+                  const next = new Set(drawerSel)
+                  if (next.has(k)) next.delete(k)
+                  else next.add(k)
+                  setActiveStatus("all")
+                  if (next.size === 0 || next.size === allKeys.length) setAdvStatuses(null)
+                  else setAdvStatuses(next)
+                }
                 return (
                   <>
                     <label
@@ -779,8 +788,8 @@ function SubscriptionsList() {
                         type="checkbox"
                         checked={allChecked}
                         onChange={() => {
-                          setActiveStatus("all");
-                          setAdvStatuses(null);
+                          setActiveStatus("all")
+                          setAdvStatuses(null)
                         }}
                         style={{ accentColor: T.headerBg }}
                       />
@@ -789,7 +798,7 @@ function SubscriptionsList() {
                       <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>{DATA.length}</span>
                     </label>
                     {allKeys.map((k) => {
-                      const checked = drawerSel.has(k) && !allChecked;
+                      const checked = drawerSel.has(k) && !allChecked
                       return (
                         <label
                           key={k}
@@ -814,10 +823,10 @@ function SubscriptionsList() {
                             {DATA.filter((r) => r.status === k).length}
                           </span>
                         </label>
-                      );
+                      )
                     })}
                   </>
-                );
+                )
               })()}
 
               <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
@@ -827,7 +836,7 @@ function SubscriptionsList() {
                 CICLO
               </div>
               {(["Mensual", "Semanal", "Anual"] as const).map((k) => {
-                const checked = advCycles ? advCycles.has(k) : false;
+                const checked = advCycles ? advCycles.has(k) : false
                 return (
                   <label
                     key={k}
@@ -848,7 +857,7 @@ function SubscriptionsList() {
                     />
                     <span style={{ fontSize: 12, color: T.text, flex: 1 }}>{k}</span>
                   </label>
-                );
+                )
               })}
 
               <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
@@ -983,5 +992,5 @@ function SubscriptionsList() {
 
       <DetailModal record={openRecord} onClose={() => setOpenRecord(null)} />
     </div>
-  );
+  )
 }

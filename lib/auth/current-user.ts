@@ -15,7 +15,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   try {
     return await fetchApi<Profile>("/me")
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null
+    if (error instanceof ApiError && (error.status === 401 || error.status === 0)) return null
     throw error
   }
 })
@@ -27,7 +27,7 @@ export const getCompany = cache(async (): Promise<Company | null> => {
   try {
     return await fetchApi<Company>("/companies/me")
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+    if (error instanceof ApiError && (error.status === 0 || error.status === 401 || error.status === 404)) {
       return null
     }
     throw error

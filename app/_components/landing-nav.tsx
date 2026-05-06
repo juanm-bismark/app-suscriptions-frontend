@@ -12,12 +12,12 @@ export function LandingNav() {
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/login">
-              <Button variant="ghost" className="text-header-text hover:text-header-accent hover:bg-transparent">
-                Inicia sesinnn
+              <Button variant="ghost" className="text-header-text hover:bg-transparent">
+                Inicia sesion
               </Button>
             </Link>
             <Link href="/register">
-              <Button className="bg-header-accent hover:bg-header-accent/hover-emphasis text-white">
+              <Button className="bg-header-accent hover:bg-header-accent/hover-emphasis">
                 Registrate
               </Button>
             </Link>
