@@ -7,7 +7,6 @@ import { registerUser } from "@/app/actions/auth"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
-import { signIn } from "next-auth/react"
 import {
   Form,
   FormControl,
@@ -22,15 +21,13 @@ import { Logo } from "@/app/components/logo"
 
 const registerSchema = z
   .object({
-    name: z.string().optional(),
-    company_name: z.string().min(1, "El nombre de la empresa es requerido"),
     email: z.email("Correo inválido"),
-    password: z.string().min(6, "Mínimo 6 caracteres"),
-    confirmPassword: z.string().min(6),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
+    password: z.string().min(8, "Mínimo 8 caracteres"),
+    full_name: z
+      .string()
+      .refine((value) => value === "" || value.length >= 2, "Nombre requerido")
+      .optional(),
+    company_name: z.string().min(1, "El nombre de la empresa es requerido"),
   })
 
 type RegisterFormData = z.infer<typeof registerSchema>
@@ -42,11 +39,10 @@ export default function RegisterPage() {
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
-      company_name: "",
       email: "",
       password: "",
-      confirmPassword: "",
+      full_name: "",
+      company_name: "",
     },
   })
 
@@ -57,23 +53,13 @@ export default function RegisterPage() {
       email: data.email,
       password: data.password,
       company_name: data.company_name,
-      name: data.name || undefined,
+      full_name: data.full_name || undefined,
     })
 
     if ("error" in result) {
       setError(result.error)
     } else {
-      const signInResult = await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      })
-
-      if (signInResult?.ok) {
-        router.push("/dashboard")
-      } else {
-        router.push("/login")
-      }
+      router.push("/login?registered=1")
     }
   }
 
@@ -105,42 +91,6 @@ export default function RegisterPage() {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-text">Nombre (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Tu nombre"
-                          className="border-border bg-white text-text placeholder:text-muted"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-text">Nombre de la empresa</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Tu empresa"
-                          className="border-border bg-white text-text placeholder:text-muted"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="email"
@@ -181,14 +131,31 @@ export default function RegisterPage() {
 
                 <FormField
                   control={form.control}
-                  name="confirmPassword"
+                  name="full_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-text">Confirmar contraseña</FormLabel>
+                      <FormLabel className="text-text">Nombre completo (opcional)</FormLabel>
                       <FormControl>
                         <Input
-                          type="password"
-                          placeholder="••••••"
+                          placeholder="Tu nombre"
+                          className="border-border bg-white text-text placeholder:text-muted"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="company_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-text">Nombre de la empresa</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Tu empresa"
                           className="border-border bg-white text-text placeholder:text-muted"
                           {...field}
                         />

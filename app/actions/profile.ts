@@ -27,7 +27,8 @@ export async function updateProfile(formData: FormData) {
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/profile")
     return { success: true, message: "Perfil actualizado exitosamente" }
-  } catch (error: any) {
-    return { error: error.message || "No se pudo actualizar el perfil" }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : null
+    return { error: message || "No se pudo actualizar el perfil" }
   }
 }

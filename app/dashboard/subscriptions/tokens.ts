@@ -86,12 +86,11 @@ export const SOURCES: Record<SourceId, SourceMeta> = {
 };
 
 export type StatusId =
-  | "active"
-  | "paused"
-  | "overdue"
-  | "canceled"
-  | "pending"
-  | "trial";
+  | "active" | "in_test" | "suspended"
+  | "inactive_new" | "activation_pendant" | "activation_ready"
+  | "terminated" | "purged" | "inventory"
+  | "replaced" | "retired" | "restore"
+  | "pending" | "unknown";
 
 export interface StatusMeta {
   label: string;
@@ -101,10 +100,18 @@ export interface StatusMeta {
 }
 
 export const STATUS_META: Record<StatusId, StatusMeta> = {
-  active: { label: "Activa", color: "#2D8A6F", bg: "#D7ECE4", dot: "#2D8A6F" },
-  paused: { label: "Pausada", color: "#C58A1E", bg: "#FBEFD4", dot: "#E0A93F" },
-  overdue: { label: "En mora", color: "#C85A4A", bg: "#FADDD6", dot: "#D86550" },
-  canceled: { label: "Cancelada", color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
-  pending: { label: "Pendiente", color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
-  trial: { label: "En prueba", color: "#7B4FE0", bg: "#E9DFFB", dot: "#7B4FE0" },
+  active:             { label: "Activa",           color: "#2D8A6F", bg: "#D7ECE4", dot: "#2D8A6F" },
+  in_test:            { label: "En prueba",        color: "#7B4FE0", bg: "#E9DFFB", dot: "#7B4FE0" },
+  suspended:          { label: "Suspendida",       color: "#C58A1E", bg: "#FBEFD4", dot: "#E0A93F" },
+  inactive_new:       { label: "Inactiva (nueva)", color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
+  activation_pendant: { label: "Pendiente activ.", color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
+  activation_ready:   { label: "Lista p/ activar", color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
+  terminated:         { label: "Terminada",        color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
+  purged:             { label: "Purgada",          color: "#C85A4A", bg: "#FADDD6", dot: "#D86550" },
+  inventory:          { label: "Inventario",       color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
+  replaced:           { label: "Reemplazada",      color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
+  retired:            { label: "Retirada",         color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
+  restore:            { label: "Restauración",     color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
+  pending:            { label: "Pendiente",        color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
+  unknown:            { label: "Desconocida",      color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
 };

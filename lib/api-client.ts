@@ -1,12 +1,44 @@
 import { auth } from "@/auth"
+import type { ProblemDetails } from "@/lib/types/api"
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  public code?: string
+  public title?: string
+  public detail?: string | null
+  public instance?: string | null
+  public extra?: Record<string, unknown>
+  public raw?: unknown
+
+  constructor(
+    public status: number,
+    message: string,
+    init?: {
+      code?: string
+      title?: string
+      detail?: string | null
+      instance?: string | null
+      extra?: Record<string, unknown>
+      raw?: unknown
+    }
+  ) {
     super(message)
     this.name = "ApiError"
+    this.code = init?.code
+    this.title = init?.title
+    this.detail = init?.detail
+    this.instance = init?.instance
+    this.extra = init?.extra
+    this.raw = init?.raw
   }
+}
+
+function withV1(path: string): string {
+  if (path.startsWith("/health") || path.startsWith("/ready") || path.startsWith("/v1/")) {
+    return path
+  }
+  return `/v1${path.startsWith("/") ? path : `/${path}`}`
 }
 
 /**
@@ -27,8 +59,21 @@ export async function fetchApi<T>(
     headers.set("Authorization", `Bearer ${token}`)
   }
 
+  // Forward Idempotency-Key if present
+  if (options.headers instanceof Headers) {
+    const idempotencyKey = options.headers.get("Idempotency-Key")
+    if (idempotencyKey) {
+      headers.set("Idempotency-Key", idempotencyKey)
+    }
+  } else if (typeof options.headers === "object" && options.headers) {
+    const idempotencyKey = (options.headers as Record<string, string>)["Idempotency-Key"]
+    if (idempotencyKey) {
+      headers.set("Idempotency-Key", idempotencyKey)
+    }
+  }
+
   const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const normalizedPath = withV1(path)
   const url = `${baseUrl}${normalizedPath}`
 
   let response: Response
@@ -42,20 +87,46 @@ export async function fetchApi<T>(
     throw new ApiError(0, `Network error calling ${url}: ${msg}`)
   }
 
-  // Si es error de credenciales, puedes querer manejar refresh tokens si los tienes,
-  // por ahora si es 401 simplemente lanzamos el error o se redirige a login.
+  const requestId = response.headers.get("X-Request-ID")
+
   if (!response.ok) {
-    let message = "Error en la petición"
+    const contentType = response.headers.get("content-type")
+    const isProblem = contentType?.includes("application/problem+json") ?? false
+    let body: unknown = null
+
     try {
-      const errorData = await response.json()
-      message = errorData.detail || errorData.message || message
+      body = await response.json()
     } catch {
-      // Ignore si no es JSON
+      body = null
     }
-    throw new ApiError(response.status, message)
+
+    if (isProblem && body && typeof body === "object") {
+      const problem = body as Partial<ProblemDetails>
+      throw new ApiError(response.status, problem.title || problem.detail || "Error en la petición", {
+        code: problem.code,
+        title: problem.title,
+        detail: problem.detail ?? null,
+        instance: problem.instance ?? requestId ?? null,
+        extra: Object.fromEntries(
+          Object.entries(problem).filter(
+            ([key]) => !["type", "title", "status", "code", "detail", "instance"].includes(key)
+          )
+        ),
+        raw: body,
+      })
+    } else {
+      const detail = body && typeof body === "object" && "detail" in body
+        ? (body as { detail?: unknown }).detail
+        : null
+      const message = typeof detail === "string" ? detail : "Error en la petición"
+      throw new ApiError(response.status, message, {
+        detail: typeof detail === "string" ? detail : null,
+        instance: requestId ?? null,
+        raw: body,
+      })
+    }
   }
 
-  // Devolver data en JSON o texto vacío
   if (response.status === 204) {
     return {} as T
   }

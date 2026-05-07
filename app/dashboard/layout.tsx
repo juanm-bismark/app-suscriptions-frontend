@@ -16,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/subscriptions", label: "Suscripciones", visible: () => true },
   { href: "/dashboard/profile", label: "Mi Perfil", visible: () => true },
   { href: "/dashboard/users", label: "Usuarios", visible: canManageUsers },
+  { href: "/dashboard/credentials", label: "Credenciales", visible: canManageUsers },
   { href: "/dashboard/company", label: "Empresa", visible: isAdmin },
 ]
 

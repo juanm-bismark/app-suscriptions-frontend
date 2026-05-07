@@ -15,7 +15,6 @@ export default async function CompanyPage() {
       <div className="bg-card rounded-lg shadow border border-border p-6 sm:p-8">
         <CompanyForm
           initialName={company?.name || ""}
-          subscriptionStatus={company?.subscription_status || "Activa"}
         />
       </div>
     </div>

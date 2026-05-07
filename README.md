@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bismark Frontend
 
-## Getting Started
+Next.js dashboard wired to the Subscriptions API backend.
 
-First, run the development server:
+## Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Create `.env.local` in this directory:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+API_URL=http://localhost:8000
+AUTH_SECRET=replace-with-a-long-random-secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`API_URL` is used by Server Components and Server Actions. If it is omitted,
+the app falls back to `NEXT_PUBLIC_API_URL`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Install dependencies and run the app:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install --no-audit --no-fund
+npm run dev
+```
 
-## Learn More
+Open http://localhost:3000.
 
-To learn more about Next.js, take a look at the following resources:
+## Auth Flow
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The frontend does not own user passwords or tenant data. It delegates auth to
+the backend:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. `/register` calls `POST /v1/auth/signup`.
+2. `/login` uses NextAuth Credentials and calls `POST /v1/auth/login`.
+3. The backend returns an access token, refresh token, expiry, role, and company id.
+4. NextAuth stores those values in the JWT session.
+5. Server-side API calls use `fetchApi`, which adds `Authorization: Bearer <accessToken>`.
+6. When the access token expires, `auth.ts` calls `POST /v1/auth/refresh` and rotates the refresh token.
+7. Logout calls `POST /v1/auth/logout` so the backend can revoke the refresh token.
 
-## Deploy on Vercel
+## Backend API
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+All app backend calls should go through `lib/api/*` helpers and `lib/api-client.ts`.
+`fetchApi` automatically prefixes paths with `/v1`, parses Problem Details
+responses, and exposes them as `ApiError`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Key flows:
+
+- SIM listing and detail: `lib/api/sims.ts`
+- Provider credentials and capability checks: `lib/api/credentials.ts`
+- Current user/company helpers: `lib/auth/current-user.ts`
+- SIM CSV bootstrap import: `/dashboard/sims/import`
+
+## Validation
+
+```bash
+npm run typecheck
+npm run build
+npm run lint
+```
+
+`next/font` downloads Google font assets during build. In a network-restricted
+sandbox, the build may need network approval.

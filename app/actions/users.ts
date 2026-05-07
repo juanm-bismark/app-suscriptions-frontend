@@ -32,7 +32,8 @@ export async function createUser(formData: FormData) {
 
     revalidatePath("/dashboard/users")
     return { success: true, message: "Usuario creado exitosamente" }
-  } catch (error: any) {
-    return { error: error.message || "No se pudo crear el usuario. ¿Tienes permisos?" }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : null
+    return { error: message || "No se pudo crear el usuario. ¿Tienes permisos?" }
   }
 }

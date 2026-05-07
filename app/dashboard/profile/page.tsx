@@ -1,7 +1,9 @@
+import { auth } from "@/auth"
 import { requireProfile } from "@/lib/auth/current-user"
 import ProfileForm from "./profile-form"
 
 export default async function ProfilePage() {
+  const session = await auth()
   const profile = await requireProfile()
 
   return (
@@ -14,7 +16,7 @@ export default async function ProfilePage() {
       <div className="bg-card rounded-lg shadow border border-border p-6 sm:p-8">
         <ProfileForm
           initialName={profile.full_name || ""}
-          email={profile.email}
+          email={session?.user?.email || ""}
           role={profile.role}
         />
       </div>

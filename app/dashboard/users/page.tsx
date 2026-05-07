@@ -10,7 +10,7 @@ export default async function UsersPage() {
 
   try {
     users = await fetchApi<User[]>("/users")
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error loading users:", err)
     if (err instanceof ApiError && err.status === 0) {
       networkError = true
@@ -43,7 +43,6 @@ export default async function UsersPage() {
                 <thead className="text-xs text-muted uppercase bg-page">
                   <tr>
                     <th scope="col" className="px-6 py-3 rounded-tl-lg">Nombre</th>
-                    <th scope="col" className="px-6 py-3">Correo</th>
                     <th scope="col" className="px-6 py-3 rounded-tr-lg">Rol</th>
                   </tr>
                 </thead>
@@ -51,7 +50,6 @@ export default async function UsersPage() {
                   {users.map((user) => (
                     <tr key={user.id} className="border-b border-border last:border-0 hover:bg-page/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-title">{user.full_name || "Sin nombre"}</td>
-                      <td className="px-6 py-4 text-muted">{user.email}</td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-header-accent/10 text-header-accent uppercase">
                           {user.role}

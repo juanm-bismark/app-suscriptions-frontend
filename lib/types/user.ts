@@ -2,15 +2,17 @@ export const ROLES = {
   ADMIN: "admin",
   MANAGER: "manager",
   MEMBER: "member",
+  PUBLIC: "public",
 } as const
 
 export type UserRole = (typeof ROLES)[keyof typeof ROLES]
 
 export interface Profile {
   id: string
-  email: string
-  full_name: string | null
+  company_id: string | null
   role: UserRole
+  full_name: string | null
+  created_at: string
 }
 
 export type User = Profile
@@ -18,7 +20,13 @@ export type User = Profile
 export interface Company {
   id: string
   name: string
-  subscription_status?: string
+  created_at: string
+}
+
+export interface CompanySettings {
+  company_id: string
+  settings: Record<string, unknown>
+  updated_at: string
 }
 
 export const isAdmin = (role?: UserRole) => role === ROLES.ADMIN

@@ -35,7 +35,6 @@
 import * as React from "react"
 import { ArrowUpDown, ArrowUp, ArrowDown, Inbox, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "./button"
 
 /* ── Tipos ────────────────────────────────────────────────────────── */
 export type SortDirection = "asc" | "desc" | null

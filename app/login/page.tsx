@@ -48,7 +48,18 @@ export default function LoginPage() {
     })
 
     if (result?.error) {
-      setError("Correo o contraseña inválidos")
+      const errorByCode: Record<string, string> = {
+        invalid_credentials: "Credenciales inválidas",
+        credentials: "Credenciales inválidas",
+      }
+
+      setError(
+        result.code && errorByCode[result.code]
+          ? errorByCode[result.code]
+          : result.error && result.error !== "CredentialsSignin"
+            ? result.error
+            : "Credenciales inválidas"
+      )
     } else if (result?.ok) {
       router.push("/dashboard")
     }

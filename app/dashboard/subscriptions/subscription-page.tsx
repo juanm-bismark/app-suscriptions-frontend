@@ -1,821 +1,293 @@
 "use client";
 
+import { newIdempotencyKey } from "@/lib/api/idempotency";
+import { getPresence, getUsage, purgeSim, setSimStatus } from "@/lib/api/sims";
+import { toast, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui";
+import type { CapabilityOut, PresenceOut, ProviderCapabilitiesOut, SubscriptionOut, UsageControl, UsageOut } from "@/lib/types/api";
+import type { AdministrativeStatus } from "@/lib/types/api/common";
+import { ROLES, type UserRole } from "@/lib/types/user";
 import { useRouter } from "next/navigation";
-import { ReactNode, useMemo, useState } from "react";
-import {
-  antiquityFor,
-  fmtCOP,
-  fmtDate,
-  fmtShortDate,
-  formatVal,
-  looksMono,
-  NOW_REFERENCE,
-  prettyKey,
-  SubscriptionRecord,
-} from "./data";
-import {
-  Btn,
-  Icon,
-  SourceBadge,
-  StatusPill,
-  StatusPillWithNative,
-  UsageBar,
-} from "./primitives";
-import { SOURCES, SourceMeta, STATUS_META, T } from "./tokens";
+import { useEffect, useMemo, useState } from "react";
+import { fmtDate, formatVal, looksMono, prettyKey } from "./data";
+import { SourceBadge, StatusPillWithNative } from "./primitives";
+import { SOURCES, STATUS_META, T } from "./tokens";
 
-interface TabProps {
-  r: SubscriptionRecord;
-  src: SourceMeta;
+type TabId = "detail" | "history" | "usage" | "presence" | "limits" | "actions";
+type AsyncState<T> =
+  | { status: "idle" | "loading" }
+  | { status: "success"; data: T }
+  | { status: "error"; message: string; code?: string };
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "detail", label: "Detalle" },
+  { id: "history", label: "Estado e historial" },
+  { id: "usage", label: "Consumo" },
+  { id: "presence", label: "Presencia y red" },
+  { id: "limits", label: "Límites" },
+  { id: "actions", label: "Acciones" },
+];
+
+function value(v: string | null | undefined) {
+  return v && v.trim() ? v : "—";
 }
 
-function Card({
-  title,
-  children,
-  accent,
-  right,
-}: {
-  title: string;
-  children: ReactNode;
-  accent?: string;
-  right?: ReactNode;
-}) {
-  return (
-    <div style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 6, marginBottom: 14 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "12px 16px",
-          borderBottom: `1px solid ${T.divider}`,
-        }}
-      >
-        {accent && <span style={{ width: 3, height: 14, background: accent, borderRadius: 2 }} />}
-        <div
-          style={{
-            fontSize: 11,
-            letterSpacing: 0.8,
-            color: T.muted,
-            fontWeight: 700,
-            textTransform: "uppercase",
-          }}
-        >
-          {title}
-        </div>
-        <div style={{ flex: 1 }} />
-        {right}
-      </div>
-      <div style={{ padding: 16 }}>{children}</div>
-    </div>
-  );
+function bytesToDataLabel(bytes: string | number | null | undefined) {
+  const n = typeof bytes === "string" ? Number(bytes) : bytes;
+  if (!n || Number.isNaN(n)) return "0 MB";
+  const mb = n / 1024 / 1024;
+  if (mb >= 1024) return `${(mb / 1024).toLocaleString("es-CO", { maximumFractionDigits: 2 })} GB`;
+  return `${mb.toLocaleString("es-CO", { maximumFractionDigits: 1 })} MB`;
 }
 
-function KV({
-  label,
-  value,
-  mono,
-  color,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-  color?: string;
-}) {
-  return (
-    <div>
-      <div style={{ fontSize: 10.5, letterSpacing: 0.4, color: T.muted, fontWeight: 600, marginBottom: 3 }}>
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 13,
-          color: color || T.title,
-          fontWeight: 500,
-          fontFamily: mono ? T.fontMono : T.fontBody,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
+function mbToLabel(mb: number | null | undefined) {
+  if (mb == null) return "Sin límite contractual";
+  if (mb >= 1024) return `${(mb / 1024).toLocaleString("es-CO", { maximumFractionDigits: 2 })} GB`;
+  return `${mb.toLocaleString("es-CO")} MB`;
 }
 
-function HeroStat({
-  label,
-  value,
-  sub,
-  mono,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  mono?: boolean;
-}) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div
-        style={{
-          fontSize: 10.5,
-          letterSpacing: 0.6,
-          color: T.muted,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          marginBottom: 3,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 17,
-          fontWeight: 700,
-          color: T.title,
-          fontFamily: mono ? T.fontMono : T.fontBody,
-          letterSpacing: -0.3,
-          lineHeight: 1.15,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-      {sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
+function daysBetween(start: string, end: string) {
+  const a = new Date(start).getTime();
+  const b = new Date(end).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return 1;
+  return Math.max(1, Math.ceil((b - a) / 86_400_000));
 }
 
-function Kpi({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
-  return (
-    <div style={{ background: T.cardBg, padding: "12px 16px" }}>
-      <div
-        style={{
-          fontSize: 10,
-          letterSpacing: 1,
-          color: T.muted,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 15,
-          fontWeight: 700,
-          color: T.title,
-          fontFamily: mono ? T.fontMono : T.fontBody,
-          letterSpacing: -0.2,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-      {sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
+function relativeTime(s: string | null | undefined) {
+  if (!s) return "—";
+  const d = new Date(s).getTime();
+  if (Number.isNaN(d)) return "—";
+  const diffDays = Math.max(0, Math.round((Date.now() - d) / 86_400_000));
+  if (diffDays === 0) return "hoy";
+  if (diffDays === 1) return "hace 1 día";
+  if (diffDays < 31) return `hace ${diffDays} días`;
+  const months = Math.round(diffDays / 30);
+  return months === 1 ? "hace 1 mes" : `hace ${months} meses`;
 }
 
-function FocalHero({ r, src }: TabProps) {
-  const u = r.usage;
-  const hasCap = u && u.used != null && u.total != null;
-  const pct = hasCap ? Math.min(100, (u.used / (u.total as number)) * 100) : null;
-  const pctColor = pct == null ? src.color : pct >= 90 ? T.danger : pct >= 70 ? T.warning : src.color;
-
-  const renewalDays = useMemo(() => {
-    if (!r.nextRenewal || r.nextRenewal === "—") return null;
-    const d = new Date(r.nextRenewal);
-    const now = new Date(NOW_REFERENCE);
-    if (Number.isNaN(d.getTime())) return null;
-    return Math.round((d.getTime() - now.getTime()) / 86_400_000);
-  }, [r.nextRenewal]);
-
-  // Deterministic 30-day shape seeded from the record id.
-  const trend = useMemo(() => {
-    let h = 0;
-    for (const c of r.id) h = (h * 31 + c.charCodeAt(0)) | 0;
-    const rnd = () => {
-      h = (h * 9301 + 49297) % 233_280;
-      return h / 233_280;
+function errorMessage(err: unknown) {
+  if (err && typeof err === "object") {
+    const anyErr = err as { detail?: unknown; title?: unknown; message?: unknown; code?: unknown; extra?: unknown };
+    const message = anyErr.detail || anyErr.title || anyErr.message;
+    const extra = anyErr.extra && typeof anyErr.extra === "object" ? anyErr.extra as Record<string, unknown> : undefined;
+    const retryAfter = extra?.retry_after;
+    const retryText = anyErr.code === "provider.rate_limited" && retryAfter ? ` Intenta de nuevo en ${String(retryAfter)}.` : "";
+    return {
+      message: `${typeof message === "string" ? message : "No pudimos cargar estos datos."}${retryText}`,
+      code: typeof anyErr.code === "string" ? anyErr.code : undefined,
     };
-    const base = hasCap ? u.used / (u.total as number) : 0.55;
-    const arr: number[] = [];
-    for (let i = 0; i < 30; i++) {
-      const noise = (rnd() - 0.5) * 0.18;
-      const drift = (i / 30) * (base > 0.4 ? 0.22 : 0.05);
-      arr.push(Math.max(0.02, Math.min(1, base * 0.55 + drift + noise)));
-    }
-    return arr;
-  }, [r.id, hasCap, u]);
-
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "260px 1fr 280px",
-        gap: 0,
-        marginBottom: 16,
-        background: T.cardBg,
-        border: `1px solid ${T.border}`,
-        borderRadius: 6,
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: src.color }} />
-
-      {/* Panel 1 — primary signal */}
-      <div style={{ padding: "20px 22px 22px 26px", borderRight: `1px solid ${T.divider}` }}>
-        {hasCap && pct != null ? (
-          <>
-            <div
-              style={{
-                fontSize: 10.5,
-                letterSpacing: 1,
-                color: T.muted,
-                fontWeight: 700,
-                textTransform: "uppercase",
-              }}
-            >
-              Consumo del ciclo
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
-              <span
-                style={{
-                  fontSize: 38,
-                  fontWeight: 700,
-                  color: pctColor,
-                  fontFamily: T.fontMono,
-                  letterSpacing: -1,
-                  lineHeight: 1,
-                }}
-              >
-                {pct.toFixed(0)}
-              </span>
-              <span style={{ fontSize: 18, color: pctColor, fontWeight: 600, fontFamily: T.fontMono }}>%</span>
-            </div>
-            <div style={{ fontSize: 12, color: T.muted, marginTop: 4, fontFamily: T.fontMono }}>
-              {u.used.toLocaleString("es-CO")} / {u.total} {u.unit}
-            </div>
-            <div
-              style={{
-                marginTop: 14,
-                height: 8,
-                background: "#E6ECEC",
-                borderRadius: 4,
-                overflow: "hidden",
-                position: "relative",
-              }}
-            >
-              <div
-                style={{
-                  width: `${pct}%`,
-                  height: "100%",
-                  background: pctColor,
-                  borderRadius: 4,
-                  transition: "width .4s",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: "70%",
-                  top: -2,
-                  width: 1,
-                  height: 12,
-                  background: T.warning,
-                  opacity: 0.6,
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: "90%",
-                  top: -2,
-                  width: 1,
-                  height: 12,
-                  background: T.danger,
-                  opacity: 0.6,
-                }}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <div
-              style={{
-                fontSize: 10.5,
-                letterSpacing: 1,
-                color: T.muted,
-                fontWeight: 700,
-                textTransform: "uppercase",
-              }}
-            >
-              Próxima renovación
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
-              <span
-                style={{
-                  fontSize: 38,
-                  fontWeight: 700,
-                  color: renewalDays != null && renewalDays < 0 ? T.danger : T.title,
-                  fontFamily: T.fontMono,
-                  letterSpacing: -1,
-                  lineHeight: 1,
-                }}
-              >
-                {renewalDays != null ? Math.abs(renewalDays) : "—"}
-              </span>
-              <span style={{ fontSize: 13, color: T.muted, fontWeight: 600 }}>
-                {renewalDays == null ? "" : renewalDays < 0 ? "días en mora" : "días"}
-              </span>
-            </div>
-            <div style={{ fontSize: 12, color: T.muted, marginTop: 4, fontFamily: T.fontMono }}>
-              {fmtDate(r.nextRenewal)}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Panel 2 — financial + lifecycle */}
-      <div
-        style={{
-          padding: "20px 22px",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "14px 24px",
-          borderRight: `1px solid ${T.divider}`,
-        }}
-      >
-        <HeroStat label="Monto por ciclo" value={fmtCOP(r.amount)} sub={r.cycle.toLowerCase()} mono />
-        <HeroStat label="Plan" value={r.plan} sub={`Desde ${fmtShortDate(r.createdAt)}`} />
-        <HeroStat label="Antigüedad" value={antiquityFor(r.createdAt)} sub="con Bismark" />
-        <HeroStat
-          label="Última factura"
-          value={String(r.specific?.last_invoice_status ?? "Pagada")}
-          sub={fmtShortDate("2026-04-15")}
-        />
-      </div>
-
-      {/* Panel 3 — sparkline */}
-      <div style={{ padding: "20px 22px 18px", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
-          <span
-            style={{
-              fontSize: 10.5,
-              letterSpacing: 1,
-              color: T.muted,
-              fontWeight: 700,
-              textTransform: "uppercase",
-            }}
-          >
-            Actividad · 30d
-          </span>
-          <span style={{ fontSize: 11, color: src.color, fontFamily: T.fontMono, fontWeight: 700 }}>
-            {hasCap && pct != null && pct >= 70 ? "↑ alta" : "→ estable"}
-          </span>
-        </div>
-        <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 2, minHeight: 60, paddingTop: 6 }}>
-          {trend.map((v, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height: `${Math.max(8, v * 100)}%`,
-                background: i >= 26 ? src.color : src.color + "88",
-                borderRadius: "1.5px 1.5px 0 0",
-                minHeight: 3,
-              }}
-            />
-          ))}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 10,
-            color: T.muted,
-            fontFamily: T.fontMono,
-            marginTop: 6,
-            letterSpacing: 0.4,
-          }}
-        >
-          <span>−30d</span>
-          <span>hoy</span>
-        </div>
-      </div>
-    </div>
-  );
+  }
+  return { message: "No pudimos cargar estos datos.", code: undefined };
 }
 
-function TabDetalle({ r, src }: TabProps) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
-      <div>
-        <Card title="Información general">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px 18px" }}>
-            <KV label="ID unificado" value={r.id} mono />
-            <KV label="Plan" value={r.plan} />
-            <KV label="Ciclo" value={r.cycle} />
-            <KV label="Monto" value={fmtCOP(r.amount)} mono />
-            <KV label="Próxima renovación" value={fmtDate(r.nextRenewal)} />
-            <KV label="Creado" value={fmtDate(r.createdAt)} />
-            <KV label="Compañía padre" value={r.parent} />
-            <KV label="Cliente" value={r.customer} />
-            <KV label="Email" value={r.customerEmail} mono />
-          </div>
-        </Card>
-        <Card title={`Atributos específicos · ${src.name}`}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px 18px" }}>
-            {Object.entries(r.specific).map(([k, v]) => (
-              <KV key={k} label={prettyKey(k)} value={formatVal(v)} mono={looksMono(k)} />
-            ))}
-          </div>
-        </Card>
-      </div>
-      <div>
-        <Card
-          title="Resumen de consumo"
-          right={
-            <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>
-              {r.usage?.label || "Mes en curso"}
-            </span>
-          }
-        >
-          <UsageBar used={r.usage?.used} total={r.usage?.total} unit={r.usage?.unit} width={"100%"} />
-          <div style={{ marginTop: 14, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
-            Las cifras provienen directamente de <strong style={{ color: T.title }}>{src.name}</strong>. La frecuencia
-            de actualización depende de la fuente.
-          </div>
-        </Card>
-        <Card title="Estado actual">
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <StatusPill status={r.status} size="md" />
-            <span style={{ fontSize: 12, color: T.muted, fontFamily: T.fontMono }}>nativo: {r.nativeStatus}</span>
-          </div>
-          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
-            Mapeado al vocabulario unificado de Bismark. El valor original que reporta la fuente se conserva como
-            referencia.
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
+function metricNumber(v: string | number | null | undefined) {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
-function TabEstado({ r, src }: TabProps) {
-  const events = [
-    {
-      date: "2026-04-15 10:22",
-      from: r.nativeStatus,
-      to: r.nativeStatus,
-      actor: "sistema",
-      kind: "sync" as const,
-      note: "Sincronización rutinaria desde " + src.name,
-    },
-    {
-      date: "2026-03-22 14:08",
-      from: "TEST",
-      to: r.nativeStatus,
-      actor: "sofia.arias",
-      kind: "change" as const,
-      note: "Activación manual tras pago confirmado",
-    },
-    {
-      date: "2026-03-21 09:31",
-      from: "PURGED",
-      to: "TEST",
-      actor: "d.quintero",
-      kind: "change" as const,
-      note: "Restauración a periodo de prueba",
-    },
-    {
-      date: "2026-02-08 16:44",
-      from: "ACTIVE",
-      to: "PURGED",
-      actor: "sistema",
-      kind: "change" as const,
-      note: "Auto-purga por 90 días sin tráfico",
-    },
-    {
-      date: "2024-03-14 11:00",
-      from: "—",
-      to: "ACTIVE",
-      actor: "onboarding",
-      kind: "create" as const,
-      note: "Creación inicial de la suscripción",
-    },
-  ];
-  const kindColor: Record<typeof events[number]["kind"], string> = {
-    sync: T.muted,
-    change: T.warning,
-    create: T.success,
-  };
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16 }}>
-      <Card
-        title="Histórico de estados"
-        right={
-          <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>
-            {events.length} eventos · últ. 24 meses
-          </span>
-        }
-      >
-        <div style={{ position: "relative" }}>
-          <div style={{ position: "absolute", left: 7, top: 4, bottom: 4, width: 1, background: T.divider }} />
-          {events.map((e, i) => (
-            <div
-              key={i}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "20px 130px 1fr 110px",
-                alignItems: "flex-start",
-                gap: 12,
-                padding: "10px 0",
-                position: "relative",
-              }}
-            >
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: "50%",
-                  background: T.cardBg,
-                  border: `2px solid ${kindColor[e.kind]}`,
-                  marginTop: 2,
-                  zIndex: 1,
-                }}
-              />
-              <div style={{ fontFamily: T.fontMono, fontSize: 11.5, color: T.muted }}>{e.date}</div>
-              <div>
-                <div style={{ fontSize: 12.5, color: T.title, fontWeight: 500 }}>{e.note}</div>
-                {e.from !== e.to && (
-                  <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted, marginTop: 3 }}>
-                    <span style={{ background: T.zebra, padding: "1px 6px", borderRadius: 3 }}>{e.from}</span>
-                    {" → "}
-                    <span
-                      style={{
-                        background: T.zebra,
-                        color: T.title,
-                        padding: "1px 6px",
-                        borderRadius: 3,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {e.to}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono, textAlign: "right" }}>{e.actor}</div>
-            </div>
-          ))}
-        </div>
-        {r.source !== "kite" && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: 12,
-              background: "#FBEFD414",
-              border: `1px solid ${T.warning}66`,
-              borderRadius: 4,
-              fontSize: 11.5,
-              color: T.warning,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <Icon.warn size={13} />
-            {src.name} no expone histórico nativo. Bismark reconstruye los eventos a partir de sincronizaciones.
-          </div>
-        )}
-      </Card>
-      <div>
-        <Card title="Mapeo de estados">
-          <div style={{ fontSize: 12, color: T.muted, marginBottom: 10, lineHeight: 1.5 }}>
-            Cada fuente reporta sus propios valores. Bismark los normaliza al vocabulario unificado.
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
-              gap: "8px 10px",
-              fontSize: 12,
-              alignItems: "center",
-            }}
-          >
-            <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.title, fontWeight: 600 }}>
-              {r.nativeStatus}
-            </div>
-            <span style={{ color: T.muted }}>→</span>
-            <div>
-              <StatusPill status={r.status} size="sm" />
-            </div>
-          </div>
-        </Card>
-        <Card title="Equivalencias entre fuentes">
-          <div style={{ fontSize: 11.5, fontFamily: T.fontMono, color: T.text, lineHeight: 1.7 }}>
-            <div>
-              <span style={{ color: SOURCES.kite.color, fontWeight: 700 }}>Kite</span>: ACTIVE · TEST · DEACTIVATED
-            </div>
-            <div>
-              <span style={{ color: SOURCES.tele2.color, fontWeight: 700 }}>Tele2</span>: ACTIVATED · PURGED
-            </div>
-            <div>
-              <span style={{ color: SOURCES.moabits.color, fontWeight: 700 }}>Moabits</span>: Active · Ready · Suspended
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
+function usageBars(usage: UsageOut) {
+  const daily = usage.usage_metrics.filter((m) => /data.*daily|daily.*data/i.test(m.metric_type));
+  const source = daily.length ? daily : usage.usage_metrics.filter((m) => /data/i.test(m.metric_type));
+  const bars = source
+    .map((m) => ({ label: m.metric_type.replace(/_/g, " "), value: metricNumber(m.usage) ?? 0, unit: m.unit ?? "" }))
+    .filter((m) => m.value > 0);
+  if (bars.length) return bars.slice(0, 30);
+
+  const totalMb = (metricNumber(usage.data_used_bytes) ?? 0) / 1024 / 1024;
+  return [{ label: "Periodo", value: totalMb, unit: "MB" }];
 }
 
-function TabConsumo({ r }: TabProps) {
-  const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
-  const days = 30;
-  const series = Array.from({ length: days }, (_, i) => {
-    const seed = (i * 7 + 13) % 11;
-    return Math.max(0, Math.round(((r.usage?.used ?? 10) / days) * (0.5 + seed / 8) * 10) / 10);
+function usageWindowQuery(days = 30) {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - days);
+  const qs = new URLSearchParams({
+    start_date: start.toISOString(),
+    end_date: end.toISOString(),
+    metrics: "data",
   });
-  const cumulative = series.reduce<number[]>((acc, v) => {
-    acc.push((acc.at(-1) ?? 0) + v);
-    return acc;
-  }, []);
-  const max = Math.max(...series, 1);
-  const total = r.usage?.total;
-  const unit = r.usage?.unit ?? "GB";
+  return qs.toString();
+}
+
+function mergedAttributes(subscription: SubscriptionOut) {
+  return Object.entries({
+    ...subscription.provider_fields,
+    ...subscription.normalized.custom_fields,
+  }).filter(([, v]) => v !== undefined);
+}
+
+export function SubscriptionPage({
+  subscription,
+  capabilities,
+  currentUserRole,
+  initialTab = "detail",
+}: {
+  subscription: SubscriptionOut;
+  capabilities: ProviderCapabilitiesOut;
+  currentUserRole?: UserRole;
+  initialTab?: TabId;
+}) {
+  const [tab, setTab] = useState<TabId>(initialTab);
+  const src = SOURCES[subscription.provider];
+  const n = subscription.normalized;
+  const statusLabel = STATUS_META[subscription.status]?.label ?? subscription.status;
+  const services = n.services.active?.length
+    ? n.services.active.join(" / ")
+    : [n.services.data_service ? "data" : null, n.services.sms_service ? "sms" : null].filter(Boolean).join(" / ");
 
   return (
-    <div>
-      <Card
-        title="Consumo de datos"
-        right={
-          <div style={{ display: "flex", gap: 6 }}>
-            {(["7d", "30d", "90d"] as const).map((rg) => (
-              <button
-                key={rg}
-                type="button"
-                onClick={() => setRange(rg)}
-                style={{
-                  background: range === rg ? T.headerBg : "transparent",
-                  color: range === rg ? "#fff" : T.muted,
-                  border: `1px solid ${range === rg ? T.headerBg : T.border}`,
-                  borderRadius: 4,
-                  padding: "3px 8px",
-                  fontSize: 11,
-                  fontFamily: T.fontMono,
-                  cursor: "pointer",
-                }}
-              >
-                {rg}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 18 }}>
-          <Kpi
-            label="Datos consumidos"
-            value={`${(r.usage?.used ?? 0).toLocaleString("es-CO")} ${unit}`}
-            mono
-            sub="periodo actual"
-          />
-          <Kpi
-            label="Cap del plan"
-            value={total ? `${total} ${unit}` : "Sin tope"}
-            mono
-            sub="límite contractual"
-          />
-          <Kpi
-            label="Promedio diario"
-            value={`${(series.reduce((a, b) => a + b, 0) / days).toFixed(1)} ${unit}`}
-            mono
-            sub="últimos 30 días"
-          />
-          <Kpi label="Pico diario" value={`${max.toFixed(1)} ${unit}`} mono sub="día más alto" />
-        </div>
-
-        <div
-          style={{
-            marginBottom: 8,
-            fontSize: 11,
-            color: T.muted,
-            fontFamily: T.fontMono,
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
-          <span>Consumo diario</span>
-          <span>
-            Acumulado: {(cumulative.at(-1) ?? 0).toFixed(1)} {unit}
-          </span>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-end",
-            gap: 3,
-            height: 120,
-            padding: "8px 0",
-            borderBottom: `1px solid ${T.divider}`,
-          }}
-        >
-          {series.map((v, i) => {
-            const h = (v / max) * 100;
-            const dailyCap = total ? total / 30 : null;
-            const overCap = dailyCap !== null && v > dailyCap;
-            return (
-              <div
-                key={i}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-end",
-                  height: "100%",
-                }}
-              >
-                <div
-                  style={{
-                    height: `${h}%`,
-                    background: overCap ? T.warning : T.headerBg,
-                    borderRadius: "2px 2px 0 0",
-                    minHeight: 2,
-                    opacity: 0.85,
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 10.5,
-            color: T.muted,
-            fontFamily: T.fontMono,
-            marginTop: 4,
-          }}
-        >
-          <span>hace 30d</span>
-          <span>hace 15d</span>
-          <span>hoy</span>
-        </div>
-
-        {total && r.usage && (
-          <div style={{ marginTop: 22 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 11,
-                color: T.muted,
-                fontFamily: T.fontMono,
-                marginBottom: 6,
-              }}
-            >
-              <span>Avance contra cap</span>
-              <span>Umbral de alerta: 80%</span>
+    <main style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", padding: 24 }}>
+      <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ height: 4, background: src.color }} />
+        <div style={{ padding: 22, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <SourceBadge source={subscription.provider} withName />
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.muted }}>{subscription.iccid}</span>
             </div>
-            <UsageBar used={r.usage.used} total={r.usage.total} unit={r.usage.unit} width={"100%"} />
+            <h1 style={{ margin: 0, color: T.title, fontSize: 24, letterSpacing: -0.3 }}>{value(n.customer.name)}</h1>
+            <p style={{ margin: "6px 0 0", color: T.muted, fontFamily: T.fontMono, fontSize: 12 }}>
+              {value(subscription.msisdn)} · {value(subscription.imsi)}
+            </p>
           </div>
+          <StatusPillWithNative status={subscription.status} nativeStatus={subscription.native_status} sourceName={src.name} size="md" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", borderTop: `1px solid ${T.divider}` }}>
+          <KV label={n.limits.data == null ? "Último cambio" : "Datos permitidos"} value={n.limits.data == null ? fmtDate(n.status.last_changed_at) : mbToLabel(n.limits.data)} sub={n.limits.data == null ? relativeTime(subscription.updated_at) : `Servicios: ${services || "—"}`} />
+          <KV label="Plan" value={value(n.plan.name)} sub={value(n.plan.code)} />
+          <KV label="Comm. Plan" value={value(n.plan.communication_plan)} />
+          <KV label="Activado" value={fmtDate(subscription.activated_at)} />
+          <KV label="Expira plan" value={fmtDate(n.plan.expires_at)} />
+          <HeroUsage iccid={subscription.iccid} />
+        </div>
+      </section>
+
+      <nav style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setTab(item.id)}
+            style={{
+              border: `1px solid ${tab === item.id ? src.color : T.border}`,
+              background: tab === item.id ? src.tintBg : T.cardBg,
+              color: tab === item.id ? src.tintText : T.text,
+              borderRadius: 5,
+              padding: "8px 11px",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "detail" && <DetailTab subscription={subscription} statusLabel={statusLabel} />}
+      {tab === "history" && <HistoryTab subscription={subscription} statusLabel={statusLabel} />}
+      {tab === "usage" && <UsageTab subscription={subscription} />}
+      {tab === "presence" && <PresenceTab iccid={subscription.iccid} />}
+      {tab === "limits" && <LimitsTab subscription={subscription} />}
+      {tab === "actions" && (
+        <ActionsTab
+          subscription={subscription}
+          capabilities={capabilities}
+          currentUserRole={currentUserRole}
+        />
+      )}
+    </main>
+  );
+}
+
+function HeroUsage({ iccid }: { iccid: string }) {
+  const state = useUsage(iccid, usageWindowQuery(30));
+  if (state.status === "error") return <KV label="Consumo 30 días" value="Datos no disponibles" sub={state.message} />;
+  if (state.status !== "success") return <KV label="Consumo 30 días" value="Cargando..." sub="Consultando proveedor" />;
+  const bars = usageBars(state.data);
+  return <MiniChart label="Consumo 30 días" bars={bars} />;
+}
+
+function DetailTab({ subscription, statusLabel }: { subscription: SubscriptionOut; statusLabel: string }) {
+  const rows = [
+    ["ICCID", subscription.iccid, true],
+    ["MSISDN", subscription.msisdn, true],
+    ["IMSI", subscription.imsi, true],
+    ["Operador", SOURCES[subscription.provider].name, false],
+    ["Estado", statusLabel, false],
+    ["Estado nativo", subscription.native_status, true],
+    ["Activado", fmtDate(subscription.activated_at), false],
+    ["Última actualización", fmtDate(subscription.updated_at), false],
+    ["ID compañía", subscription.company_id, true],
+  ] as const;
+  const attrs = mergedAttributes(subscription);
+
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <Card title="Información general">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
+          {rows.map(([label, val, mono]) => <KV key={label} label={label} value={value(val)} mono={mono} />)}
+        </div>
+      </Card>
+      <Card title={`Atributos específicos · ${SOURCES[subscription.provider].name}`}>
+        {attrs.length ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+            {attrs.map(([k, v]) => <KV key={k} label={prettyKey(k)} value={formatVal(v)} mono={looksMono(k)} />)}
+          </div>
+        ) : (
+          <Empty text="Este proveedor no envió atributos adicionales para esta SIM." />
         )}
       </Card>
+    </div>
+  );
+}
 
-      {r.source === "tele2" && (
-        <Card title="Desglose por servicio · Tele2">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Datos</div>
-              <UsageBar used={r.usage?.used} total={r.usage?.total} unit="GB" width={"100%"} />
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>SMS</div>
-              <UsageBar used={142} total={500} unit="msgs" width={"100%"} />
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>Voz</div>
-              <UsageBar used={88} total={300} unit="min" width={"100%"} />
-            </div>
-          </div>
-        </Card>
-      )}
-      {r.source === "moabits" && (
-        <Card title="Renovaciones de plan · Moabits">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-            <KV label="Renovaciones plan" value="12 / 24" mono />
-            <KV label="Restantes" value="12" mono color={T.success} />
-            <KV label="Inicio plan" value={fmtDate("2025-01-15")} />
-            <KV label="Expira" value={fmtDate("2027-01-15")} />
+function HistoryTab({ subscription, statusLabel }: { subscription: SubscriptionOut; statusLabel: string }) {
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <Card title="Histórico de estado">
+        <Empty text={subscription.provider === "kite" ? "El histórico nativo aún no está disponible vía Bismark API." : `El proveedor ${SOURCES[subscription.provider].name} no expone histórico de estados en Bismark API.`} />
+      </Card>
+      <Card title="Mapeo de estados">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <KV label="Estado normalizado" value={statusLabel} />
+          <KV label="Código canónico" value={subscription.status} mono />
+          <KV label={`Estado ${SOURCES[subscription.provider].name}`} value={value(subscription.native_status)} mono />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function UsageTab({ subscription }: { subscription: SubscriptionOut }) {
+  const state = useUsage(subscription.iccid, "metrics=data");
+  if (state.status === "error") return <Card title="Consumo"><Empty text={state.message} /></Card>;
+  if (state.status !== "success") return <Card title="Consumo"><Empty text="Cargando consumo desde el proveedor..." /></Card>;
+
+  const usage = state.data;
+  const totalBytes = metricNumber(usage.data_used_bytes) ?? 0;
+  const days = daysBetween(usage.period_start, usage.period_end);
+  const bars = usageBars(usage);
+  const peak = Math.max(...bars.map((b) => b.value), 0);
+  const hasSms = usage.sms_count > 0 || usage.usage_metrics.some((m) => /sms/i.test(m.metric_type));
+  const hasVoice = usage.voice_seconds > 0 || usage.usage_metrics.some((m) => /voice|voz/i.test(m.metric_type));
+
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <Card title="KPIs de consumo">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+          <KV label="Datos consumidos" value={bytesToDataLabel(usage.data_used_bytes)} />
+          <KV label="Cap del plan" value={mbToLabel(subscription.normalized.limits.data)} />
+          <KV label="Promedio diario" value={bytesToDataLabel(totalBytes / days)} />
+          {peak > 0 && <KV label="Pico diario" value={`${peak.toLocaleString("es-CO", { maximumFractionDigits: 1 })} ${bars[0]?.unit || "MB"}`} />}
+        </div>
+      </Card>
+      <Card title={`Periodo · ${fmtDate(usage.period_start)} a ${fmtDate(usage.period_end)}`}>
+        <BarChart bars={bars} />
+      </Card>
+      {(hasSms || hasVoice) && (
+        <Card title="Otros consumos">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+            {hasSms && <KV label="SMS" value={usage.sms_count.toLocaleString("es-CO")} />}
+            {hasVoice && <KV label="Voz" value={`${Math.round(usage.voice_seconds / 60).toLocaleString("es-CO")} min`} />}
           </div>
         </Card>
       )}
@@ -823,472 +295,450 @@ function TabConsumo({ r }: TabProps) {
   );
 }
 
-function TabPresencia({ r }: TabProps) {
-  if (r.source === "tele2") {
+function PresenceTab({ iccid }: { iccid: string }) {
+  const state = usePresence(iccid);
+  if (state.status === "error") {
+    const unsupported = state.code === "provider.unsupported_operation";
+    return <Card title="Presencia y red"><Empty text={unsupported ? "Este proveedor no expone presencia para la SIM." : state.message} /></Card>;
+  }
+  if (state.status !== "success") return <Card title="Presencia y red"><Empty text="Consultando presencia..." /></Card>;
+  const p = state.data;
+  return (
+    <Card title="Presencia y red">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+        <KV label="Estado" value={p.state} dot={presenceColor(p.state)} />
+        <KV label="Última vez vista" value={fmtDate(p.last_seen_at)} />
+        <KV label="País" value={value(p.country_code)} mono />
+        <KV label="Red" value={value(p.network_name)} />
+        <KV label="RAT" value={value(p.rat_type)} mono />
+        <KV label="IP" value={value(p.ip_address)} mono />
+      </div>
+    </Card>
+  );
+}
+
+function LimitsTab({ subscription }: { subscription: SubscriptionOut }) {
+  const limits = subscription.normalized.limits;
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <Card title="Límites contractuales">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+          <KV label="Datos por SIM" value={mbToLabel(limits.data)} />
+          <KV label="SMS por SIM" value={limits.sms == null ? "Sin límite contractual" : limits.sms.toLocaleString("es-CO")} />
+        </div>
+      </Card>
+      <LimitGroup title="Controles diarios" controls={limits.daily} />
+      <LimitGroup title="Controles mensuales" controls={limits.monthly} />
+    </div>
+  );
+}
+
+type PendingAction =
+  | { kind: "status"; target: AdministrativeStatus; dataService: boolean; smsService: boolean }
+  | { kind: "purge"; confirmText: string };
+
+function canClickCapability(capability: CapabilityOut | undefined) {
+  return capability?.status === "supported" || capability?.status === "requires_confirmation";
+}
+
+function capabilityDisabledReason(capability: CapabilityOut | undefined) {
+  if (!capability) return "El proveedor no reportó esta capacidad.";
+  if (capability.status === "supported" || capability.status === "requires_confirmation") return null;
+  return capability.reason || "Esta operación no está habilitada para el proveedor.";
+}
+
+function actionErrorMessage(err: unknown) {
+  const parsed = errorMessage(err);
+  return parsed.message || "No pudimos ejecutar la acción.";
+}
+
+function ActionsTab({
+  subscription,
+  capabilities,
+  currentUserRole,
+}: {
+  subscription: SubscriptionOut;
+  capabilities: ProviderCapabilitiesOut;
+  currentUserRole?: UserRole;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [busy, setBusy] = useState(false);
+  const statusCapability = capabilities.capabilities.set_administrative_status;
+  const purgeCapability = capabilities.capabilities.purge;
+  const isAdmin = currentUserRole === ROLES.ADMIN;
+  const disabledReason = capabilityDisabledReason(statusCapability);
+  const canSetStatus = isAdmin && canClickCapability(statusCapability);
+  const targets = statusCapability?.targets ?? [];
+  const isMoabitsServiceTarget =
+    subscription.provider === "moabits" &&
+    pending?.kind === "status" &&
+    (pending.target === "active" || pending.target === "suspended");
+  const servicesValid = !isMoabitsServiceTarget || pending.dataService || pending.smsService;
+  const purgeConfirmValid = pending?.kind !== "purge" || pending.confirmText === subscription.iccid;
+
+  if (!isAdmin) {
     return (
-      <Card title="Presencia y red">
-        <div style={{ padding: 24, textAlign: "center", color: T.muted, fontSize: 13 }}>
-          Tele2 no expone un endpoint de presencia. Mostramos solo el estado lógico.
+      <Card title="Acciones">
+        <div style={{ padding: 16 }}>
+          <div
+            role="note"
+            style={{
+              border: `1px solid ${T.warning}`,
+              background: "#FBEFD4",
+              color: "#7A4E0B",
+              borderRadius: 6,
+              padding: "10px 12px",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            Solo un administrador puede ejecutar cambios de estado o purgas.
+          </div>
         </div>
       </Card>
     );
   }
-  const isMoabits = r.source === "moabits";
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
-      <Card title="Conectividad actual">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px 18px" }}>
-          <KV label="Estado online" value="Online" color={T.success} />
-          <KV label="Última conexión" value="hace 4 min" />
-          <KV label="País" value={isMoabits ? "CO · Colombia" : "—"} />
-          <KV label="Red / operador" value={isMoabits ? "Tigo CO · 732103" : "KITE-FTTH"} />
-          <KV label="RAT" value={isMoabits ? "LTE" : "GPON"} />
-          <KV
-            label={isMoabits ? "IMSI" : "IP asignada"}
-            value={isMoabits ? "732103004458102" : "10.45.22.118"}
-            mono
-          />
-        </div>
-      </Card>
-      <Card title={isMoabits ? "Última actividad CDR/LU" : "Sesión PDP"}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 18px" }}>
-          {isMoabits ? (
-            <>
-              <KV label="First LU" value={fmtShortDate("2025-01-15")} />
-              <KV label="Last LU" value="hace 4 min" />
-              <KV label="First CDR" value={fmtShortDate("2025-01-16")} />
-              <KV label="Last CDR" value="hace 12 min" />
-            </>
-          ) : (
-            <>
-              <KV label="APN" value="internet.kite.co" mono />
-              <KV label="SGSN" value="bog-sgsn-02" mono />
-              <KV label="GGSN" value="bog-ggsn-01" mono />
-              <KV label="Sesión activa" value="2h 14m" />
-            </>
-          )}
-        </div>
-      </Card>
-    </div>
-  );
-}
 
-function TabLimites({ r }: TabProps) {
-  const total = r.usage?.total;
-  const isMoabits = r.source === "moabits";
-  const isTele2 = r.source === "tele2";
+  async function submitAction() {
+    if (!pending || busy || !servicesValid || !purgeConfirmValid) return;
+    setBusy(true);
+    const idempotencyKey = newIdempotencyKey();
+    try {
+      if (pending.kind === "status") {
+        await setSimStatus(
+          subscription.iccid,
+          {
+            target: pending.target,
+            data_service: isMoabitsServiceTarget ? pending.dataService : undefined,
+            sms_service: isMoabitsServiceTarget ? pending.smsService : undefined,
+          },
+          idempotencyKey
+        );
+        toast.success(`Estado enviado: ${STATUS_META[pending.target]?.label ?? pending.target}.`);
+      } else {
+        await purgeSim(subscription.iccid, idempotencyKey);
+        toast.success("Purga enviada al proveedor.");
+      }
+      setPending(null);
+      router.refresh();
+    } catch (err) {
+      toast.error(actionErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div>
-      <Card title="Límites configurados">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
+    <Card title="Acciones">
+      <div style={{ padding: 16, display: "grid", gap: 16 }}>
+        <section style={{ display: "grid", gap: 10 }}>
           <div>
-            <div
-              style={{
-                fontSize: 11,
-                color: T.muted,
-                marginBottom: 6,
-                fontWeight: 600,
-                letterSpacing: 0.4,
-                textTransform: "uppercase",
-              }}
-            >
-              Datos por SIM
+            <h3 style={{ margin: 0, color: T.title, fontSize: 14 }}>Cambiar estado administrativo</h3>
+            <p style={{ margin: "4px 0 0", color: T.muted, fontSize: 12 }}>
+              {disabledReason ?? `Capacidad reportada por ${SOURCES[subscription.provider].name}.`}
+            </p>
+          </div>
+
+          {targets.length ? (
+            <TooltipProvider>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {targets.map((target) => {
+                  const meta = STATUS_META[target];
+                  const disabled = !canSetStatus || target === subscription.status;
+                  const title = target === subscription.status
+                      ? "La SIM ya está en este estado."
+                      : disabledReason ?? undefined;
+                  const button = (
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => setPending({
+                        kind: "status",
+                        target,
+                        dataService: subscription.normalized.services.data_service ?? true,
+                        smsService: subscription.normalized.services.sms_service ?? true,
+                      })}
+                      style={{
+                        border: `1px solid ${disabled ? T.border : meta?.color ?? T.border}`,
+                        background: disabled ? "#F3F4F6" : meta?.bg ?? T.cardBg,
+                        color: disabled ? T.muted : meta?.color ?? T.text,
+                        borderRadius: 5,
+                        padding: "9px 11px",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        opacity: disabled ? 0.65 : 1,
+                      }}
+                    >
+                      {meta?.label ?? target}
+                    </button>
+                  );
+
+                  return title ? (
+                    <Tooltip key={target}>
+                      <TooltipTrigger asChild>
+                        <span>{button}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>{title}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span key={target}>{button}</span>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
+          ) : (
+            <Empty text="Este proveedor no publicó estados destino para esta SIM." />
+          )}
+        </section>
+
+        {isAdmin && purgeCapability?.status === "supported" && (
+          <section style={{ borderTop: `1px solid ${T.divider}`, paddingTop: 14, display: "grid", gap: 10 }}>
+            <div>
+              <h3 style={{ margin: 0, color: T.title, fontSize: 14 }}>Purga</h3>
+              <p style={{ margin: "4px 0 0", color: T.muted, fontSize: 12 }}>
+                Acción irreversible protegida con confirmación por ICCID.
+              </p>
             </div>
-            <UsageBar used={r.usage?.used} total={total} unit={r.usage?.unit ?? "GB"} width={"100%"} />
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
-              Umbral de alerta: <strong>80%</strong> del cap
+            <div>
+              <button
+                type="button"
+                onClick={() => setPending({ kind: "purge", confirmText: "" })}
+                style={{
+                  border: `1px solid ${T.danger}`,
+                  background: "#FADDD6",
+                  color: "#A84234",
+                  borderRadius: 5,
+                  padding: "9px 11px",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                Purgar SIM
+              </button>
+            </div>
+          </section>
+        )}
+      </div>
+
+      {pending && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            background: "rgba(15, 23, 42, 0.42)",
+            display: "grid",
+            placeItems: "center",
+            padding: 18,
+          }}
+        >
+          <div style={{ width: "min(520px, 100%)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.22)", overflow: "hidden" }}>
+            <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.divider}` }}>
+              <h3 style={{ margin: 0, color: T.title, fontSize: 16 }}>
+                {pending.kind === "status" ? "Confirmar cambio de estado" : "Confirmar purga"}
+              </h3>
+              <p style={{ margin: "6px 0 0", color: T.muted, fontSize: 13 }}>
+                ICCID <span style={{ fontFamily: T.fontMono }}>{subscription.iccid}</span>
+              </p>
+            </div>
+            <div style={{ padding: 18, display: "grid", gap: 14 }}>
+              {pending.kind === "status" ? (
+                <>
+                  <p style={{ margin: 0, color: T.text, fontSize: 14 }}>
+                    Enviar cambio a <strong>{STATUS_META[pending.target]?.label ?? pending.target}</strong>.
+                  </p>
+                  {isMoabitsServiceTarget && (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, color: T.text, fontSize: 13, fontWeight: 700 }}>
+                        <input
+                          type="checkbox"
+                          checked={pending.dataService}
+                          onChange={(event) => setPending({ ...pending, dataService: event.target.checked })}
+                        />
+                        Habilitar servicio de datos
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, color: T.text, fontSize: 13, fontWeight: 700 }}>
+                        <input
+                          type="checkbox"
+                          checked={pending.smsService}
+                          onChange={(event) => setPending({ ...pending, smsService: event.target.checked })}
+                        />
+                        Habilitar servicio SMS
+                      </label>
+                      {!servicesValid && <p style={{ margin: 0, color: T.danger, fontSize: 12 }}>Moabits requiere datos o SMS activo para este cambio.</p>}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <label style={{ display: "grid", gap: 7, color: T.text, fontSize: 13, fontWeight: 700 }}>
+                  Escribe el ICCID para confirmar
+                  <input
+                    value={pending.confirmText}
+                    onChange={(event) => setPending({ ...pending, confirmText: event.target.value })}
+                    style={{ border: `1px solid ${T.border}`, borderRadius: 5, padding: "9px 10px", fontFamily: T.fontMono, color: T.text }}
+                    autoFocus
+                  />
+                </label>
+              )}
+            </div>
+            <div style={{ padding: 14, borderTop: `1px solid ${T.divider}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                disabled={busy}
+                style={{ border: `1px solid ${T.border}`, background: T.cardBg, color: T.text, borderRadius: 5, padding: "9px 11px", cursor: busy ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800 }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={submitAction}
+                disabled={busy || !servicesValid || !purgeConfirmValid}
+                style={{ border: "1px solid transparent", background: busy || !servicesValid || !purgeConfirmValid ? "#C7CDD4" : T.title, color: "#FFFFFF", borderRadius: 5, padding: "9px 11px", cursor: busy || !servicesValid || !purgeConfirmValid ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800 }}
+              >
+                {busy ? "Enviando..." : "Confirmar"}
+              </button>
             </div>
           </div>
-          {isTele2 && (
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.muted,
-                  marginBottom: 6,
-                  fontWeight: 600,
-                  letterSpacing: 0.4,
-                  textTransform: "uppercase",
-                }}
-              >
-                Overage override
-              </div>
-              <KV label="Limit override" value="20.00 USD" mono />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>
-                Cuando se supera, la línea pasa a estado limitado.
-              </div>
-            </div>
-          )}
-          {isMoabits && (
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.muted,
-                  marginBottom: 6,
-                  fontWeight: 600,
-                  letterSpacing: 0.4,
-                  textTransform: "uppercase",
-                }}
-              >
-                SMS por SIM
-              </div>
-              <UsageBar used={42} total={500} unit="msgs" width={"100%"} />
-            </div>
-          )}
         </div>
-      </Card>
-      {isMoabits && (
-        <Card title={`Límites por compañía · ${r.parent}`}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.muted,
-                  marginBottom: 6,
-                  fontWeight: 600,
-                  letterSpacing: 0.4,
-                  textTransform: "uppercase",
-                }}
-              >
-                Datos compañía
-              </div>
-              <UsageBar used={1240} total={1500} unit="GB" width={"100%"} />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
-                Notificaciones:{" "}
-                <span style={{ fontFamily: T.fontMono, color: T.title }}>ops@agrocampo.com.co</span>
-              </div>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.muted,
-                  marginBottom: 6,
-                  fontWeight: 600,
-                  letterSpacing: 0.4,
-                  textTransform: "uppercase",
-                }}
-              >
-                SMS compañía
-              </div>
-              <UsageBar used={3200} total={10000} unit="msgs" width={"100%"} />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
-                Umbral de alerta: <strong>90%</strong>
-              </div>
-            </div>
-          </div>
-        </Card>
       )}
-      {!isTele2 && !isMoabits && (
-        <Card title="Umbrales de tráfico · Kite">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
-            <KV label="thrReached (datos)" value="No alcanzado" color={T.success} />
-            <KV label="trafficCut" value="Desactivado" />
-          </div>
-        </Card>
-      )}
-    </div>
+    </Card>
   );
 }
 
-function TabAcciones({ r, src }: TabProps) {
-  type ActionKey = "reactivate" | "network-reset" | "sync" | "purge";
-  const actionsByStatus: Record<string, ActionKey[]> = {
-    active: ["network-reset", "sync", "purge"],
-    paused: ["reactivate", "sync", "purge"],
-    overdue: ["reactivate", "sync", "purge"],
-    canceled: ["reactivate"],
-    pending: ["sync"],
-    trial: ["network-reset", "sync", "purge"],
-  };
-  const available = actionsByStatus[r.status] ?? ["sync"];
-
-  const ACT: Record<ActionKey, { title: string; body: string; color: string; icon: ReactNode; danger: boolean }> = {
-    reactivate: {
-      title: "Reactivar suscripción",
-      body:
-        "Restablece la línea al estado Activa. Internamente combina los endpoints de la fuente: " +
-        (r.source === "kite"
-          ? "Activate (Kite)"
-          : r.source === "tele2"
-            ? "Edit Device Status (Tele2)"
-            : "Reactivate (Moabits)"),
-      color: T.success,
-      icon: <Icon.play size={12} />,
-      danger: false,
-    },
-    "network-reset": {
-      title: "Reset de red",
-      body: "Cancela ubicación 2G/3G/4G y fuerza nueva attach. Solo disponible en Kite.",
-      color: T.info,
-      icon: <Icon.refresh size={13} />,
-      danger: false,
-    },
-    sync: {
-      title: "Sincronizar desde fuente",
-      body: "Refresca los datos consultando " + src.name + " en tiempo real.",
-      color: T.info,
-      icon: <Icon.refresh size={13} />,
-      danger: false,
-    },
-    purge: {
-      title: "Purgar línea",
-      body: "Acción destructiva. Marca la línea como PURGED en la fuente. No se puede deshacer fácilmente.",
-      color: T.danger,
-      icon: <Icon.close size={12} />,
-      danger: true,
-    },
-  };
-
+function LimitGroup({ title, controls }: { title: string; controls: Record<string, UsageControl> | null }) {
+  const entries = Object.entries(controls ?? {});
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16 }}>
-      <Card
-        title="Acciones disponibles"
-        right={
-          <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>
-            según estado actual: {STATUS_META[r.status].label}
-          </span>
-        }
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {available.map((k) => {
-            const a = ACT[k];
-            return (
-              <div
-                key={k}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: "12px 14px",
-                  border: `1px solid ${a.danger ? T.danger + "55" : T.border}`,
-                  borderRadius: 6,
-                  background: a.danger ? "#FFF5F2" : T.cardBg,
-                }}
-              >
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    background: a.color + "22",
-                    color: a.color,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {a.icon}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: T.title, letterSpacing: -0.1 }}>
-                    {a.title}
-                  </div>
-                  <div style={{ fontSize: 12, color: T.muted, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
-                </div>
-                <Btn variant={a.danger ? "danger" : "outline"} size="sm">
-                  {a.danger ? "Confirmar…" : "Ejecutar"}
-                </Btn>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-      <div>
-        <Card title="Mapeo Bismark → fuente">
-          <div style={{ fontSize: 11.5, fontFamily: T.fontMono, color: T.text, lineHeight: 1.8 }}>
-            <div>
-              <strong style={{ color: T.title }}>Reactivar</strong> · agrupa Activate / Edit status / Reactivate
-            </div>
-            <div>
-              <strong style={{ color: T.title }}>Network reset</strong> · Kite networkReset
-            </div>
-            <div>
-              <strong style={{ color: T.title }}>Purgar</strong> · Tele2 PURGED · Moabits purgeSims
-            </div>
-            <div>
-              <strong style={{ color: T.title }}>Sincronizar</strong> · GET de la fuente
-            </div>
-          </div>
-        </Card>
-        <Card title="Bitácora reciente">
-          <div style={{ fontSize: 12, color: T.text }}>
-            {[
-              { d: "2026-04-15 10:22", a: "Sincronización · sistema" },
-              { d: "2026-03-22 14:08", a: "Reactivación · sofia.arias" },
-              { d: "2026-02-08 16:44", a: "Auto-purga · sistema" },
-            ].map((e, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  padding: "6px 0",
-                  borderBottom: i < 2 ? `1px solid ${T.rowDivider}` : "none",
-                }}
-              >
-                <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted, width: 110, flexShrink: 0 }}>
-                  {e.d}
-                </span>
-                <span style={{ flex: 1, fontSize: 12 }}>{e.a}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-const TABS = [
-  { id: "detalle", label: "Detalle" },
-  { id: "estado", label: "Estado e historial" },
-  { id: "consumo", label: "Consumo" },
-  { id: "presencia", label: "Presencia y red" },
-  { id: "limites", label: "Límites" },
-  { id: "acciones", label: "Acciones" },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
-
-export function SubscriptionPage({ record }: { record: SubscriptionRecord }) {
-  const router = useRouter();
-  const [tab, setTab] = useState<TabId>("detalle");
-  const src = SOURCES[record.source];
-
-  return (
-    <div
-      style={{
-        background: T.pageBg,
-        fontFamily: T.fontBody,
-        color: T.text,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "calc(100vh - 64px)",
-      }}
-    >
-      {/* Breadcrumb + URL bar */}
-      <div
-        style={{
-          padding: "10px 24px",
-          background: T.cardBg,
-          borderBottom: `1px solid ${T.border}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontSize: 12,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard/subscriptions")}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: T.muted,
-            cursor: "pointer",
-            padding: 4,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            fontFamily: T.fontBody,
-            fontSize: 12,
-          }}
-        >
-          <Icon.arrowLeft size={12} />
-          Suscripciones
-        </button>
-        <span style={{ color: T.muted }}>/</span>
-        <span style={{ fontFamily: T.fontMono, color: T.title, fontWeight: 600 }}>{record.id}</span>
-        <div style={{ flex: 1 }} />
-        <span
-          style={{
-            fontFamily: T.fontMono,
-            fontSize: 11,
-            color: T.muted,
-            padding: "3px 8px",
-            background: T.zebra,
-            borderRadius: 4,
-            border: `1px solid ${T.border}`,
-          }}
-        >
-          /subscription/{record.id.toLowerCase()}
-        </span>
-      </div>
-
-      {/* Hero header */}
-      <div style={{ background: T.cardBg, borderBottom: `1px solid ${T.border}`, padding: "20px 24px 0" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 18, marginBottom: 18, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-              <SourceBadge source={record.source} size="sm" />
-              <StatusPillWithNative
-                status={record.status}
-                nativeStatus={record.nativeStatus}
-                sourceName={src.name}
-                size="sm"
-              />
-              <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>·</span>
-              <span style={{ fontSize: 12, color: T.muted }}>{record.parent}</span>
-            </div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: T.title, letterSpacing: -0.5 }}>
-              {record.customer}
-            </h1>
-            <div style={{ fontSize: 13, color: T.muted, marginTop: 3, fontFamily: T.fontMono }}>
-              {record.customerEmail}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn variant="outline" size="md" icon={<Icon.refresh size={13} />}>
-              Sincronizar
-            </Btn>
-            <Btn variant="primary" size="md" icon={<Icon.play size={11} />}>
-              Reactivar
-            </Btn>
-          </div>
-        </div>
-
-        <FocalHero r={record} src={src} />
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 2, marginBottom: -1, overflowX: "auto" }}>
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              style={{
-                padding: "11px 16px",
-                background: "transparent",
-                border: "none",
-                borderBottom: `2px solid ${tab === t.id ? T.title : "transparent"}`,
-                color: tab === t.id ? T.title : T.muted,
-                fontFamily: T.fontBody,
-                fontSize: 13,
-                fontWeight: tab === t.id ? 700 : 500,
-                cursor: "pointer",
-                letterSpacing: -0.1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t.label}
-            </button>
+    <Card title={title}>
+      {entries.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          {entries.map(([metric, c]) => (
+            <KV
+              key={metric}
+              label={prettyKey(metric)}
+              value={`${formatVal(c.value)} / ${formatVal(c.limit)}`}
+              sub={[c.threshold_reached ? "umbral alcanzado" : null, c.traffic_cut ? "tráfico cortado" : null, c.enabled === false ? "deshabilitado" : null].filter(Boolean).join(" · ") || "normal"}
+              dot={c.traffic_cut ? T.danger : c.threshold_reached ? T.warning : T.success}
+            />
           ))}
         </div>
-      </div>
+      ) : (
+        <Empty text="Sin controles configurados." />
+      )}
+    </Card>
+  );
+}
 
-      {/* Tab content */}
-      <div style={{ flex: 1, padding: 24 }}>
-        {tab === "detalle" && <TabDetalle r={record} src={src} />}
-        {tab === "estado" && <TabEstado r={record} src={src} />}
-        {tab === "consumo" && <TabConsumo r={record} src={src} />}
-        {tab === "presencia" && <TabPresencia r={record} src={src} />}
-        {tab === "limites" && <TabLimites r={record} src={src} />}
-        {tab === "acciones" && <TabAcciones r={record} src={src} />}
+function useUsage(iccid: string, qs?: string): AsyncState<UsageOut> {
+  const key = `${iccid}:${qs ?? ""}`;
+  const [state, setState] = useState<{ key: string; value: AsyncState<UsageOut> }>({
+    key,
+    value: { status: "loading" },
+  });
+  useEffect(() => {
+    let alive = true;
+    getUsage(iccid, qs).then(
+      (data) => alive && setState({ key, value: { status: "success", data } }),
+      (err) => {
+        const e = errorMessage(err);
+        if (alive) setState({ key, value: { status: "error", ...e } });
+      }
+    );
+    return () => {
+      alive = false;
+    };
+  }, [iccid, key, qs]);
+  return state.key === key ? state.value : { status: "loading" };
+}
+
+function usePresence(iccid: string): AsyncState<PresenceOut> {
+  const [state, setState] = useState<{ key: string; value: AsyncState<PresenceOut> }>({
+    key: iccid,
+    value: { status: "loading" },
+  });
+  useEffect(() => {
+    let alive = true;
+    getPresence(iccid).then(
+      (data) => alive && setState({ key: iccid, value: { status: "success", data } }),
+      (err) => {
+        const e = errorMessage(err);
+        if (alive) setState({ key: iccid, value: { status: "error", ...e } });
+      }
+    );
+    return () => {
+      alive = false;
+    };
+  }, [iccid]);
+  return state.key === iccid ? state.value : { status: "loading" };
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>
+        {title}
+      </div>
+      <div>{children}</div>
+    </section>
+  );
+}
+
+function KV({ label, value, sub, mono, dot }: { label: string; value: string; sub?: string; mono?: boolean; dot?: string }) {
+  return (
+    <div style={{ padding: 16, borderRight: `1px solid ${T.divider}`, borderBottom: `1px solid ${T.divider}`, minWidth: 0 }}>
+      <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.6, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ color: T.title, fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: mono ? T.fontMono : T.fontBody, display: "flex", alignItems: "center", gap: 7 }}>
+        {dot && <span style={{ width: 8, height: 8, borderRadius: 99, background: dot, flexShrink: 0 }} />}
+        {value}
+      </div>
+      {sub && <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Empty({ text }: { text: string }) {
+  return <div style={{ padding: 18, color: T.muted, fontSize: 13 }}>{text}</div>;
+}
+
+function MiniChart({ label, bars }: { label: string; bars: { label: string; value: number; unit: string }[] }) {
+  const max = Math.max(...bars.map((b) => b.value), 1);
+  return (
+    <div style={{ padding: 16, borderRight: `1px solid ${T.divider}`, borderBottom: `1px solid ${T.divider}` }}>
+      <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.6, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>{label}</div>
+      <div style={{ height: 40, display: "flex", alignItems: "end", gap: 3 }}>
+        {bars.slice(-18).map((b, i) => (
+          <span key={`${b.label}-${i}`} title={`${b.label}: ${b.value} ${b.unit}`} style={{ flex: 1, minWidth: 3, height: `${Math.max(8, (b.value / max) * 40)}px`, background: T.info, borderRadius: 2, opacity: 0.35 + (b.value / max) * 0.55 }} />
+        ))}
       </div>
     </div>
   );
+}
+
+function BarChart({ bars }: { bars: { label: string; value: number; unit: string }[] }) {
+  const visibleBars = useMemo(() => bars.slice(-30), [bars]);
+  const max = Math.max(...visibleBars.map((b) => b.value), 1);
+  return (
+    <div style={{ padding: 18 }}>
+      <div style={{ height: 180, display: "flex", alignItems: "end", gap: 6 }}>
+        {visibleBars.map((b, i) => (
+          <div key={`${b.label}-${i}`} style={{ flex: 1, minWidth: 8, display: "flex", alignItems: "end" }}>
+            <div title={`${b.label}: ${b.value} ${b.unit}`} style={{ width: "100%", height: `${Math.max(6, (b.value / max) * 170)}px`, background: T.headerAccent, borderRadius: "3px 3px 0 0" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function presenceColor(state: PresenceOut["state"]) {
+  if (state === "online") return T.success;
+  if (state === "offline") return T.danger;
+  return T.muted;
 }

@@ -1,13 +1,11 @@
 "use client";
 
 import { CSSProperties } from "react";
-import { DATA, fmtCOP, fmtShortDate } from "./data";
-import { Btn, Chip, Icon, SourceBadge, StatusPillWithNative, UsageBar } from "./primitives";
+import { Btn, Chip, Icon } from "./primitives";
 import { SOURCES, SourceId, T } from "./tokens";
 
-const GRID_COLS = "4px 150px 1.1fr 0.95fr 130px 110px 130px 110px 100px 110px";
+const GRID_COLS = "4px 170px 1.1fr 1fr 0.95fr 170px 120px 120px 100px";
 const cellH: CSSProperties = { padding: "9px 12px" };
-const cell: CSSProperties = { padding: "9px 12px", minWidth: 0 };
 
 const SHIMMER_BG = `linear-gradient(90deg, ${T.divider}, ${T.zebra}, ${T.divider})`;
 
@@ -288,12 +286,7 @@ function SourceStatus({
   );
 }
 
-// "Moabits caído" partial-error variant: top has a non-blocking warning banner,
-// per-source status strip, and the rest of the table renders Kite + Tele2 rows
-// with a placeholder strip for the failed source so users don't lose data
-// they could otherwise see.
 export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
-  const visibleRows = DATA.filter((r) => r.source !== "moabits" && r.customer.includes("Valentina"));
   return (
     <div
       style={{
@@ -341,8 +334,8 @@ export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
             <Icon.warn size={15} />
           </span>
           <div style={{ flex: 1, fontSize: 12.5, color: "#6B4A0E" }}>
-            <strong style={{ fontWeight: 700 }}>Moabits no respondió.</strong> Mostramos resultados parciales de Kite y
-            Tele2. Los registros de Moabits pueden estar desactualizados.
+            <strong style={{ fontWeight: 700 }}>No se pudo cargar la lista.</strong> Revisa la conexión con el backend
+            o prueba filtrando por un proveedor específico.
           </div>
           <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />}>
             Reintentar
@@ -350,9 +343,9 @@ export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-          <SourceStatus source="kite" ok count={2} latency="142 ms" />
-          <SourceStatus source="tele2" ok count={1} latency="98 ms" />
-          <SourceStatus source="moabits" ok={false} err="Timeout · 8.0s" />
+          <SourceStatus source="kite" ok={false} err="Sin datos" />
+          <SourceStatus source="tele2" ok={false} err="Sin datos" />
+          <SourceStatus source="moabits" ok={false} err="Sin datos" />
         </div>
       </div>
 
@@ -371,152 +364,16 @@ export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
           }}
         >
           <div />
-          <div style={cellH}>ID</div>
-          <div style={cellH}>Cliente</div>
+          <div style={cellH}>ICCID</div>
+          <div style={cellH}>Identidad</div>
           <div style={cellH}>Plan</div>
-          <div style={cellH}>Compañía</div>
+          <div style={cellH}>Cliente</div>
           <div style={cellH}>Estado</div>
-          <div style={cellH}>Consumo</div>
-          <div style={{ ...cellH, textAlign: "right" }}>Monto</div>
-          <div style={cellH}>Renovación</div>
+          <div style={cellH}>Operador</div>
+          <div style={cellH}>Última actualización</div>
           <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }}>Detalle</div>
         </div>
 
-        {visibleRows.map((r, i) => {
-          const src = SOURCES[r.source];
-          return (
-            <div
-              key={r.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: GRID_COLS,
-                alignItems: "stretch",
-                background: i % 2 ? T.zebra : T.cardBg,
-                borderBottom: `1px solid ${T.rowDivider}`,
-                fontSize: 12.5,
-              }}
-            >
-              <div style={{ background: src.color }} />
-              <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
-                <SourceBadge source={r.source} size="sm" />
-                <span
-                  style={{
-                    fontFamily: T.fontMono,
-                    fontSize: 11.5,
-                    color: T.title,
-                    fontWeight: 500,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {r.id}
-                </span>
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      color: T.title,
-                      fontWeight: 600,
-                      fontSize: 12.5,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {r.customer}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: T.muted,
-                      marginTop: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {r.customerEmail}
-                  </div>
-                </div>
-              </div>
-              <div
-                style={{
-                  ...cell,
-                  color: T.text,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.plan}</div>
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>Desde {fmtShortDate(r.createdAt)}</div>
-              </div>
-              <div
-                title={r.parent}
-                style={{
-                  ...cell,
-                  fontSize: 11.5,
-                  color: T.text,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                {r.parent}
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center" }}>
-                <StatusPillWithNative
-                  status={r.status}
-                  nativeStatus={r.nativeStatus}
-                  sourceName={src.name}
-                  size="sm"
-                />
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center" }}>
-                <UsageBar used={r.usage?.used} total={r.usage?.total} unit={r.usage?.unit} width={120} />
-              </div>
-              <div
-                style={{
-                  ...cell,
-                  textAlign: "right",
-                  fontFamily: T.fontMono,
-                  fontSize: 12.5,
-                  color: T.title,
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                }}
-              >
-                {fmtCOP(r.amount)}
-              </div>
-              <div style={{ ...cell, fontSize: 12, color: T.text, display: "flex", alignItems: "center" }}>
-                {fmtShortDate(r.nextRenewal)}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 12 }}>
-                <span
-                  style={{
-                    fontSize: 11.5,
-                    color: T.muted,
-                    fontWeight: 600,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "4px 8px",
-                  }}
-                >
-                  Ver detalle <Icon.arrowRight size={11} />
-                </span>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Placeholder card for the failed source */}
         <div
           style={{
             display: "flex",
@@ -544,12 +401,12 @@ export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
               fontSize: 12,
             }}
           >
-            M
+            !
           </span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12.5, color: T.title, fontWeight: 600 }}>Moabits no disponible</div>
+            <div style={{ fontSize: 12.5, color: T.title, fontWeight: 600 }}>No hay filas para mostrar</div>
             <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2, fontFamily: T.fontMono }}>
-              Última sync correcta: hace 14 min · Error: <span style={{ color: T.warning }}>TIMEOUT_8S</span>
+              Consulta: <span style={{ color: T.warning }}>{query}</span>
             </div>
           </div>
           <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />}>

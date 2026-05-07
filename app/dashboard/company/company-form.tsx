@@ -23,10 +23,9 @@ const companySchema = z.object({
 type CompanyFormData = z.infer<typeof companySchema>
 
 export default function CompanyForm({
-  initialName, subscriptionStatus
+  initialName
 }: {
-  initialName: string,
-  subscriptionStatus: string
+  initialName: string
 }) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -53,14 +52,6 @@ export default function CompanyForm({
 
   return (
     <div className="space-y-6">
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-muted mb-1">Estado de suscripción</label>
-        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 uppercase tracking-wide">
-          {subscriptionStatus}
-        </div>
-      </div>
-
-      <hr className="border-border my-6" />
 
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
       {success && <div className="text-sm bg-green-100 text-green-800 p-3 rounded-md">{success}</div>}

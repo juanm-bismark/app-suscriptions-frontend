@@ -1,101 +1,52 @@
-# Setup de Autenticación
+# Auth Setup
 
-Frontend con NextAuth + Email/Contraseña + PostgreSQL.
+This frontend uses NextAuth for browser sessions, but the backend is the auth
+authority. There is no Prisma user table in the frontend.
 
-## 1. Configurar PostgreSQL
-
-### Opción A: Docker (recomendado)
-```bash
-docker run --name postgres \
-  -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=app_suscripciones \
-  -p 5432:5432 \
-  -d postgres
-```
-
-### Opción B: Local
-Instala PostgreSQL e crea una base de datos llamada `app_suscripciones`.
-
-### Opción C: Cloud
-- Supabase: https://supabase.com
-- Vercel Postgres: https://vercel.com/postgres
-- Railway: https://railway.app
-
-## 2. Completar .env.local
-
-Abre `.env.local` y reemplaza:
+## Environment
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/app_suscripciones"
-AUTH_SECRET="tu-secret-aqui"
+NEXT_PUBLIC_API_URL=http://localhost:8000
+API_URL=http://localhost:8000
+AUTH_SECRET=replace-with-a-long-random-secret
 ```
 
-**Para generar AUTH_SECRET:**
+Generate `AUTH_SECRET` with:
+
 ```bash
 npx auth secret
 ```
 
-Esto genera una cadena larga. Cópiala y pégala en `AUTH_SECRET=`.
+## Runtime Flow
 
-## 3. Crear la base de datos
+1. Registration submits `POST /v1/auth/signup` from `app/actions/auth.ts`.
+2. Login uses the NextAuth Credentials provider in `auth.ts`.
+3. The provider calls `POST /v1/auth/login` and receives backend JWTs.
+4. The JWT callback stores `accessToken`, `refreshToken`, `expiresAt`, `role`, and `companyId`.
+5. Server Components and Server Actions call `fetchApi`, which attaches the access token.
+6. When the access token is expired, `auth.ts` calls `POST /v1/auth/refresh`.
+7. Logout calls `POST /v1/auth/logout` with the refresh token.
 
-Ejecuta las migraciones de Prisma:
-```bash
-npx prisma migrate dev --name init
-```
+## Routes
 
-Esto crea la tabla `User`.
-
-## 4. Probar
-
-```bash
-npm run dev
-```
-
-Abre http://localhost:3000/register y crea un usuario.
-
-## Archivos creados
-
-- **auth.ts** — Configuración de NextAuth con Credentials provider
-- **prisma/schema.prisma** — Modelo de base de datos
-- **app/api/auth/[...nextauth]/route.ts** — Route handler para NextAuth
-- **app/login/page.tsx** — Página de login
-- **app/register/page.tsx** — Página de registro
-- **app/dashboard/page.tsx** — Página protegida (requiere login)
-- **app/actions/auth.ts** — Server action para registrar usuarios
-- **app/components/** — Botones de sign-in/sign-out
-
-## Rutas disponibles
-
-- `/login` — Login
-- `/register` — Registro
-- `/dashboard` — Protegida (requiere autenticación)
-- `/api/auth/*` — NextAuth endpoints
-
-## Personalización
-
-### Cambiar email del provider
-Edita `auth.ts` en la sección `authorize()`.
-
-### Agregar más campos a User
-1. Edita `prisma/schema.prisma`
-2. Ejecuta `npx prisma migrate dev --name add_field`
-
-### Redirigir después del login
-En `app/login/page.tsx`, cambia:
-```typescript
-router.push("/dashboard")  // Cambia esto
-```
+- `/register` creates the backend user and tenant.
+- `/login` starts a NextAuth session backed by the backend JWT.
+- `/dashboard` and nested pages require an authenticated session.
+- `/api/auth/*` is handled by NextAuth.
 
 ## Troubleshooting
 
-**Error: "Database connection failed"**
-- Verifica DATABASE_URL en .env.local
-- Verifica que PostgreSQL esté corriendo
+**401 after login**
 
-**Error: "AUTH_SECRET is not set"**
-- Ejecuta `npx auth secret`
-- Copia el output a .env.local
+Check that `API_URL` points to the running backend and that the backend accepts
+the credentials used on `/login`.
 
-**Error: "Table User does not exist"**
-- Ejecuta `npx prisma migrate dev --name init`
+**Session expires unexpectedly**
+
+Confirm the backend refresh endpoint is reachable at `POST /v1/auth/refresh`
+and that `AUTH_SECRET` is stable between app restarts.
+
+**Server Components cannot call the API**
+
+Set `API_URL` to a backend URL reachable from the Next.js server process. The
+browser-facing `NEXT_PUBLIC_API_URL` is only the fallback.

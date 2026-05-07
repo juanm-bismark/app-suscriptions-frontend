@@ -1,19 +1,24 @@
 "use server"
 
+import { ApiError } from "@/lib/api-client"
+import { signup } from "@/lib/api/auth"
 import { z } from "zod"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 const registerSchema = z.object({
   email: z.string().email("Correo inválido"),
-  password: z.string().min(6, "Mínimo 6 caracteres"),
+  password: z.string().min(8, "Mínimo 8 caracteres"),
+  full_name: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(2, "Nombre requerido").optional()
+  ),
   company_name: z.string().min(1, "Empresa requerida"),
-  name: z.string().optional(),
 })
+
+type RegisterResult = { success: true } | { error: string }
 
 export async function registerUser(
   data: z.infer<typeof registerSchema>
-) {
+): Promise<RegisterResult> {
   const parsed = registerSchema.safeParse(data)
   if (!parsed.success) {
     return {
@@ -22,32 +27,39 @@ export async function registerUser(
   }
 
   try {
-    const response = await fetch(`${API_URL}/auth/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: parsed.data.email,
-        password: parsed.data.password,
-        company_name: parsed.data.company_name,
-        name: parsed.data.name || null,
-      }),
+    const tokenResponse = await signup({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      company_name: parsed.data.company_name,
+      full_name: parsed.data.full_name || null,
     })
 
-    if (!response.ok) {
-      const error = await response.json()
+    if (!tokenResponse.access_token || !tokenResponse.refresh_token) {
       return {
-        error: error.message || "Error al registrar",
+        error: "Respuesta de registro inválida",
       }
     }
 
-    const user = await response.json()
     return {
       success: true,
-      userId: user.id,
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      if (error.status === 409) {
+        if (error.detail === "Email already exists") {
+          return { error: "Ya existe una cuenta con este correo" }
+        }
+
+        if (error.detail === "Company name already exists") {
+          return { error: "Ya existe una empresa con este nombre" }
+        }
+      }
+
+      return {
+        error: error.detail || error.message || "Error al registrar",
+      }
+    }
+
     return {
       error: "Error de conexión con el servidor",
     }

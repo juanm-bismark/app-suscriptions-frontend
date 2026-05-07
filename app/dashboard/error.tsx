@@ -1,5 +1,7 @@
 "use client"
 
+import { ProblemAlert } from "@/app/dashboard/_components/problem-alert"
+
 interface ErrorProps {
   error: Error & { digest?: string }
   reset: () => void
@@ -30,37 +32,17 @@ export default function DashboardError({ error, reset }: ErrorProps) {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-title mb-2">
-            Algo sali   mal
+            Algo salio mal
           </h2>
           <p className="text-muted mb-8">
-            Ocurri   un error al cargar el panel. Por favor, intenta de nuevo.
+            Ocurrio un error al cargar el panel. Por favor, intenta de nuevo.
           </p>
-          {process.env.NODE_ENV === "development" && (
-            <div className="mb-8 text-left bg-zebra border border-divider rounded-lg p-4 overflow-auto max-h-32">
-              <p className="text-xs font-mono text-muted whitespace-pre-wrap break-words">
-                {error.message}
-              </p>
-            </div>
-          )}
-          <button
-            onClick={reset}
-            className="inline-flex items-center px-6 py-3 bg-header-accent text-white rounded-lg hover:bg-opacity-hover-emphasis transition-colors font-medium"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.581 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            Intentar de nuevo
-          </button>
+          <ProblemAlert
+            problem={error}
+            title="Error al cargar el panel"
+            fallbackDetail="Ocurrio un problema al cargar el panel."
+            onRetry={reset}
+          />
         </div>
       </div>
     </div>

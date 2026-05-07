@@ -27,7 +27,8 @@ export async function updateCompany(formData: FormData) {
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/company")
     return { success: true, message: "Empresa actualizada exitosamente" }
-  } catch (error: any) {
-    return { error: error.message || "No se pudo actualizar la empresa. ¿Eres Administrador?" }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : null
+    return { error: message || "No se pudo actualizar la empresa. ¿Eres Administrador?" }
   }
 }

@@ -11,6 +11,7 @@ export const getSession = cache(async () => {
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const session = await getSession()
   if (!session?.user) return null
+  if (session.user.error === "RefreshAccessTokenError") return null
 
   try {
     return await fetchApi<Profile>("/me")
@@ -23,6 +24,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
 export const getCompany = cache(async (): Promise<Company | null> => {
   const session = await getSession()
   if (!session?.user) return null
+  if (session.user.error === "RefreshAccessTokenError") return null
 
   try {
     return await fetchApi<Company>("/companies/me")
