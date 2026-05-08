@@ -34,12 +34,7 @@ const FEATURES: HeroFeature[] = [
 export function HeroSection() {
   return (
     <div className="relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-header-accent rounded-full mix-blend-multiply filter blur-3xl opacity-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-header-client rounded-full mix-blend-multiply filter blur-3xl opacity-blob"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
         <div className="text-center">
           <div className="flex justify-center mb-6">
             <Logo size="md" />
@@ -54,20 +49,20 @@ export function HeroSection() {
             Controla costos, fechas de renovación y nunca olvides una suscripción importante
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center px-4 mb-16">
-            <Link href="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full bg-header-accent hover:bg-header-accent/hover-emphasis">
-                Comenzar Ahora
+          <div className="flex flex-col sm:flex-row gap-4 justify-center px-4 mb-14">
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full border-0 bg-[#1A4A52] text-white shadow-sm shadow-black/15 hover:bg-[#235D66] hover:text-white">
+                Inicia sesión
               </Button>
             </Link>
-            <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full border-header-accent text-header-accent hover:bg-header-accent/badge">
-                Inicia sesión
+            <Link href="/register" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full bg-white text-[#12343B] shadow-md shadow-black/15 hover:bg-[#DFF4F2] hover:text-[#12343B]">
+                Comenzar Ahora
               </Button>
             </Link>
           </div>
 
-          <div className="bg-header-info-bg/soft-bg backdrop-blur border border-header-info-border rounded-lg p-6 sm:p-8 max-w-2xl mx-auto">
+          <div className="bg-white/[0.07] backdrop-blur rounded-lg p-6 shadow-sm shadow-black/10 ring-1 ring-white/10 sm:p-8 max-w-2xl mx-auto">
             <h3 className="text-header-text font-semibold mb-6 text-lg">Por qué App Suscripciones</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
               {FEATURES.map((feature) => (

@@ -29,6 +29,16 @@ export interface CompanySettings {
   updated_at: string
 }
 
+export interface Page<T> {
+  items: T[]
+  total: number | null
+  page: number
+  size: number
+  pages: number | null
+}
+
 export const isAdmin = (role?: UserRole) => role === ROLES.ADMIN
 export const canManageUsers = (role?: UserRole) =>
   role === ROLES.ADMIN || role === ROLES.MANAGER
+export const canViewCompany = (role?: UserRole) =>
+  role === ROLES.ADMIN || role === ROLES.MANAGER || role === ROLES.MEMBER

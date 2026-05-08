@@ -10,7 +10,6 @@ declare module "next-auth" {
     user: {
       id: string
       accessToken?: string
-      refreshToken?: string
       accessTokenExpiresAt?: number
       role?: UserRole
       companyId?: string | null
@@ -40,6 +39,8 @@ declare module "next-auth/jwt" {
 }
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const ACCESS_TOKEN_REFRESH_MARGIN_MS = 60_000
+const refreshRequests = new Map<string, Promise<JWT>>()
 
 const credentialsSchema = z.object({
   email: z.string().min(1),
@@ -72,6 +73,22 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     return { ...token, error: "RefreshAccessTokenError" }
   }
 
+  const existingRefresh = refreshRequests.get(token.refreshToken)
+  if (existingRefresh) return existingRefresh
+
+  const refreshRequest = refreshAccessTokenRequest(token).finally(() => {
+    if (token.refreshToken) refreshRequests.delete(token.refreshToken)
+  })
+
+  refreshRequests.set(token.refreshToken, refreshRequest)
+  return refreshRequest
+}
+
+async function refreshAccessTokenRequest(token: JWT): Promise<JWT> {
+  if (!token.refreshToken) {
+    return { ...token, error: "RefreshAccessTokenError" }
+  }
+
   try {
     const response = await fetch(`${API_URL}/v1/auth/refresh`, {
       method: "POST",
@@ -97,6 +114,22 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   } catch (error) {
     console.error("Refresh token error:", error)
     return { ...token, error: "RefreshAccessTokenError" }
+  }
+}
+
+async function revokeRefreshToken(refreshToken: unknown) {
+  if (typeof refreshToken !== "string" || !refreshToken) return
+
+  try {
+    await fetch(`${API_URL}/v1/auth/logout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+  } catch (error) {
+    console.error("Refresh token revoke error:", error)
   }
 }
 
@@ -188,7 +221,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (
         token.accessTokenExpiresAt &&
-        Date.now() > token.accessTokenExpiresAt - 60_000
+        !token.error &&
+        Date.now() > token.accessTokenExpiresAt - ACCESS_TOKEN_REFRESH_MARGIN_MS
       ) {
         return refreshAccessToken(token)
       }
@@ -199,13 +233,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string
         session.user.accessToken = token.accessToken as string | undefined
-        session.user.refreshToken = token.refreshToken as string | undefined
         session.user.accessTokenExpiresAt = token.accessTokenExpiresAt as number | undefined
         session.user.role = token.role as UserRole | undefined
         session.user.companyId = token.companyId as string | null | undefined
         session.user.error = token.error
       }
       return session
+    },
+  },
+  events: {
+    async signOut(message) {
+      if ("token" in message) {
+        await revokeRefreshToken(message.token?.refreshToken)
+      }
     },
   },
 })

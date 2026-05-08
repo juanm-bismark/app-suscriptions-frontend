@@ -56,7 +56,7 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
   return (
     <div className="space-y-4">
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-green-100 text-green-800 p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -67,7 +67,7 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
               <FormItem>
                 <FormLabel>Nombre completo</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Nombre del empleado" />
+                  <Input {...field} placeholder="Nombre del empleado" className="border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -81,7 +81,7 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
               <FormItem>
                 <FormLabel>Correo electrónico</FormLabel>
                 <FormControl>
-                  <Input {...field} type="email" placeholder="usuario@bismark.com" />
+                  <Input {...field} type="email" placeholder="usuario@bismark.com" className="border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -95,7 +95,7 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
               <FormItem>
                 <FormLabel>Contraseña temporal</FormLabel>
                 <FormControl>
-                  <Input {...field} type="password" placeholder="••••••" />
+                  <Input {...field} type="password" placeholder="••••••" className="border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -111,10 +111,10 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
                 <FormControl>
                   <select
                     {...field}
-                    className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-page text-title focus:outline-none focus:ring-1 focus:ring-header-info-border"
+                    className="mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus:ring-2 focus:ring-header-accent"
                   >
                     <option value="member">Miembro (Visualizar e interactuar base)</option>
-                    {(currentRole === "admin" || currentRole === "manager") && (
+                    {currentRole === "admin" && (
                       <option value="manager">Manager (Añadir miembros y editar planes)</option>
                     )}
                     {currentRole === "admin" && (
@@ -130,7 +130,7 @@ export default function CreateUserForm({ currentRole }: { currentRole: string })
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="w-full"
+            className="w-full bg-[#0E7490] text-white shadow-sm shadow-[#0E7490]/20 hover:bg-[#155E75] hover:text-white"
           >
             {form.formState.isSubmitting ? "Añadiendo..." : "Añadir usuario"}
           </Button>

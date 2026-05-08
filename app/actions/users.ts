@@ -11,6 +11,12 @@ const createUserSchema = z.object({
   role: z.enum(["admin", "manager", "member"], { error: "Rol inválido" }),
 })
 
+const updateUserSchema = z.object({
+  id: z.string().uuid("Usuario inválido"),
+  full_name: z.string().min(2, "Mínimo 2 caracteres"),
+  role: z.enum(["admin", "manager", "member"], { error: "Rol inválido" }).optional(),
+})
+
 export async function createUser(formData: FormData) {
   try {
     const rawData = {
@@ -35,5 +41,33 @@ export async function createUser(formData: FormData) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : null
     return { error: message || "No se pudo crear el usuario. ¿Tienes permisos?" }
+  }
+}
+
+export async function updateUser(formData: FormData) {
+  try {
+    const role = formData.get("role")
+    const rawData = {
+      id: formData.get("id"),
+      full_name: formData.get("full_name"),
+      role: typeof role === "string" && role.length > 0 ? role : undefined,
+    }
+
+    const parsed = updateUserSchema.safeParse(rawData)
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0].message }
+    }
+
+    const { id, ...body } = parsed.data
+    await fetchApi(`/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    })
+
+    revalidatePath("/dashboard/users")
+    return { success: true, message: "Usuario actualizado" }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : null
+    return { error: message || "No se pudo actualizar el usuario. ¿Tienes permisos?" }
   }
 }

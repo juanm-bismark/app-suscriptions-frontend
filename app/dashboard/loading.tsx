@@ -1,70 +1,71 @@
 export default function DashboardLoading() {
+  const providerSkeletonColors = ["bg-[#E5F5F6]", "bg-[#F0EAFB]", "bg-[#FCEADC]"]
+
   return (
-    <div className="flex-1 flex flex-col bg-page">
-      {/* Header skeleton */}
-      <div className="bg-card border-b border-divider px-8 py-6">
-        <div className="animate-pulse space-y-2">
-          <div className="h-9 bg-zebra rounded w-48"></div>
-          <div className="h-4 bg-zebra rounded w-96"></div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="mb-6 animate-pulse space-y-2 sm:mb-8">
+        <div className="h-10 w-64 rounded bg-zebra" />
+        <div className="h-4 w-80 max-w-full rounded bg-zebra" />
       </div>
 
-      {/* Content skeleton */}
-      <div className="flex-1 px-8 py-6 overflow-auto">
-        {/* Quick Stats - 4 cards */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="bg-white border border-divider rounded-lg p-4 animate-pulse"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-3 bg-zebra rounded w-24"></div>
-                <div className="h-5 bg-zebra rounded w-5"></div>
+      <section className="space-y-4">
+        <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="flex min-h-32 animate-pulse flex-col justify-between rounded-lg bg-gradient-to-b from-white to-[#EAF6F7] px-4 py-4 shadow-sm shadow-header-top/5">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-md bg-[#DDF1F2]" />
+                  <div className="h-4 w-24 rounded bg-zebra" />
+                </div>
+                <div className="h-9 w-20 rounded bg-zebra" />
+                <div className="h-3 w-28 rounded bg-zebra" />
               </div>
-              <div className="h-8 bg-zebra rounded w-16"></div>
+            ))}
+          </div>
+
+          <div className="animate-pulse rounded-lg bg-[#DDF1F2] p-4 shadow-sm shadow-header-top/5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="h-3 w-24 rounded bg-zebra" />
+                <div className="h-6 w-52 rounded bg-zebra" />
+              </div>
+              <div className="h-5 w-5 rounded bg-[#326472]" />
+            </div>
+            <div className="mt-3 space-y-2">
+              <div className="h-4 w-full rounded bg-zebra" />
+              <div className="h-4 w-2/3 rounded bg-zebra" />
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <div className="h-10 w-40 rounded-md bg-header-bg" />
+              <div className="h-10 w-32 rounded-md bg-white/75" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className={`animate-pulse rounded-lg px-4 py-2.5 shadow-sm shadow-header-top/5 ${providerSkeletonColors[item - 1]}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="h-4 w-20 rounded bg-zebra" />
+                  <div className="h-3 w-24 rounded bg-zebra" />
+                </div>
+                <div className="h-6 w-16 rounded-full bg-[#DDF4EA]" />
+              </div>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* CTA Box skeleton */}
-        <div className="bg-white border border-divider rounded-lg p-8 text-center max-w-2xl mx-auto animate-pulse">
-          <div className="mb-4 inline-flex items-center justify-center w-14 h-14 bg-zebra rounded-lg"></div>
-          <div className="h-8 bg-zebra rounded w-48 mx-auto mb-2"></div>
-          <div className="space-y-2 mb-6">
-            <div className="h-4 bg-zebra rounded w-full"></div>
-            <div className="h-4 bg-zebra rounded w-3/4 mx-auto"></div>
-          </div>
-          <div className="h-10 bg-zebra rounded w-40 mx-auto"></div>
-        </div>
-
-        {/* Quick Links skeleton */}
-        <div className="mt-12">
-          <div className="h-6 bg-zebra rounded w-32 mb-4 animate-pulse"></div>
-          <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="p-4 bg-white border border-divider rounded-lg animate-pulse"
-              >
-                <div className="h-5 bg-zebra rounded w-5 mx-auto mb-2"></div>
-                <div className="h-4 bg-zebra rounded w-20 mx-auto"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Account Info skeleton */}
-        <div className="mt-12 max-w-2xl animate-pulse">
-          <div className="h-6 bg-zebra rounded w-40 mb-4"></div>
-          <div className="bg-white border border-divider rounded-lg p-6 space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex justify-between items-start">
-                <div className="h-4 bg-zebra rounded w-20"></div>
-                <div className="h-4 bg-zebra rounded w-32"></div>
-              </div>
-            ))}
-          </div>
+      <div className="mt-12 pt-8">
+        <div className="mb-6 h-6 w-44 animate-pulse rounded bg-zebra" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="animate-pulse rounded-lg bg-[#F5FAFA] p-4 shadow-sm shadow-header-top/5 sm:p-6">
+              <div className="mb-3 h-4 w-20 rounded bg-zebra" />
+              <div className="h-5 w-36 rounded bg-zebra" />
+            </div>
+          ))}
         </div>
       </div>
     </div>

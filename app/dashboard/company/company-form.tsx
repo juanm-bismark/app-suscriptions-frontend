@@ -23,9 +23,11 @@ const companySchema = z.object({
 type CompanyFormData = z.infer<typeof companySchema>
 
 export default function CompanyForm({
-  initialName
+  initialName,
+  canEdit,
 }: {
   initialName: string
+  canEdit: boolean
 }) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -36,6 +38,8 @@ export default function CompanyForm({
   })
 
   async function onSubmit(data: CompanyFormData) {
+    if (!canEdit) return
+
     setError(null)
     setSuccess(null)
 
@@ -54,7 +58,7 @@ export default function CompanyForm({
     <div className="space-y-6">
 
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-green-100 text-green-800 p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -65,19 +69,27 @@ export default function CompanyForm({
               <FormItem>
                 <FormLabel>Nombre de la Empresa</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Ej. Bismark" />
+                  <Input
+                    {...field}
+                    readOnly={!canEdit}
+                    placeholder="Ej. Bismark"
+                    className="border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent read-only:text-muted"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button
-            type="submit"
-            disabled={form.formState.isSubmitting}
-          >
-            {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
-          </Button>
+          {canEdit && (
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting}
+              className="bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
+            >
+              {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          )}
         </form>
       </Form>
     </div>

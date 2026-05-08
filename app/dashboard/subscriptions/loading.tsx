@@ -1,5 +1,5 @@
-import { PageLoadingSkeleton } from "@/app/dashboard/_components/page-skeletons"
+import { LoadingState } from "./state-views"
 
 export default function SubscriptionsLoading() {
-  return <PageLoadingSkeleton />
+  return <LoadingState />
 }

@@ -66,9 +66,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-header-top via-header-bg to-header-bg flex flex-col">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-header-top via-header-bg to-header-bg">
       {/* Header */}
-      <div className="bg-header-bg border-b border-header-info-border">
+      <div className="bg-header-bg/95 shadow-sm shadow-black/10 ring-1 ring-white/5 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
             <Logo size="md" />
@@ -79,14 +79,15 @@ export default function LoginPage() {
       {/* Main */}
       <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
-          <div className="bg-card rounded-lg shadow-lg p-6 sm:p-8">
-            <h1 className="text-3xl font-bold text-title text-center mb-2">Inicia sesión</h1>
-            <p className="text-center text-muted mb-8 text-sm">
+          <div className="rounded-lg bg-card p-6 shadow-lg shadow-header-top/15 ring-1 ring-white/30 sm:p-8">
+            <div className="mx-auto mb-6 h-1 w-14 rounded-full bg-header-accent" />
+            <h1 className="text-center text-3xl font-bold text-title">Inicia sesión</h1>
+            <p className="mb-8 mt-2 text-center text-sm text-muted">
               Accede a tu cuenta para gestionar tus suscripciones
             </p>
 
             {error && (
-              <div className="bg-warn-bg border border-warn-border text-warn-text px-4 py-3 rounded-lg mb-6 text-sm">
+              <div className="mb-6 rounded-md bg-warn-bg px-4 py-3 text-sm font-medium text-warn-text shadow-sm">
                 {error}
               </div>
             )}
@@ -103,7 +104,7 @@ export default function LoginPage() {
                         <Input
                           type="email"
                           placeholder="tu@correo.com"
-                          className="border-border bg-white text-text placeholder:text-muted"
+                          className="h-11 border-border bg-white text-text shadow-sm placeholder:text-muted focus-visible:ring-header-accent"
                           {...field}
                         />
                       </FormControl>
@@ -122,7 +123,7 @@ export default function LoginPage() {
                         <Input
                           type="password"
                           placeholder="••••••"
-                          className="border-border bg-white text-text placeholder:text-muted"
+                          className="h-11 border-border bg-white text-text shadow-sm placeholder:text-muted focus-visible:ring-header-accent"
                           {...field}
                         />
                       </FormControl>
@@ -134,16 +135,16 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={form.formState.isSubmitting}
-                  className="w-full mt-6 py-6 text-lg font-bold shadow-md transition-all duration-200 hover:shadow-lg"
+                  className="mt-6 h-12 w-full bg-[#12343B] text-base font-bold text-white shadow-md shadow-header-top/15 transition-all duration-200 hover:bg-[#1A4A52] hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
                 >
                   {form.formState.isSubmitting ? "Iniciando..." : "Iniciar sesión"}
                 </Button>
               </form>
             </Form>
 
-            <div className="mt-8 text-center border-t border-border pt-6">
-              <p className="text-muted text-sm mb-3">¿No tienes cuenta?</p>
-              <Button asChild variant="ghost" className="w-full font-semibold">
+            <div className="mt-8 text-center">
+              <p className="mb-3 text-sm text-muted">¿No tienes cuenta?</p>
+              <Button asChild variant="secondary" className="h-10 w-full bg-[#1A4A52] font-semibold text-white shadow-sm shadow-header-top/10 hover:bg-[#235D66] hover:text-white">
                 <Link href="/register">
                   Crear cuenta
                 </Link>

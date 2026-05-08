@@ -23,17 +23,17 @@ export default async function MoabitsCredentialsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="bg-card rounded-lg shadow border border-border p-6 sm:p-8 self-start">
+        <section className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
           <h2 className="text-xl font-semibold text-title mb-4">Credenciales</h2>
           {!credentialResult.ok && credentialResult.status !== 404 && (
-            <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+            <div className="mb-4 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
               {credentialResult.error}
             </div>
           )}
           <CredentialForm provider="moabits" credential={credential} />
         </section>
 
-        <section className="bg-card rounded-lg shadow border border-border p-6 sm:p-8 self-start">
+        <section className="bg-[#FCEADC] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
           <h2 className="text-xl font-semibold text-title mb-2">Companias Moabits</h2>
           <p className="text-sm text-muted mb-4">
             {discoveryResult.ok
@@ -43,7 +43,7 @@ export default async function MoabitsCredentialsPage() {
           {discoveryResult.ok ? (
             <MoabitsCompanySelector discovery={discoveryResult.data} />
           ) : (
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+            <div className="rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
               {discoveryResult.error}
             </div>
           )}

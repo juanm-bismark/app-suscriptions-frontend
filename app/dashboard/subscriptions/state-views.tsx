@@ -14,7 +14,9 @@ const STATE_KEYFRAMES = `
 @keyframes bismark-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 `;
 
-export function LoadingState({ query = "ocampo" }: { query?: string }) {
+export function LoadingState({ query }: { query?: string }) {
+  const hasQuery = Boolean(query?.trim());
+
   return (
     <div
       style={{
@@ -27,34 +29,147 @@ export function LoadingState({ query = "ocampo" }: { query?: string }) {
     >
       <style>{STATE_KEYFRAMES}</style>
       <div style={{ padding: "22px 24px 16px", borderBottom: `1px solid ${T.border}`, background: T.cardBg }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, marginBottom: 14 }}>
-          Suscripciones
-        </h1>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: T.pageBg,
-            border: `1px solid ${T.headerAccent}`,
-            boxShadow: `0 0 0 3px ${T.headerAccent}22`,
-            borderRadius: 6,
-            padding: "9px 12px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div
+              style={{
+                fontSize: 11,
+                letterSpacing: 1.2,
+                color: T.muted,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                marginBottom: 4,
+              }}
+            >
+              Búsqueda unificada
+            </div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: -0.4 }}>
+              Suscripciones
+            </h1>
+          </div>
+          <Btn variant="outline" size="sm" icon={<Icon.refresh size={13} />}>
+            Sincronizar
+          </Btn>
+        </div>
+
+        {hasQuery && (
           <div
             style={{
-              width: 15,
-              height: 15,
-              borderRadius: "50%",
-              border: `2px solid ${T.headerAccent}`,
-              borderTopColor: "transparent",
-              animation: "bismark-spin 0.7s linear infinite",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: T.pageBg,
+              border: `1px solid ${T.headerAccent}`,
+              boxShadow: `0 0 0 3px ${T.headerAccent}22`,
+              borderRadius: 6,
+              padding: "9px 12px",
+              marginBottom: 16,
             }}
-          />
-          <span style={{ flex: 1, fontSize: 13.5, color: T.text }}>{query}</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>buscando…</span>
+          >
+            <div
+              style={{
+                width: 15,
+                height: 15,
+                borderRadius: "50%",
+                border: `2px solid ${T.headerAccent}`,
+                borderTopColor: "transparent",
+                animation: "bismark-spin 0.7s linear infinite",
+              }}
+            />
+            <span style={{ color: T.muted, display: "inline-flex" }}>
+              <Icon.search size={15} />
+            </span>
+            <span style={{ flex: 1, fontSize: 13.5, color: T.text }}>{query}</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>buscando…</span>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 6, marginTop: hasQuery ? 0 : 16, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ fontSize: 11, color: T.muted, marginRight: 4, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase" }}>
+            Fuente
+          </div>
+          <button
+            style={{
+              padding: "6px 11px 6px 9px",
+              background: T.headerBg,
+              border: `1px solid ${T.headerBg}`,
+              borderRadius: 4,
+              color: "#fff",
+              fontSize: 12.5,
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontFamily: T.fontBody,
+            }}
+          >
+            Todas
+            <span style={{ fontFamily: T.fontMono, fontSize: 10.5, fontWeight: 700, padding: "1px 5px", borderRadius: 3, lineHeight: 1.4, background: "rgba(255,255,255,.18)", color: "#fff" }}>
+              ...
+            </span>
+          </button>
+          {Object.values(SOURCES).map((s) => (
+            <button
+              key={s.id}
+              style={{
+                padding: "6px 11px 6px 9px",
+                background: "#fff",
+                border: `1px solid ${T.border}`,
+                borderRadius: 4,
+                color: T.title,
+                fontSize: 12.5,
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontFamily: T.fontBody,
+              }}
+            >
+              <span style={{ width: 14, height: 14, borderRadius: 3, background: s.color }} />
+              {s.name}
+              <span style={{ fontFamily: T.fontMono, fontSize: 10.5, fontWeight: 700, padding: "1px 5px", borderRadius: 3, lineHeight: 1.4, background: T.tableHeaderBg, color: T.muted }}>
+                ...
+              </span>
+            </button>
+          ))}
         </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ fontSize: 11, color: T.muted, alignSelf: "center", marginRight: 4, fontWeight: 600, letterSpacing: 0.3 }}>
+              ESTADO
+            </div>
+            <Chip active>Todos</Chip>
+            <Chip>Activas</Chip>
+            <Chip>En prueba</Chip>
+            <Chip>Suspendidas</Chip>
+            <Chip>Terminadas</Chip>
+          </div>
+          <div style={{ flex: 1 }} />
+          <button
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "6px 11px",
+              borderRadius: 4,
+              border: `1px solid ${T.border}`,
+              background: "#fff",
+              color: T.text,
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: T.fontBody,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <Icon.filter size={13} />
+            Filtros avanzados
+          </button>
+          <div style={{ fontSize: 12, color: T.muted, fontFamily: T.fontMono }}>
+            cargando...
+          </div>
+        </div>
+
         <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
           {Object.values(SOURCES).map((s, i) => (
             <div
@@ -74,7 +189,7 @@ export function LoadingState({ query = "ocampo" }: { query?: string }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: T.title }}>{s.name}</div>
                 <div style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono, marginTop: 2 }}>
-                  {i === 0 ? "consultando API…" : i === 1 ? "esperando respuesta…" : "procesando 120 ms"}
+                  {i === 0 ? "consultando API..." : i === 1 ? "esperando respuesta..." : "procesando respuesta"}
                 </div>
               </div>
               <div
@@ -160,7 +275,36 @@ export function LoadingState({ query = "ocampo" }: { query?: string }) {
   );
 }
 
-export function EmptyState({ query = "xqtm-999-zzz" }: { query?: string }) {
+type FailedProvider = { provider: string; code: string; title: string };
+
+export function EmptyState({
+  query,
+  source = "all",
+  failedProviders = [],
+}: {
+  query?: string;
+  source?: SourceId | "all";
+  failedProviders?: FailedProvider[];
+}) {
+  const isGlobal = source === "all";
+  const sourceName = isGlobal ? "la vista global" : SOURCES[source].name;
+  const uniqueFailedProviders = dedupeFailedProviders(failedProviders);
+  const failedProviderNames = Array.from(new Set(uniqueFailedProviders.map((f) => sourceNameFor(f.provider)))).join(", ");
+  const hasQuery = Boolean(query?.trim());
+  const hasProviderErrors = uniqueFailedProviders.length > 0;
+  const emptyPrefix = hasProviderErrors
+    ? hasQuery
+      ? `El backend no pudo consultar ${failedProviderNames} para `
+      : `El backend no pudo consultar ${failedProviderNames} en este intento.`
+    : isGlobal
+      ? hasQuery ? "La consulta global no devolvió registros para " : "La consulta global no devolvió registros "
+      : hasQuery ? "Buscamos " : "No encontramos registros ";
+  const emptySuffix = hasProviderErrors
+    ? "en este intento."
+    : isGlobal
+      ? "con los filtros actuales."
+      : `en ${sourceName} y no encontramos registros.`;
+
   return (
     <div
       style={{
@@ -189,50 +333,77 @@ export function EmptyState({ query = "xqtm-999-zzz" }: { query?: string }) {
           <Icon.search size={28} />
         </div>
         <div style={{ fontSize: 17, fontWeight: 700, color: T.title, letterSpacing: -0.2, marginBottom: 6 }}>
-          No hay coincidencias en ninguna fuente
+          {hasProviderErrors ? "No se pudo completar la consulta global" : `No hay coincidencias en ${sourceName}`}
         </div>
         <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
-          Buscamos{" "}
-          <span
+          {emptyPrefix}
+          {hasQuery && (
+            <>
+              <span
+                style={{
+                  fontFamily: T.fontMono,
+                  color: T.title,
+                  background: T.zebra,
+                  padding: "1px 6px",
+                  borderRadius: 3,
+                }}
+              >
+                &quot;{query}&quot;
+              </span>{" "}
+            </>
+          )}
+          {(!hasProviderErrors || hasQuery) && emptySuffix}
+        </div>
+        {hasProviderErrors && (
+          <div
             style={{
-              fontFamily: T.fontMono,
-              color: T.title,
-              background: T.zebra,
-              padding: "1px 6px",
-              borderRadius: 3,
+              background: "#FDF4E1",
+              border: `1px solid ${T.warning}55`,
+              borderRadius: 6,
+              padding: "12px 14px",
+              textAlign: "left",
+              marginBottom: 14,
             }}
           >
-            &quot;{query}&quot;
-          </span>{" "}
-          en Kite, Tele2 y Moabits y no encontramos registros.
-        </div>
-        <div
-          style={{
-            background: T.cardBg,
-            border: `1px solid ${T.border}`,
-            borderRadius: 6,
-            padding: "12px 14px",
-            textAlign: "left",
-            marginBottom: 14,
-          }}
-        >
-          <div style={{ fontSize: 10.5, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>
-            FUENTES CONSULTADAS
+            <div style={{ fontSize: 10.5, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>
+              FUENTES CON ERROR
+            </div>
+            {uniqueFailedProviders.map((f, index) => (
+              <div key={`${f.provider}-${f.code}-${index}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: sourceColorFor(f.provider) }} />
+                <span style={{ color: T.title, fontWeight: 600, flex: 1 }}>{sourceNameFor(f.provider)}</span>
+                <span style={{ color: T.muted, fontFamily: T.fontMono, fontSize: 11 }}>{f.title || f.code}</span>
+                <span style={{ color: T.warning }}>
+                  <Icon.warn size={12} />
+                </span>
+              </div>
+            ))}
           </div>
-          {Object.values(SOURCES).map((s) => (
-            <div
-              key={s.id}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12 }}
-            >
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />
-              <span style={{ color: T.title, fontWeight: 600, flex: 1 }}>{s.name}</span>
+        )}
+        {!isGlobal && (
+          <div
+            style={{
+              background: T.cardBg,
+              border: `1px solid ${T.border}`,
+              borderRadius: 6,
+              padding: "12px 14px",
+              textAlign: "left",
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ fontSize: 10.5, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>
+              FUENTE CONSULTADA
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: SOURCES[source].color }} />
+              <span style={{ color: T.title, fontWeight: 600, flex: 1 }}>{sourceName}</span>
               <span style={{ color: T.muted, fontFamily: T.fontMono, fontSize: 11 }}>0 resultados</span>
               <span style={{ color: T.success }}>
                 <Icon.check size={12} />
               </span>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
         <div style={{ fontSize: 12, color: T.muted, marginBottom: 14 }}>Prueba con otro criterio:</div>
         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 18 }}>
           <Chip>solo ID</Chip>
@@ -240,11 +411,28 @@ export function EmptyState({ query = "xqtm-999-zzz" }: { query?: string }) {
           <Chip>nombre del cliente</Chip>
           <Chip>serial ONT</Chip>
         </div>
-        <Btn variant="primary" size="md" icon={<Icon.plus size={12} />}>
-          Crear nueva suscripción
-        </Btn>
       </div>
     </div>
+  );
+}
+
+function sourceNameFor(provider: string) {
+  return provider in SOURCES ? SOURCES[provider as SourceId].name : provider;
+}
+
+function sourceColorFor(provider: string) {
+  return provider in SOURCES ? SOURCES[provider as SourceId].color : T.muted;
+}
+
+function dedupeFailedProviders(failedProviders: FailedProvider[]) {
+  return Array.from(
+    failedProviders
+      .reduce((byKey, failed) => {
+        const key = `${failed.provider}:${failed.code}:${failed.title}`;
+        if (!byKey.has(key)) byKey.set(key, failed);
+        return byKey;
+      }, new Map<string, FailedProvider>())
+      .values()
   );
 }
 
@@ -286,7 +474,9 @@ function SourceStatus({
   );
 }
 
-export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
+export function ErrorState({ query }: { query?: string }) {
+  const hasQuery = Boolean(query?.trim());
+
   return (
     <div
       style={{
@@ -301,26 +491,28 @@ export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, marginBottom: 14 }}>
           Suscripciones
         </h1>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: T.pageBg,
-            border: `1px solid ${T.border}`,
-            borderRadius: 6,
-            padding: "9px 12px",
-          }}
-        >
-          <span style={{ color: T.muted, display: "inline-flex" }}>
-            <Icon.search size={15} />
-          </span>
-          <span style={{ flex: 1, fontSize: 13.5, color: T.text }}>{query}</span>
-        </div>
+        {hasQuery && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: T.pageBg,
+              border: `1px solid ${T.border}`,
+              borderRadius: 6,
+              padding: "9px 12px",
+            }}
+          >
+            <span style={{ color: T.muted, display: "inline-flex" }}>
+              <Icon.search size={15} />
+            </span>
+            <span style={{ flex: 1, fontSize: 13.5, color: T.text }}>{query}</span>
+          </div>
+        )}
 
         <div
           style={{
-            marginTop: 12,
+            marginTop: hasQuery ? 12 : 0,
             padding: "10px 14px",
             borderRadius: 6,
             background: "#FBEFD4",
@@ -406,7 +598,13 @@ export function ErrorState({ query = "valentina ocampo" }: { query?: string }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12.5, color: T.title, fontWeight: 600 }}>No hay filas para mostrar</div>
             <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2, fontFamily: T.fontMono }}>
-              Consulta: <span style={{ color: T.warning }}>{query}</span>
+              {hasQuery ? (
+                <>
+                  Consulta: <span style={{ color: T.warning }}>{query}</span>
+                </>
+              ) : (
+                "No se recibieron filas para esta consulta."
+              )}
             </div>
           </div>
           <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />}>

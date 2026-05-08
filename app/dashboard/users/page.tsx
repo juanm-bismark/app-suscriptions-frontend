@@ -1,15 +1,25 @@
 import { fetchApi, ApiError } from "@/lib/api-client"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
-import type { User } from "@/lib/types/user"
+import { ROLES, type Page, type User, type UserRole } from "@/lib/types/user"
 import CreateUserForm from "./create-user-form"
+import UsersTable from "./users-table"
 
-export default async function UsersPage() {
+type UsersPageProps = {
+  searchParams?: Promise<{ page?: string; size?: string }>
+}
+
+export default async function UsersPage({ searchParams }: UsersPageProps) {
   const profile = await requireManagerOrAdmin()
+  const params = await searchParams
+  const currentPage = positiveInt(params?.page, 1)
+  const pageSize = positiveInt(params?.size, 50)
   let users: User[] = []
+  let pageData: Page<User> | null = null
   let networkError = false
 
   try {
-    users = await fetchApi<User[]>("/users")
+    pageData = await fetchApi<Page<User>>(`/users?page=${currentPage}&size=${pageSize}`)
+    users = visibleUsersForRole(pageData.items, profile.role, profile.company_id)
   } catch (err: unknown) {
     console.error("Error loading users:", err)
     if (err instanceof ApiError && err.status === 0) {
@@ -29,44 +39,80 @@ export default async function UsersPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {networkError && (
-          <div className="col-span-full bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-4">
+          <div className="col-span-full bg-[#FFF7E7] text-[#6D4D16] rounded-lg p-4 mb-4 shadow-sm shadow-warn-bg/5">
             No se puede conectar al servidor API. Algunas funcionalidades pueden no estar disponibles.
           </div>
         )}
-        <div className="lg:col-span-2 bg-card rounded-lg shadow border border-border p-6 sm:p-8">
-          <h2 className="text-xl font-semibold mb-4 text-title">Lista de Miembros</h2>
-          {users.length === 0 ? (
-            <p className="text-sm text-muted">No hay usuarios adicionales en la empresa.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-muted uppercase bg-page">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 rounded-tl-lg">Nombre</th>
-                    <th scope="col" className="px-6 py-3 rounded-tr-lg">Rol</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-border last:border-0 hover:bg-page/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-title">{user.full_name || "Sin nombre"}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-header-accent/10 text-header-accent uppercase">
-                          {user.role}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div className="lg:col-span-2 bg-[#F5FAFA] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
+          <h2 className="text-xl font-semibold mb-4 text-title">Usuarios de la empresa</h2>
+          <UsersTable users={users} currentRole={profile.role} />
+          {pageData && (
+            <PaginationControls
+              page={pageData.page}
+              pages={pageData.pages}
+              size={pageData.size}
+              total={pageData.total}
+            />
           )}
         </div>
 
-        <div className="bg-card rounded-lg shadow border border-border p-6 sm:p-8 self-start">
+        <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
           <h2 className="text-xl font-semibold mb-4 text-title">Añadir usuario</h2>
           <CreateUserForm currentRole={profile.role} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+function visibleUsersForRole(users: User[], currentRole: UserRole, companyId: string | null) {
+  if (currentRole !== ROLES.MANAGER) return users
+
+  return users.filter((user) => {
+    const sameCompany = companyId ? user.company_id === companyId : true
+    return sameCompany && (user.role === ROLES.MANAGER || user.role === ROLES.MEMBER)
+  })
+}
+
+function positiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function PaginationControls({
+  page,
+  pages,
+  size,
+  total,
+}: {
+  page: number
+  pages: number | null
+  size: number
+  total: number | null
+}) {
+  const hasPrevious = page > 1
+  const hasNext = pages !== null ? page < pages : false
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 pt-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+      <span>
+        Página {page}{pages ? ` de ${pages}` : ""}{total !== null ? ` · ${total} usuarios` : ""}
+      </span>
+      <div className="flex gap-2">
+        <a
+          href={`/dashboard/users?page=${Math.max(page - 1, 1)}&size=${size}`}
+          aria-disabled={!hasPrevious}
+          className={`rounded-md px-3 py-2 font-semibold transition-colors ${hasPrevious ? "border border-[#94A3B8]/50 bg-[#E8EEF2] text-[#334155] shadow-sm shadow-header-top/5 hover:bg-[#DCE6EA] hover:text-[#1F2937]" : "pointer-events-none border border-[#CBD5E1]/60 bg-[#EEF3F5] text-[#64748B]/60"}`}
+        >
+          Anterior
+        </a>
+        <a
+          href={`/dashboard/users?page=${page + 1}&size=${size}`}
+          aria-disabled={!hasNext}
+          className={`rounded-md px-3 py-2 font-semibold transition-colors ${hasNext ? "border border-[#0E7490]/30 bg-[#D8F0F2] text-[#155E75] shadow-sm shadow-[#0891B2]/10 hover:bg-[#C7E7EA] hover:text-[#164E63]" : "pointer-events-none border border-[#B8DDE1]/70 bg-[#E3F1F2] text-[#326472]/55"}`}
+        >
+          Siguiente
+        </a>
       </div>
     </div>
   )

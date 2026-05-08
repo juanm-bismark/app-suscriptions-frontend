@@ -30,12 +30,12 @@ export default async function ProviderCredentialPage({
       </div>
 
       {!result.ok && result.status !== 404 && (
-        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+        <div className="mb-6 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
           {result.error}
         </div>
       )}
 
-      <div className="bg-card rounded-lg shadow border border-border p-6 sm:p-8">
+      <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
         <CredentialForm provider={provider} credential={credential} />
       </div>
     </div>

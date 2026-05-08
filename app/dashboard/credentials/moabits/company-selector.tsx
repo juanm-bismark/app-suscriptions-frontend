@@ -63,12 +63,12 @@ export function MoabitsCompanySelector({ discovery }: { discovery: MoabitsCompan
         </Alert>
       )}
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <div className="max-h-[420px] overflow-y-auto divide-y divide-border">
+      <div className="rounded-lg bg-white/55 overflow-hidden shadow-sm shadow-header-top/5">
+        <div className="max-h-[420px] overflow-y-auto">
           {discovery.companies.map((company) => (
             <label
               key={company.companyCode}
-              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-page/60 cursor-pointer"
+              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/70 cursor-pointer"
             >
               <Checkbox
                 checked={selected.has(company.companyCode)}
@@ -86,7 +86,7 @@ export function MoabitsCompanySelector({ discovery }: { discovery: MoabitsCompan
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted">{selected.size} seleccionada(s)</p>
-        <Button type="button" onClick={submit} disabled={pending}>
+        <Button type="button" onClick={submit} disabled={pending} className="bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white">
           Guardar seleccion
         </Button>
       </div>

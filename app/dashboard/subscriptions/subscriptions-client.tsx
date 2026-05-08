@@ -1,7 +1,10 @@
 "use client"
 
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
-import type { AdministrativeStatus, Provider } from "@/lib/types/api"
+import type { FailedProvider, LoadSubscriptionsData, LoadSubscriptionsInput } from "@/app/actions/subscriptions"
+import { loadSubscriptions } from "@/app/actions/subscriptions"
+import { useQueries, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { CSSProperties, ReactNode, useEffect, useMemo, useState } from "react"
 import { fmtShortDate } from "./data"
@@ -9,6 +12,9 @@ import { DetailModal } from "./detail-modal"
 import { Btn, Chip, Icon, SourceBadge, StatusPillWithNative } from "./primitives"
 import { EmptyState, ErrorState, LoadingState } from "./state-views"
 import { SOURCES, SourceId, STATUS_META, StatusId, T } from "./tokens"
+
+const PROVIDER_IDS = Object.keys(SOURCES) as SourceId[]
+const STALE_TIME_MS = 5 * 60 * 1000
 
 const GRID_COLS = "4px 170px 1.1fr 1fr 0.95fr 170px 120px 120px 100px"
 const cellH: CSSProperties = { padding: "9px 12px" }
@@ -18,20 +24,73 @@ const STATUS_FILTERS: StatusId[] = ["active", "in_test", "suspended", "terminate
 type SourceFilter = SourceId | "all"
 type StatusFilter = StatusId | "all"
 
-interface SubscriptionsClientProps {
-  initialRows?: SubscriptionRow[]
-  pagination?: { nextCursor: string | null; total: number | null; partial: boolean }
-  filters?: { provider?: Provider; status?: AdministrativeStatus; cursor?: string; q?: string }
-}
 
-export function SubscriptionsClient({ initialRows, pagination, filters }: SubscriptionsClientProps) {
+export function SubscriptionsClient({ filters }: { filters?: LoadSubscriptionsInput }) {
   const searchParams = useSearchParams()
   const stateOverride = searchParams.get("state")
   if (stateOverride === "loading") return <LoadingState query={filters?.q || undefined} />
   if (stateOverride === "error") return <ErrorState query={filters?.q || undefined} />
   if (stateOverride === "empty") return <ListEmptyShell query={filters?.q || undefined} />
+  return <SubscriptionsLoader filters={filters} />
+}
 
-  return <SubscriptionsList initialRows={initialRows ?? []} pagination={pagination} filters={filters} />
+function SubscriptionsLoader({ filters }: { filters?: LoadSubscriptionsInput }) {
+  const q = filters?.q ?? ""
+  const cursor = filters?.cursor ?? ""
+
+  const results = useQueries({
+    queries: PROVIDER_IDS.map((provider) => ({
+      queryKey: ["subscriptions", provider, q, cursor] as const,
+      queryFn: async () => {
+        const result = await loadSubscriptions({ provider, q: filters?.q, cursor: filters?.cursor, limit: 25 })
+        if (!result.ok && result.kind === "error") throw new Error(result.error)
+        return result
+      },
+      staleTime: STALE_TIME_MS,
+    })),
+  })
+
+  const isLoading = results.some((r) => r.isLoading)
+  if (isLoading) return <LoadingState query={filters?.q || undefined} />
+
+  const allFailed = results.every((r) => r.isError || (r.data && !r.data.ok))
+  if (allFailed) {
+    const routingEmpty = results.find((r) => r.data && !r.data.ok && r.data.kind === "routing_map_empty")
+    if (routingEmpty?.data && !routingEmpty.data.ok && routingEmpty.data.kind === "routing_map_empty") {
+      return <RoutingMapEmptyState failedProviders={routingEmpty.data.failedProviders} />
+    }
+    return <ErrorState query={filters?.q || undefined} />
+  }
+
+  const allRows: SubscriptionRow[] = []
+  const failedProviders: FailedProvider[] = []
+  let hasPartial = false
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i]
+    if (r.data?.ok) {
+      allRows.push(...r.data.data.rows)
+      failedProviders.push(...r.data.data.pagination.failedProviders)
+      if (r.data.data.pagination.partial) hasPartial = true
+    } else if (r.isError || (r.data && !r.data.ok)) {
+      failedProviders.push({
+        provider: PROVIDER_IDS[i],
+        code: "provider.unavailable",
+        title: r.isError ? (r.error instanceof Error ? r.error.message : "No se pudo consultar") : "No se pudo consultar",
+      })
+    }
+  }
+
+  const initialSource: SourceFilter = (filters?.provider as SourceId | undefined) ?? "all"
+
+  return (
+    <SubscriptionsList
+      rows={allRows}
+      pagination={{ nextCursor: null, total: allRows.length, partial: hasPartial || failedProviders.length > 0, failedProviders }}
+      filters={{}}
+      initialSource={initialSource}
+    />
+  )
 }
 
 function ListEmptyShell({ query }: { query?: string }) {
@@ -63,12 +122,23 @@ function secondary(value: string | null | undefined) {
   return value && value.trim() ? value : "—"
 }
 
-function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<SubscriptionsClientProps, "initialRows">> & Omit<SubscriptionsClientProps, "initialRows">) {
+function SubscriptionsList({
+  rows: initialRows,
+  pagination,
+  filters,
+  initialSource = "all",
+}: {
+  rows: SubscriptionRow[]
+  pagination: LoadSubscriptionsData["pagination"]
+  filters: LoadSubscriptionsData["filters"]
+  initialSource?: SourceFilter
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const [q, setQ] = useState(filters?.q ?? "")
-  const [activeSrc, setActiveSrc] = useState<SourceFilter>(filters?.provider ?? "all")
+  const [activeSrc, setActiveSrc] = useState<SourceFilter>(initialSource)
   const [activeStatus, setActiveStatus] = useState<StatusFilter>((filters?.status as StatusId | undefined) ?? "all")
   const [hovered, setHovered] = useState<string | null>(null)
   const [openRecord, setOpenRecord] = useState<SubscriptionRow | null>(null)
@@ -104,17 +174,7 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
         if (advSrcs && advSrcs.size > 0 && !advSrcs.has(r.provider)) return false
         if (advStatuses && advStatuses.size > 0 && !advStatuses.has(r.status as StatusId)) return false
         if (!q.trim()) return true
-        const haystack = [
-          r.iccid,
-          r.msisdn,
-          r.imsi,
-          r.planName,
-          r.planCode,
-          r.customerName,
-          r.customerScope,
-          r.nativeStatus,
-          r.provider,
-        ]
+        const haystack = [r.iccid, r.msisdn, r.imsi, r.planName, r.planCode, r.customerName, r.customerScope, r.nativeStatus, r.provider]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
@@ -125,6 +185,8 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
 
   const advCount = (advSrcs && advSrcs.size > 0 ? 1 : 0) + (advStatuses && advStatuses.size > 0 ? 1 : 0)
   const total = pagination?.total ?? initialRows.length
+  const failedProviders = pagination?.failedProviders ?? []
+  const hasPartialProviders = Boolean(pagination?.partial && failedProviders.length)
 
   const sourceTabs = [
     { id: "all" as const, name: "Todas", color: T.headerBg, count: initialRows.length },
@@ -148,11 +210,22 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
     setAdvStatuses(null)
   }
 
-  const toggleInSet = <V,>(set: Set<V> | null, key: V): Set<V> => {
-    const next = new Set(set ?? [])
+  const allSelected = <V,>(set: Set<V> | null, options: readonly V[]) => !set || set.size === options.length
+  const visibleSet = <V,>(set: Set<V> | null, options: readonly V[]) => set ?? new Set(options)
+  const normalizeSet = <V,>(set: Set<V>, options: readonly V[]) => (set.size === 0 || set.size === options.length ? null : set)
+  const toggleInSet = <V,>(set: Set<V> | null, key: V, options: readonly V[]): Set<V> | null => {
+    const next = new Set(set ?? options)
     if (next.has(key)) next.delete(key)
     else next.add(key)
-    return next
+    return normalizeSet(next, options)
+  }
+
+  function handleSincronizar() {
+    if (activeSrc === "all") {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] })
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", activeSrc] })
+    }
   }
 
   return (
@@ -188,7 +261,7 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
             </h1>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Btn variant="outline" size="sm" icon={<Icon.refresh size={13} />}>
+            <Btn variant="outline" size="sm" icon={<Icon.refresh size={13} />} onClick={handleSincronizar}>
               Sincronizar
             </Btn>
             <Btn variant="primary" size="sm" icon={<Icon.plus size={12} />}>
@@ -322,6 +395,8 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
             {rows.length} resultado{rows.length !== 1 ? "s" : ""}
           </div>
         </div>
+
+        {hasPartialProviders && <PartialProvidersNotice failedProviders={failedProviders} />}
       </div>
 
       <div style={{ flex: 1, overflow: "auto", background: T.cardBg, position: "relative" }}>
@@ -352,7 +427,7 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
           <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }}>Detalle</div>
         </div>
 
-        {rows.length === 0 && <EmptyState query={q || "tus filtros"} />}
+        {rows.length === 0 && <EmptyState query={q || "tus filtros"} source={activeSrc} failedProviders={failedProviders} />}
 
         {rows.map((r, i) => {
           const src = SOURCES[r.provider]
@@ -440,11 +515,17 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
 
             <div style={{ flex: 1, overflow: "auto", padding: "16px 18px" }}>
               <DrawerGroup title="FUENTES">
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 4, cursor: "pointer", background: allSelected(advSrcs, PROVIDER_IDS) ? T.tableHeaderBg : "transparent" }}>
+                  <input type="checkbox" checked={allSelected(advSrcs, PROVIDER_IDS)} onChange={() => setAdvSrcs(null)} style={{ accentColor: T.headerBg }} />
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundImage: conicGradient }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: T.title, flex: 1 }}>Todas</span>
+                  <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>{initialRows.length}</span>
+                </label>
                 {Object.values(SOURCES).map((s) => {
-                  const checked = advSrcs?.has(s.id) ?? false
+                  const checked = visibleSet(advSrcs, PROVIDER_IDS).has(s.id)
                   return (
                     <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 4, cursor: "pointer", background: checked ? s.tintBg : "transparent" }}>
-                      <input type="checkbox" checked={checked} onChange={() => setAdvSrcs((prev) => toggleInSet(prev, s.id))} style={{ accentColor: s.color }} />
+                      <input type="checkbox" checked={checked} onChange={() => setAdvSrcs((prev) => toggleInSet(prev, s.id, PROVIDER_IDS))} style={{ accentColor: s.color }} />
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: T.title, flex: 1 }}>{s.name}</span>
                       <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>{initialRows.filter((r) => r.provider === s.id).length}</span>
@@ -454,11 +535,17 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
               </DrawerGroup>
               <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
               <DrawerGroup title="ESTADO">
+                <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 4, cursor: "pointer", background: allSelected(advStatuses, STATUS_FILTERS) ? T.tableHeaderBg : "transparent" }}>
+                  <input type="checkbox" checked={allSelected(advStatuses, STATUS_FILTERS)} onChange={() => setAdvStatuses(null)} style={{ accentColor: T.headerAccent }} />
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.headerAccent }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.title, flex: 1 }}>Todos</span>
+                  <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>{initialRows.length}</span>
+                </label>
                 {STATUS_FILTERS.map((k) => {
-                  const checked = advStatuses?.has(k) ?? false
+                  const checked = visibleSet(advStatuses, STATUS_FILTERS).has(k)
                   return (
                     <label key={k} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 4, cursor: "pointer" }}>
-                      <input type="checkbox" checked={checked} onChange={() => setAdvStatuses((prev) => toggleInSet(prev, k))} style={{ accentColor: T.headerAccent }} />
+                      <input type="checkbox" checked={checked} onChange={() => setAdvStatuses((prev) => toggleInSet(prev, k, STATUS_FILTERS))} style={{ accentColor: T.headerAccent }} />
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: STATUS_META[k].dot }} />
                       <span style={{ fontSize: 12, color: T.text, flex: 1 }}>{STATUS_META[k].label}</span>
                       <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>{initialRows.filter((r) => r.status === k).length}</span>
@@ -498,7 +585,7 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
         <span>
           Mostrando {rows.length} de {total}
         </span>
-        {pagination?.partial && <span>respuesta parcial</span>}
+        {pagination?.partial && <span>{hasPartialProviders ? "respuesta parcial por fuente" : "respuesta parcial"}</span>}
         <div style={{ flex: 1 }} />
         {pagination?.nextCursor && <span>siguiente cursor disponible</span>}
       </div>
@@ -506,6 +593,41 @@ function SubscriptionsList({ initialRows, pagination, filters }: Required<Pick<S
       <DetailModal record={openRecord} onClose={() => setOpenRecord(null)} />
     </div>
   )
+}
+
+function PartialProvidersNotice({ failedProviders }: { failedProviders: FailedProvider[] }) {
+  const names = Array.from(new Set(failedProviders.map((f) => sourceName(f.provider)))).join(", ")
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 9,
+        border: `1px solid ${T.warning}55`,
+        background: "#FDF4E1",
+        color: "#6B4A0E",
+        borderRadius: 6,
+        padding: "10px 12px",
+        fontSize: 12.5,
+        lineHeight: 1.45,
+      }}
+    >
+      <span style={{ color: T.warning, display: "inline-flex", marginTop: 1 }}>
+        <Icon.warn size={14} />
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <strong style={{ fontWeight: 800 }}>Vista parcial.</strong> No se pudo consultar {names}.
+        <div style={{ color: T.muted, fontSize: 11.5, marginTop: 2, fontFamily: T.fontMono }}>
+          {failedProviders.map((f) => `${sourceName(f.provider)}: ${f.title || f.code}`).join(" · ")}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function sourceName(provider: string) {
+  return provider in SOURCES ? SOURCES[provider as SourceId].name : provider
 }
 
 function StackCell({ top, bottom, mono }: { top: string; bottom: string; mono?: boolean }) {
@@ -528,6 +650,40 @@ function DrawerGroup({ title, children }: { title: string; children: ReactNode }
     <div>
       <div style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>{title}</div>
       {children}
+    </div>
+  )
+}
+
+function RoutingMapEmptyState({ failedProviders = [] }: { failedProviders?: FailedProvider[] }) {
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6">
+        <p className="text-sm font-semibold uppercase tracking-wide text-amber-800">Listado global pendiente</p>
+        <h1 className="mt-2 text-2xl font-bold text-title">Importa SIMs para activar la vista global</h1>
+        <p className="mt-2 max-w-2xl text-sm text-amber-900">
+          El backend aun no tiene mapa de enrutamiento ICCID-proveedor. Puedes cargar un CSV inicial o revisar un proveedor especifico.
+        </p>
+        {failedProviders.length > 0 && (
+          <div className="mt-4 max-w-2xl rounded border border-amber-300 bg-white/70 p-3 text-sm text-amber-950">
+            <p className="font-semibold">Fuentes que no respondieron durante el bootstrap:</p>
+            <ul className="mt-2 space-y-1">
+              {failedProviders.map((f, index) => (
+                <li key={`${f.provider}-${f.code}-${index}`}>
+                  <span className="font-mono">{f.provider}</span>: {f.title || f.code}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/dashboard/sims/import" className="rounded bg-header-bg px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+            Importar SIMs
+          </Link>
+          <Link href="/dashboard/subscriptions?provider=kite" className="rounded border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">
+            Ver por proveedor
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

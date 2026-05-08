@@ -17,7 +17,7 @@ export default function CompanyError({ error, reset }: ErrorProps) {
         onRetry={reset}
       >
         {process.env.NODE_ENV === "development" && (
-          <details className="text-xs text-red-600 mb-4 bg-white p-2 rounded border border-red-100">
+          <details className="text-xs text-red-600 mb-4 bg-white p-2 rounded">
             <summary className="cursor-pointer font-mono">Detalles del error</summary>
             <pre className="mt-2 overflow-auto text-red-600">{error.message}</pre>
           </details>

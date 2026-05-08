@@ -50,3 +50,4 @@ export async function requireRole(...allowed: UserRole[]): Promise<Profile> {
 
 export const requireAdmin = () => requireRole(ROLES.ADMIN)
 export const requireManagerOrAdmin = () => requireRole(ROLES.ADMIN, ROLES.MANAGER)
+export const requireCompanyUser = () => requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.MEMBER)

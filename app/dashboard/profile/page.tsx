@@ -13,7 +13,7 @@ export default async function ProfilePage() {
         <p className="text-muted">Actualiza tu información personal</p>
       </div>
 
-      <div className="bg-card rounded-lg shadow border border-border p-6 sm:p-8">
+      <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
         <ProfileForm
           initialName={profile.full_name || ""}
           email={session?.user?.email || ""}

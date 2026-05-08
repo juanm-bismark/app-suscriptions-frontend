@@ -284,6 +284,7 @@ export function CredentialForm({
               {field.kind === "select" ? (
                 <Select
                   {...form.register(field.name)}
+                  className="h-11 border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent"
                 >
                   {field.options.map((option) => (
                     <SelectItem key={option} value={option}>
@@ -296,6 +297,7 @@ export function CredentialForm({
                   <Input
                     type="file"
                     accept=".pfx,.p12,application/x-pkcs12"
+                    className="border-0 bg-white/80 shadow-sm shadow-header-top/5 file:text-[#285F68] focus-visible:ring-header-accent"
                     onChange={async (event) => {
                       const file = event.target.files?.[0]
                       if (!file) return
@@ -309,6 +311,7 @@ export function CredentialForm({
                   {...form.register(field.name, field.kind === "number" ? { valueAsNumber: true } : undefined)}
                   type={field.kind === "password" ? "password" : field.kind === "number" ? "number" : "text"}
                   placeholder={field.placeholder}
+                  className="border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent"
                 />
               )}
               {errorMessage && typeof errorMessage === "object" && "message" in errorMessage ? (
@@ -325,16 +328,17 @@ export function CredentialForm({
           variant="outline"
           disabled={form.formState.isSubmitting}
           onClick={form.handleSubmit((values) => submit("test", values))}
+          className="border-0 bg-[#EAF6F7] text-[#285F68] shadow-sm shadow-header-top/5 hover:bg-[#DDF1F2] hover:text-[#12343B]"
         >
           Probar credenciales
         </Button>
-        <Button type="submit" disabled={form.formState.isSubmitting}>
+        <Button type="submit" disabled={form.formState.isSubmitting} className="bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white">
           Guardar
         </Button>
         {credential?.active && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" disabled={form.formState.isSubmitting || deactivating}>
+              <Button type="button" variant="destructive" disabled={form.formState.isSubmitting || deactivating} className="border-0">
                 Desactivar
               </Button>
             </AlertDialogTrigger>
@@ -351,7 +355,7 @@ export function CredentialForm({
                   type="button"
                   disabled={deactivating}
                   onClick={() => void deactivate()}
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-warn-border bg-warn-bg px-4 py-2 text-sm font-medium text-warn-text transition-colors hover:bg-warn-bg/90 disabled:pointer-events-none disabled:opacity-50"
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-warn-bg px-4 py-2 text-sm font-medium text-warn-text transition-colors hover:bg-warn-bg/90 disabled:pointer-events-none disabled:opacity-50"
                 >
                   {deactivating ? "Desactivando..." : "Desactivar"}
                 </AlertDialogAction>

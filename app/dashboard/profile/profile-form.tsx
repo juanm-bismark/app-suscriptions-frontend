@@ -59,22 +59,20 @@ export default function ProfileForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-muted mb-1">Correo electrónico</label>
-          <div className="px-3 py-2 bg-page border border-border rounded-md text-sm text-muted cursor-not-allowed">
+          <div className="min-h-11 px-3 py-2.5 bg-white/55 rounded-md text-sm text-muted cursor-not-allowed shadow-sm shadow-header-top/5">
             {email}
           </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-muted mb-1">Rol</label>
-          <div className="px-3 py-2 bg-page border border-border rounded-md text-sm text-muted cursor-not-allowed uppercase">
+          <div className="min-h-11 px-3 py-2.5 bg-white/55 rounded-md text-sm text-muted cursor-not-allowed uppercase shadow-sm shadow-header-top/5">
             {role}
           </div>
         </div>
       </div>
 
-      <hr className="border-border my-6" />
-
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-green-100 text-green-800 p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
 
       {/* Editable fields */}
       <Form {...form}>
@@ -86,7 +84,7 @@ export default function ProfileForm({
               <FormItem>
                 <FormLabel>Nombre completo</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Ingresa tu nombre completo" />
+                  <Input {...field} placeholder="Ingresa tu nombre completo" className="border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -96,6 +94,7 @@ export default function ProfileForm({
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
+            className="bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
           >
             {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
           </Button>

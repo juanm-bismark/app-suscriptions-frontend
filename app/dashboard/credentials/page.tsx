@@ -15,7 +15,7 @@ function CredentialExpiryBadge({ status }: { status: CredentialMetadataOut["expi
       style={{
         background: item.meta.bg,
         color: item.meta.color,
-        border: `1px solid ${item.meta.dot}33`,
+        border: "none",
       }}
     >
       {item.label}
@@ -42,10 +42,10 @@ export default async function CredentialsPage() {
         </Alert>
       )}
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-0 bg-[#F5FAFA] shadow-sm shadow-header-top/5">
         <Table>
-          <TableHeader className="bg-page">
-            <TableRow>
+          <TableHeader className="bg-[#EAF6F7]">
+            <TableRow className="border-0 hover:bg-transparent">
               <TableHead>Proveedor</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Vigencia</TableHead>
@@ -60,7 +60,7 @@ export default async function CredentialsPage() {
                 const href = `/dashboard/credentials/${provider}`
 
                 return (
-                  <TableRow key={provider}>
+                  <TableRow key={provider} className="border-0 hover:bg-white/65">
                     <TableCell className="font-medium text-title">
                       <SourceBadge source={provider} withName />
                     </TableCell>
@@ -89,11 +89,11 @@ export default async function CredentialsPage() {
                     <TableCell>
                       <div className="flex items-center justify-end gap-3">
                         {credential?.active ? (
-                          <Link className="text-sm font-medium text-header-bg hover:underline" href={href}>
-                            Probar
-                          </Link>
-                        ) : null}
-                        <Link className="text-sm font-medium text-header-bg hover:underline" href={href}>
+                        <Link className="rounded-md bg-[#EAF6F7] px-2.5 py-1 text-sm font-semibold text-[#285F68] hover:bg-[#DDF1F2]" href={href}>
+                          Probar
+                        </Link>
+                      ) : null}
+                        <Link className="rounded-md bg-[#0F202A] px-2.5 py-1 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
                           {credential?.active ? "Editar" : "Configurar"}
                         </Link>
                       </div>
