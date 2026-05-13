@@ -40,6 +40,19 @@ function toActionError(error: unknown): ActionErr {
   }
 }
 
+function toCredentialTestResult(data: CredentialTestOut): CredentialActionResult<CredentialTestOut> {
+  if (!data.ok) {
+    return {
+      ok: false,
+      error: data.detail || "Credenciales invalidas",
+      status: 422,
+      code: "credential_test_failed",
+    }
+  }
+
+  return { ok: true, data }
+}
+
 export async function listCredentials(): Promise<CredentialActionResult<CredentialMetadataOut[]>> {
   await requireManagerOrAdmin()
   try {
@@ -99,7 +112,7 @@ export async function testCredential(
       method: "POST",
       body: JSON.stringify(body),
     })
-    return { ok: true, data }
+    return toCredentialTestResult(data)
   } catch (error) {
     return toActionError(error)
   }
@@ -118,7 +131,7 @@ export async function testCompanyCredential(
       method: "POST",
       body: JSON.stringify(body),
     })
-    return { ok: true, data }
+    return toCredentialTestResult(data)
   } catch (error) {
     return toActionError(error)
   }
@@ -197,4 +210,3 @@ export async function deactivateCompanyCredential(
     return toActionError(error)
   }
 }
-

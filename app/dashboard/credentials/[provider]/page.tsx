@@ -22,12 +22,12 @@ export default async function ProviderCredentialPage({
   const credential = result.ok ? result.data : null
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="mb-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+      <div className="mb-5">
         <Link className="text-sm font-medium text-header-bg hover:underline" href="/dashboard/credentials">
           Volver a credenciales
         </Link>
-        <h1 className="mt-3 text-3xl font-bold text-title">{providerName(provider)}</h1>
+        <h1 className="mt-2 text-3xl font-bold text-title">{providerName(provider)}</h1>
         <p className="text-muted">Configura, prueba y guarda las credenciales del proveedor.</p>
       </div>
 
@@ -37,7 +37,7 @@ export default async function ProviderCredentialPage({
         </div>
       )}
 
-      <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
+      <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-5 sm:p-6">
         <CredentialForm provider={provider} credential={credential} isAdmin={isAdmin} />
       </div>
     </div>

@@ -1,11 +1,11 @@
 export default function AdminCompanyCredentialLoading() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
 
       {/* Header */}
-      <div className="mb-8 animate-pulse">
+      <div className="mb-5 animate-pulse">
         <div className="h-4 w-36 rounded bg-zebra" />
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="h-9 w-32 rounded bg-zebra" />
             <div className="mt-2 h-4 w-48 rounded bg-zebra" />
@@ -21,7 +21,7 @@ export default function AdminCompanyCredentialLoading() {
       </div>
 
       {/* Form card */}
-      <div className="rounded-lg bg-[#DDF1F2] p-6 shadow-sm shadow-header-top/5 sm:p-8">
+      <div className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="rounded-lg bg-white/30 p-4 sm:p-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

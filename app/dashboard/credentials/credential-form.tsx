@@ -32,6 +32,7 @@ import {
   toast,
 } from "@/components/ui"
 import type { CredentialMetadataOut, CredentialUpsertIn, Provider } from "@/lib/types/api"
+import { credentialDefaults, pruneEmptyStrings } from "./credential-payload"
 import { providerName } from "./credential-utils"
 
 const environment = {
@@ -58,7 +59,6 @@ const kiteSchema = z.object({
   account_scope: z.object({
     environment: z.enum(["production", "staging", "sandbox"]).default("production"),
     end_customer_id: z.string().optional(),
-    cert_expires_at: z.string().datetime("Usa fecha ISO 8601").optional().or(z.literal("")),
   }),
 })
 
@@ -67,7 +67,6 @@ const tele2Schema = z.object({
     cobrand_url: z.string().default("restapi3.jasper.com"),
     username: z.string().min(1, "Ingresa el usuario"),
     api_key: z.string().min(1, "Ingresa el API key"),
-    api_version: z.literal("v1").default("v1"),
   }),
   account_scope: z.object({
     account_id: z.string().min(1, "Ingresa el account ID"),
@@ -80,7 +79,6 @@ const moabitsSchema = z.object({
   credentials: z.object({
     base_url: z.string().url("URL invalida").default("https://www.api.myorion.co"),
     x_api_key: z.string().min(1, "Ingresa el x-api-key"),
-    parent_company_code: z.string().min(1, "Ingresa el codigo de compania padre"),
   }),
   account_scope: z.object({
     parent_company_code: z.string().min(1, "Ingresa el codigo de compania padre"),
@@ -138,13 +136,11 @@ const FIELDS: Record<Provider, Field[]> = {
     { kind: "text", name: "credentials.server_ca_bundle_pem_b64", label: "CA bundle PEM base64", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging", "sandbox"], adminOnly: true },
     { kind: "text", name: "account_scope.end_customer_id", label: "End customer ID", adminOnly: true },
-    { kind: "text", name: "account_scope.cert_expires_at", label: "Vencimiento certificado", placeholder: "2026-12-31T23:59:59Z", adminOnly: true },
   ],
   tele2: [
     { kind: "text", name: "credentials.cobrand_url", label: "Cobrand URL", adminOnly: true },
     { kind: "text", name: "credentials.username", label: "Usuario", adminOnly: true },
     { kind: "password", name: "credentials.api_key", label: "API key" },
-    { kind: "text", name: "credentials.api_version", label: "Version API", adminOnly: true },
     { kind: "text", name: "account_scope.account_id", label: "Account ID", adminOnly: true },
     { kind: "number", name: "account_scope.max_tps", label: "Max TPS", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging"], adminOnly: true },
@@ -152,60 +148,9 @@ const FIELDS: Record<Provider, Field[]> = {
   moabits: [
     { kind: "text", name: "credentials.base_url", label: "Base URL", adminOnly: true },
     { kind: "password", name: "credentials.x_api_key", label: "x-api-key" },
-    { kind: "text", name: "credentials.parent_company_code", label: "Codigo de compania padre", adminOnly: true },
-    { kind: "text", name: "account_scope.parent_company_code", label: "Scope compania padre", adminOnly: true },
+    { kind: "text", name: "account_scope.parent_company_code", label: "Codigo de compania padre", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging"], adminOnly: true },
   ],
-}
-
-function defaults(provider: Provider, credential?: CredentialMetadataOut | null): CredentialUpsertIn {
-  const scope = credential?.account_scope ?? {}
-
-  if (provider === "kite") {
-    return {
-      credentials: {
-        endpoint: "",
-        username: "",
-        password: "",
-        client_cert_pfx_b64: "",
-        client_cert_password: "",
-        server_ca_bundle_pem_b64: "",
-      },
-      account_scope: {
-        environment: scope.environment ?? "production",
-        end_customer_id: scope.end_customer_id ?? "",
-        cert_expires_at: scope.cert_expires_at ?? "",
-      },
-    }
-  }
-
-  if (provider === "tele2") {
-    return {
-      credentials: {
-        cobrand_url: "restapi3.jasper.com",
-        username: "",
-        api_key: "",
-        api_version: "v1",
-      },
-      account_scope: {
-        account_id: scope.account_id ?? "",
-        max_tps: scope.max_tps ?? 5,
-        environment: scope.environment ?? "production",
-      },
-    }
-  }
-
-  return {
-    credentials: {
-      base_url: String(scope.base_url ?? "https://www.api.myorion.co"),
-      x_api_key: "",
-      parent_company_code: String(scope.parent_company_code ?? ""),
-    },
-    account_scope: {
-      parent_company_code: scope.parent_company_code ?? "",
-      environment: scope.environment ?? "production",
-    },
-  }
 }
 
 function getPath(source: unknown, path: string) {
@@ -223,15 +168,16 @@ async function fileToBase64(file: File) {
   return window.btoa(binary)
 }
 
-function pruneEmptyStrings(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(pruneEmptyStrings)
-  if (!value || typeof value !== "object") return value
+function alignCredentialPayload(provider: Provider, payload: CredentialUpsertIn) {
+  if (provider !== "moabits") return
+  const scope = payload.account_scope
+  const parentCompanyCode = scope?.parent_company_code
+  if (!parentCompanyCode) return
 
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([, item]) => item !== "")
-      .map(([key, item]) => [key, pruneEmptyStrings(item)])
-  )
+  payload.credentials = {
+    ...(payload.credentials ?? {}),
+    parent_company_code: parentCompanyCode,
+  }
 }
 
 export function CredentialForm({
@@ -240,12 +186,14 @@ export function CredentialForm({
   isAdmin = true,
   companyId,
   autoParentCompanyCode,
+  onSuccess,
 }: {
   provider: Provider
   credential?: CredentialMetadataOut | null
   isAdmin?: boolean
   companyId?: string
   autoParentCompanyCode?: string
+  onSuccess?: () => void
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -253,7 +201,7 @@ export function CredentialForm({
   const [submittingMode, setSubmittingMode] = useState<"test" | "save" | null>(null)
   const [deactivating, setDeactivating] = useState(false)
   const schema = getSchema(provider, isAdmin)
-  const defaultValues = useMemo(() => defaults(provider, credential), [provider, credential])
+  const defaultValues = useMemo(() => credentialDefaults(provider, credential), [provider, credential])
   const fields = useMemo(
     () => FIELDS[provider].filter((field) => isAdmin || !field.adminOnly),
     [provider, isAdmin]
@@ -283,6 +231,8 @@ export function CredentialForm({
         }
       }
       delete payload.account_scope
+    } else {
+      alignCredentialPayload(provider, payload)
     }
 
     try {
@@ -310,6 +260,7 @@ export function CredentialForm({
         setSuccess("Credenciales guardadas correctamente")
         toast.success("Credenciales guardadas correctamente")
         router.refresh()
+        onSuccess?.()
       }
     } finally {
       setSubmittingMode(null)
@@ -320,20 +271,27 @@ export function CredentialForm({
     setError(null)
     setSuccess(null)
     setDeactivating(true)
-    const result = companyId
-      ? await deactivateCompanyCredential(companyId, provider)
-      : await deactivateCredential(provider)
-    setDeactivating(false)
+    try {
+      const result = companyId
+        ? await deactivateCompanyCredential(companyId, provider)
+        : await deactivateCredential(provider)
 
-    if (!result.ok) {
-      setError(result.error)
-      toast.error(result.error)
-      return
+      if (!result.ok) {
+        setError(result.error)
+        toast.error(result.error)
+        return
+      }
+
+      setSuccess("Credencial desactivada correctamente")
+      toast.success("Credencial desactivada correctamente")
+      router.refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo desactivar la credencial"
+      setError(message)
+      toast.error(message)
+    } finally {
+      setDeactivating(false)
     }
-
-    setSuccess("Credencial desactivada correctamente")
-    toast.success("Credencial desactivada correctamente")
-    router.refresh()
   }
 
   return (
@@ -417,7 +375,7 @@ export function CredentialForm({
           onClick={form.handleSubmit((values) => submit("test", values))}
           className="border-0 bg-white/80 text-header-bg shadow-sm shadow-header-top/10 hover:bg-white hover:text-header-top"
         >
-          Probar credenciales
+          Probar
         </Button>
         <Button
           type="submit"
@@ -428,7 +386,7 @@ export function CredentialForm({
         >
           Guardar
         </Button>
-        {credential?.active && (
+        {isAdmin && credential?.active && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button

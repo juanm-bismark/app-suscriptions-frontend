@@ -13,9 +13,19 @@ import type {
 import type { Company, Page } from "@/lib/types/user"
 import { z } from "zod"
 
+const companyNameSchema = z.string().trim().min(2, "El nombre de la empresa debe tener al menos 2 caracteres")
+
+const createCompanySchema = z.object({
+  name: companyNameSchema,
+})
+
 const updateCompanySchema = z.object({
   id: z.string().uuid("Empresa inválida"),
-  name: z.string().min(2, "El nombre de la empresa debe tener al menos 2 caracteres"),
+  name: companyNameSchema,
+})
+
+const deleteCompanySchema = z.object({
+  id: z.string().uuid("Empresa inválida"),
 })
 
 export async function searchCompanies(input?: { q?: string; page?: number; size?: number; limit?: number }) {
@@ -56,6 +66,33 @@ export async function getCompanyById(id: string) {
   }
 }
 
+export async function createCompany(formData: FormData) {
+  await requireAdmin()
+
+  try {
+    const parsed = createCompanySchema.safeParse({
+      name: formData.get("name"),
+    })
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0].message }
+    }
+
+    const company = await fetchApi<Company>("/companies", {
+      method: "POST",
+      body: JSON.stringify(parsed.data),
+    })
+
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/company")
+    revalidatePath("/dashboard/company/moabits")
+    revalidatePath("/dashboard/credentials")
+    return { success: true, message: "Empresa creada exitosamente", company }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : null
+    return { error: message || "No se pudo crear la empresa. ¿Eres Administrador?" }
+  }
+}
+
 export async function updateCompany(formData: FormData) {
   await requireAdmin()
 
@@ -71,17 +108,46 @@ export async function updateCompany(formData: FormData) {
     }
 
     const { id, ...body } = parsed.data
-    await fetchApi(`/companies/${id}`, {
+    const company = await fetchApi<Company>(`/companies/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
     })
 
     revalidatePath("/dashboard")
     revalidatePath("/dashboard/company")
-    return { success: true, message: "Empresa actualizada exitosamente" }
+    revalidatePath("/dashboard/company/moabits")
+    revalidatePath("/dashboard/credentials")
+    return { success: true, message: "Empresa actualizada exitosamente", company }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : null
     return { error: message || "No se pudo actualizar la empresa. ¿Eres Administrador?" }
+  }
+}
+
+export async function deleteCompany(formData: FormData) {
+  await requireAdmin()
+
+  try {
+    const parsed = deleteCompanySchema.safeParse({
+      id: formData.get("id"),
+    })
+
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0].message }
+    }
+
+    await fetchApi<Record<string, never>>(`/companies/${parsed.data.id}`, {
+      method: "DELETE",
+    })
+
+    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/company")
+    revalidatePath("/dashboard/company/moabits")
+    revalidatePath("/dashboard/credentials")
+    return { success: true, message: "Empresa eliminada" }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : null
+    return { error: message || "No se pudo eliminar la empresa. ¿Eres Administrador?" }
   }
 }
 

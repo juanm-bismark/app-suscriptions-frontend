@@ -1,16 +1,16 @@
 export default function ProviderCredentialLoading() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
 
       {/* Header */}
-      <div className="mb-8 animate-pulse">
+      <div className="mb-5 animate-pulse">
         <div className="h-4 w-32 rounded bg-zebra" />
-        <div className="mt-4 h-9 w-48 rounded bg-zebra" />
+        <div className="mt-2 h-9 w-48 rounded bg-zebra" />
         <div className="mt-2 h-4 w-72 max-w-full rounded bg-zebra" />
       </div>
 
       {/* Form card */}
-      <div className="rounded-lg bg-[#DDF1F2] p-6 shadow-sm shadow-header-top/5 sm:p-8">
+      <div className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <FormSkeleton />
       </div>
     </div>

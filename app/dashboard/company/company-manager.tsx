@@ -2,11 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Command } from "cmdk"
-import { Building2, Loader2, Save, Search, X } from "lucide-react"
+import { Building2, Loader2, Plus, Save, Search, Trash2, X } from "lucide-react"
 import {
+  createCompany,
+  deleteCompany,
   searchCompanies,
   updateCompany,
 } from "@/app/actions/company"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectItem } from "@/components/ui/select"
@@ -42,11 +53,15 @@ export default function CompanyManager({
   const [selected, setSelected] = useState<Company | null>(null)
   const selectedIdRef = useRef<string | null>(null)
   const [draftName, setDraftName] = useState("")
+  const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(initialError ?? null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -94,7 +109,7 @@ export default function CompanyManager({
       active = false
       window.clearTimeout(timer)
     }
-  }, [query, page, pageSize])
+  }, [query, page, pageSize, reloadToken])
 
   const selectedCreatedAt = useMemo(() => {
     if (!selected) return null
@@ -107,6 +122,8 @@ export default function CompanyManager({
     selectedIdRef.current = company.id
     setSelected(company)
     setDraftName(company.name)
+    setIsCreatingNew(false)
+    setDeleteTarget(null)
     setSaveError(null)
     setSuccess(null)
   }
@@ -115,8 +132,32 @@ export default function CompanyManager({
     selectedIdRef.current = null
     setSelected(null)
     setDraftName("")
+    setIsCreatingNew(false)
+    setDeleteTarget(null)
     setSaveError(null)
     setSuccess(null)
+  }
+
+  function startCreateCompany() {
+    selectedIdRef.current = null
+    setSelected(null)
+    setDraftName("")
+    setIsCreatingNew(true)
+    setDeleteTarget(null)
+    setSaveError(null)
+    setSuccess(null)
+  }
+
+  function requestDeleteCompany(company: Company) {
+    setDeleteTarget(company)
+    setSaveError(null)
+    setSuccess(null)
+  }
+
+  function updateDeleteDialogOpen(open: boolean) {
+    if (!open && !isDeleting) {
+      setDeleteTarget(null)
+    }
   }
 
   function updateQuery(value: string) {
@@ -137,41 +178,113 @@ export default function CompanyManager({
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!selected) return
+    if (!isCreatingNew && !selected) return
 
     setIsSaving(true)
     setSaveError(null)
     setSuccess(null)
 
     const formData = new FormData()
-    formData.append("id", selected.id)
     formData.append("name", draftName)
 
-    const result = await updateCompany(formData).finally(() => setIsSaving(false))
+    if (isCreatingNew) {
+      const result = await createCompany(formData).finally(() => setIsSaving(false))
 
-    if (result.error) {
-      setSaveError(result.error)
+      if (result.success !== true) {
+        setSaveError(result.error ?? "No se pudo crear la empresa")
+        return
+      }
+
+      selectedIdRef.current = result.company.id
+      setSelected(result.company)
+      setDraftName(result.company.name)
+      setIsCreatingNew(false)
+      setQuery("")
+      setPage(1)
+      setReloadToken((value) => value + 1)
+      setSuccess(result.message || "Empresa creada")
       return
     }
 
-    const updated = { ...selected, name: draftName }
+    if (!selected) {
+      setIsSaving(false)
+      return
+    }
+
+    formData.append("id", selected.id)
+    const result = await updateCompany(formData).finally(() => setIsSaving(false))
+
+    if (result.success !== true) {
+      setSaveError(result.error ?? "No se pudo actualizar la empresa")
+      return
+    }
+
+    const updated = result.company
     selectedIdRef.current = updated.id
     setSelected(updated)
     setCompanies((items) => items.map((company) => company.id === updated.id ? updated : company))
     setSuccess(result.message || "Empresa actualizada")
   }
 
+  async function onDeleteTarget() {
+    if (!deleteTarget) return
+
+    setIsDeleting(true)
+    setSaveError(null)
+    setSuccess(null)
+
+    const companyToDelete = deleteTarget
+    const deletedId = companyToDelete.id
+    const isLastCompanyOnPage = companies.length === 1
+    const formData = new FormData()
+    formData.append("id", deletedId)
+
+    const result = await deleteCompany(formData).finally(() => setIsDeleting(false))
+
+    if (result.success !== true) {
+      setDeleteTarget(null)
+      setSaveError(result.error ?? "No se pudo eliminar la empresa")
+      return
+    }
+
+    setDeleteTarget(null)
+    if (selectedIdRef.current === deletedId) {
+      selectedIdRef.current = null
+      setSelected(null)
+      setDraftName("")
+      setIsCreatingNew(false)
+    }
+    setCompanies((items) => items.filter((company) => company.id !== deletedId))
+    setTotal((current) => current === null ? current : Math.max(0, current - 1))
+    if (isLastCompanyOnPage && page > 1) {
+      setPage(page - 1)
+    } else {
+      setReloadToken((value) => value + 1)
+    }
+    setSuccess(result.message || "Empresa eliminada")
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)]">
       <section className="rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-title">Empresas en BD</h2>
             <p className="mt-1 text-sm text-muted">
               {total !== null ? `${total} empresas guardadas` : "Busca por nombre o ID"}
             </p>
           </div>
-          {isSearching && <Loader2 className="h-5 w-5 animate-spin text-[#326472]" aria-hidden="true" />}
+          <div className="flex items-center gap-2">
+            {isSearching && <Loader2 className="h-5 w-5 animate-spin text-[#326472]" aria-hidden="true" />}
+            <Button
+              type="button"
+              onClick={startCreateCompany}
+              className="gap-2 bg-[#0E7490] text-white shadow-sm shadow-[#0E7490]/20 hover:bg-[#0F4C5C] hover:text-white"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Añadir empresa
+            </Button>
+          </div>
         </div>
 
         {searchError && (
@@ -218,6 +331,24 @@ export default function CompanyManager({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium text-title">{company.name}</span>
                 </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Eliminar empresa"
+                  aria-label={`Eliminar empresa ${company.name}`}
+                  disabled={isDeleting}
+                  loading={isDeleting && deleteTarget?.id === company.id}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    requestDeleteCompany(company)
+                  }}
+                  className="h-8 w-8 shrink-0 border-[#DC2626]/25 bg-white text-[#B91C1C] shadow-sm shadow-[#DC2626]/10 hover:border-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#7F1D1D]"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
               </Command.Item>
             ))}
           </Command.List>
@@ -236,50 +367,143 @@ export default function CompanyManager({
       </section>
 
       <section className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
-        <h2 className="text-xl font-semibold text-title">Editar empresa</h2>
-        {!selected ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-title">
+              {isCreatingNew ? "Añadir empresa" : "Editar empresa"}
+            </h2>
+            {selected && !isCreatingNew && (
+              <p className="mt-1 break-all font-mono text-xs text-muted">{selected.id}</p>
+            )}
+          </div>
+          {selected && !isCreatingNew && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              title="Eliminar empresa"
+              aria-label={`Eliminar empresa ${selected.name}`}
+              disabled={isDeleting}
+              loading={isDeleting && deleteTarget?.id === selected.id}
+              onClick={() => requestDeleteCompany(selected)}
+              className="h-9 w-9 border-[#DC2626]/25 bg-white text-[#B91C1C] shadow-sm shadow-[#DC2626]/10 hover:border-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#7F1D1D]"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+
+        {saveError && <div className="mt-5 rounded-md bg-warn-bg p-3 text-sm text-warn-text">{saveError}</div>}
+        {success && <div className="mt-5 rounded-md bg-[#DDF4EA] p-3 text-sm text-[#16603B]">{success}</div>}
+
+        {!selected && !isCreatingNew ? (
           <div className="mt-5 rounded-lg bg-white/65 p-6 text-sm text-muted shadow-sm shadow-header-top/5">
-            Selecciona una empresa para editar su información.
+            Selecciona una empresa para editarla o usa el botón para añadir una nueva.
           </div>
         ) : (
           <div className="mt-5 space-y-6">
             <form onSubmit={onSubmit} className="space-y-5">
-              {saveError && <div className="rounded-md bg-warn-bg p-3 text-sm text-warn-text">{saveError}</div>}
-              {success && <div className="rounded-md bg-[#DDF4EA] p-3 text-sm text-[#16603B]">{success}</div>}
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-muted">Creada</label>
-                <div className="min-h-11 rounded-md bg-white/65 px-3 py-2.5 text-sm text-muted shadow-sm shadow-header-top/5">
-                  {selectedCreatedAt}
+              {selected && !isCreatingNew && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-muted">Creada</label>
+                  <div className="min-h-11 rounded-md bg-white/65 px-3 py-2.5 text-sm text-muted shadow-sm shadow-header-top/5">
+                    {selectedCreatedAt}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-muted">Nombre de la empresa</label>
                 <Input
                   value={draftName}
                   onChange={(event) => setDraftName(event.target.value)}
-                  placeholder="Ej. Bismark"
+                  placeholder="Ej. Acme"
                   className="border-0 bg-white/85 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent"
                 />
               </div>
 
-              <Button
-                type="submit"
-                disabled={isSaving || draftName.trim().length < 2}
-                loading={isSaving}
-                loadingText="Guardando..."
-                className="gap-2 bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
-              >
-                <Save className="h-4 w-4" aria-hidden="true" />
-                Guardar cambios
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button
+                  type="submit"
+                  disabled={isSaving || isDeleting || draftName.trim().length < 2}
+                  loading={isSaving}
+                  loadingText={isCreatingNew ? "Añadiendo..." : "Guardando..."}
+                  className="gap-2 bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
+                >
+                  {isCreatingNew ? (
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {isCreatingNew ? "Añadir empresa" : "Guardar cambios"}
+                </Button>
+                {isCreatingNew && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSaving}
+                    onClick={clearSelectedCompany}
+                    className="border-[#94A3B8]/50 bg-white text-[#334155] hover:border-[#334155] hover:bg-[#334155] hover:text-white"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+              </div>
             </form>
 
           </div>
         )}
       </section>
+      {deleteTarget && (
+        <DeleteCompanyDialog
+          company={deleteTarget}
+          deleting={isDeleting}
+          open={Boolean(deleteTarget)}
+          onOpenChange={updateDeleteDialogOpen}
+          onConfirm={onDeleteTarget}
+        />
+      )}
     </div>
+  )
+}
+
+function DeleteCompanyDialog({
+  company,
+  deleting,
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  company: Company
+  deleting: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => void
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminar empresa</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción eliminará {company.name}. No se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+          <Button
+            type="button"
+            variant="destructive"
+            loading={deleting}
+            loadingText="Eliminando..."
+            onClick={onConfirm}
+            className="border-[#DC2626] bg-[#DC2626] text-white hover:bg-[#B91C1C] hover:text-white"
+          >
+            Eliminar
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

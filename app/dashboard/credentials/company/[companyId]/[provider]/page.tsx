@@ -43,10 +43,10 @@ export default async function AdminCompanyCredentialPage({
   const companyName = companyResult.success ? companyResult.company.name : companyId
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
 
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-5">
         <Link
           className="text-sm font-medium text-header-bg hover:underline"
           href={`/dashboard/credentials?companyId=${companyId}`}
@@ -54,13 +54,13 @@ export default async function AdminCompanyCredentialPage({
           ← Volver a credenciales
         </Link>
 
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-title">{providerName(provider)}</h1>
             <p className="mt-1 text-muted text-sm">{companyName}</p>
           </div>
           {credential && (
-            <div className="shrink-0 pt-1">
+            <div className="shrink-0 pt-0.5">
               <StatusBadge active={credential.active} expiry={credential.expiry_status} />
             </div>
           )}
@@ -99,7 +99,7 @@ export default async function AdminCompanyCredentialPage({
       )}
 
       {/* Form card */}
-      <div className="rounded-lg bg-[#DDF1F2] p-6 shadow-sm shadow-header-top/5 sm:p-8">
+      <div className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <CredentialForm provider={provider} credential={credential} companyId={companyId} />
       </div>
     </div>

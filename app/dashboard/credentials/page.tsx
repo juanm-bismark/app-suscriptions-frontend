@@ -11,6 +11,9 @@ import { PendingLinkButton } from "../_components/pending-link-button"
 import { SearchSubmitButton } from "../_components/search-submit-button"
 import { CompanyPaginationControls } from "./company-pagination-controls"
 import { EXPIRY_META, PROVIDERS, formatDate, providerName, scopeValue } from "./credential-utils"
+import { AdminAddCredentialDialog } from "./admin-add-credential-dialog"
+import { DeleteCredentialButton } from "./delete-credential-button"
+import { TestCredentialButton } from "./test-credential-button"
 
 type CredentialsPageProps = {
   searchParams?: Promise<{ companyId?: string; q?: string; page?: string; size?: string }>
@@ -79,7 +82,7 @@ async function ScopedCredentialsPage() {
       )}
 
       <Card className="overflow-hidden border-0 bg-[#F5FAFA] shadow-sm shadow-header-top/5">
-        <Table>
+        <Table className="min-w-[760px]">
           <TableHeader className="bg-[#EAF6F7]">
             <TableRow className="border-0 hover:bg-transparent">
               <TableHead>Proveedor</TableHead>
@@ -96,11 +99,11 @@ async function ScopedCredentialsPage() {
                 const href = `/dashboard/credentials/${provider}`
 
                 return (
-                  <TableRow key={provider} className="border-0 hover:bg-white/65">
-                    <TableCell className="font-medium text-title">
+                  <TableRow key={provider} className="h-20 border-0 hover:bg-white/65">
+                    <TableCell className="min-w-32 py-4 align-middle font-medium text-title">
                       <SourceBadge source={provider} withName />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4 align-middle">
                       {credential?.active ? (
                         <Badge variant="success">
                           Activa
@@ -111,25 +114,20 @@ async function ScopedCredentialsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4 align-middle">
                       {credential ? <CredentialExpiryBadge status={credential.expiry_status} /> : "No aplica"}
                     </TableCell>
-                    <TableCell className="text-muted">
+                    <TableCell className="py-4 align-middle text-muted">
                       {credential
                         ? provider === "tele2"
                           ? scopeValue(credential.account_scope, "account_id")
                           : scopeValue(credential.account_scope, "environment")
                         : "No definido"}
                     </TableCell>
-                    <TableCell className="text-muted">{formatDate(credential?.rotated_at)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-3">
-                        {credential?.active ? (
-                          <PendingLinkButton className="rounded-md bg-[#EAF6F7] px-2.5 py-1 text-sm font-semibold text-[#285F68] hover:bg-[#DDF1F2]" href={href}>
-                            Probar
-                          </PendingLinkButton>
-                        ) : null}
-                        <PendingLinkButton className="rounded-md bg-[#0F202A] px-2.5 py-1 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
+                    <TableCell className="py-4 align-middle text-muted">{formatDate(credential?.rotated_at)}</TableCell>
+                    <TableCell className="py-4 align-middle">
+                      <div className="flex items-center justify-end gap-3 whitespace-nowrap">
+                        <PendingLinkButton className="inline-flex h-9 items-center rounded-md bg-[#0F202A] px-3 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
                           {credential?.active ? "Editar" : "Agregar"}
                         </PendingLinkButton>
                       </div>
@@ -176,6 +174,9 @@ async function AdminCredentialsPage({
           <div className="min-w-0">
             <h1 className="text-3xl font-bold text-title mb-2">Credenciales</h1>
             <p className="text-muted">Administra credenciales por empresa para toda la plataforma.</p>
+            <div className="mt-4">
+              <AdminAddCredentialDialog />
+            </div>
           </div>
           <div className="flex max-w-full items-center gap-3 rounded-md border border-[#C9DFE3] bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 sm:max-w-xs">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#DDF1F2] text-[#12343B]">
@@ -256,8 +257,8 @@ async function AdminCredentialsPage({
           )}
         </Card>
 
-        <Card className="overflow-hidden border-0 bg-[#F5FAFA] shadow-sm shadow-header-top/5">
-          <div className="border-b border-[#D8E7EA] p-5 sm:p-6">
+        <Card className="flex min-h-[calc(100vh-22rem)] flex-col overflow-hidden border-0 bg-[#F5FAFA] shadow-sm shadow-header-top/5">
+          <div className="border-b border-[#D8E7EA] p-4 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-title">
@@ -288,7 +289,9 @@ async function AdminCredentialsPage({
           {selectedId ? (
             <CredentialsTable key={`${query}:${selectedId}`} byProvider={byProvider} companyId={selectedId} />
           ) : (
-            <div className="p-6 text-sm text-muted">Selecciona una empresa para ver sus credenciales.</div>
+            <div className="flex flex-1 items-center p-6 text-sm text-muted">
+              Selecciona una empresa para ver sus credenciales.
+            </div>
           )}
         </Card>
       </div>
@@ -336,62 +339,65 @@ function CredentialsTable({
   companyId?: string
 }) {
   return (
-    <Table>
-      <TableHeader className="bg-[#EAF6F7]">
-        <TableRow className="border-0 hover:bg-transparent">
-          <TableHead className="h-12 py-3 align-middle">Proveedor</TableHead>
-          <TableHead className="h-12 py-3 align-middle">Estado</TableHead>
-          <TableHead className="h-12 py-3 align-middle">Vigencia</TableHead>
-          <TableHead className="h-12 py-3 align-middle">Scope</TableHead>
-          <TableHead className="h-12 py-3 align-middle">Rotacion</TableHead>
-          <TableHead className="h-12 py-3 text-right align-middle">Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {PROVIDERS.map((provider) => {
-          const credential = byProvider.get(provider)
-          const href = credentialHref(provider, companyId)
+    <div className="min-h-0 flex-1 overflow-hidden [&>div]:h-full">
+      <Table className="h-full min-w-[760px]">
+        <TableHeader className="bg-[#EAF6F7]">
+          <TableRow className="border-0 hover:bg-transparent">
+            <TableHead className="h-12 py-3 align-middle">Proveedor</TableHead>
+            <TableHead className="h-12 py-3 align-middle">Estado</TableHead>
+            <TableHead className="h-12 py-3 align-middle">Vigencia</TableHead>
+            <TableHead className="h-12 py-3 align-middle">Scope</TableHead>
+            <TableHead className="h-12 py-3 align-middle">Rotacion</TableHead>
+            <TableHead className="h-12 py-3 text-right align-middle">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {PROVIDERS.map((provider) => {
+            const credential = byProvider.get(provider)
+            const href = credentialHref(provider, companyId)
 
-          return (
-            <TableRow key={provider} className="h-[72px] border-0 hover:bg-white/65">
-              <TableCell className="py-5 align-middle font-medium text-title">
-                <SourceBadge source={provider} withName />
-              </TableCell>
-              <TableCell className="py-5 align-middle">
-                {credential?.active ? (
-                  <Badge variant="success">Activa</Badge>
-                ) : (
-                  <Badge variant="secondary">Sin configurar</Badge>
-                )}
-              </TableCell>
-              <TableCell className="py-5 align-middle">
-                {credential ? <CredentialExpiryBadge status={credential.expiry_status} /> : "No aplica"}
-              </TableCell>
-              <TableCell className="py-5 align-middle text-muted">
-                {credential
-                  ? provider === "tele2"
-                    ? scopeValue(credential.account_scope, "account_id")
-                    : scopeValue(credential.account_scope, "environment")
-                  : "No definido"}
-              </TableCell>
-              <TableCell className="py-5 align-middle text-muted">{formatDate(credential?.rotated_at)}</TableCell>
-              <TableCell className="py-5 align-middle">
-                <div className="flex items-center justify-end gap-3">
+            return (
+              <TableRow key={provider} className="h-20 border-0 hover:bg-white/65">
+                <TableCell className="min-w-32 py-4 align-middle font-medium text-title">
+                  <SourceBadge source={provider} withName />
+                </TableCell>
+                <TableCell className="py-4 align-middle">
                   {credential?.active ? (
-                    <PendingLinkButton className="inline-flex h-9 items-center rounded-md bg-[#EAF6F7] px-3 text-sm font-semibold text-[#285F68] hover:bg-[#DDF1F2]" href={href}>
-                      Probar
+                    <Badge variant="success">Activa</Badge>
+                  ) : (
+                    <Badge variant="secondary">Sin configurar</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="py-4 align-middle">
+                  {credential ? <CredentialExpiryBadge status={credential.expiry_status} /> : "No aplica"}
+                </TableCell>
+                <TableCell className="py-4 align-middle text-muted">
+                  {credential
+                    ? provider === "tele2"
+                      ? scopeValue(credential.account_scope, "account_id")
+                      : scopeValue(credential.account_scope, "environment")
+                    : "No definido"}
+                </TableCell>
+                <TableCell className="py-4 align-middle text-muted">{formatDate(credential?.rotated_at)}</TableCell>
+                <TableCell className="py-4 align-middle">
+                  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                    <PendingLinkButton className="inline-flex h-9 items-center rounded-md bg-[#0F202A] px-3 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
+                      {credential?.active ? "Editar" : "Agregar"}
                     </PendingLinkButton>
-                  ) : null}
-                  <PendingLinkButton className="inline-flex h-9 items-center rounded-md bg-[#0F202A] px-3 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
-                    {credential?.active ? "Editar" : "Agregar"}
-                  </PendingLinkButton>
-                </div>
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+                    {credential?.active && companyId && (
+                      <TestCredentialButton provider={provider} companyId={companyId} credential={credential} />
+                    )}
+                    {credential?.active && companyId && (
+                      <DeleteCredentialButton provider={provider} companyId={companyId} />
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -405,7 +411,7 @@ function AddCredentialActions({
   className?: string
 }) {
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${className ?? "mt-4"}`}>
+    <div className={`flex flex-wrap items-center gap-1.5 ${className ?? "mt-3"}`}>
       {missingProviders.length > 0 ? (
         <>
           <span className="text-sm font-medium text-muted">Agregar:</span>
@@ -413,7 +419,7 @@ function AddCredentialActions({
             <PendingLinkButton
               key={provider}
               href={credentialHref(provider, companyId)}
-              className="inline-flex items-center gap-2 rounded-md bg-[#0F202A] px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41]"
+              className="inline-flex items-center gap-1.5 rounded-md bg-[#0F202A] px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41]"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               {providerName(provider)}
@@ -421,7 +427,7 @@ function AddCredentialActions({
           ))}
         </>
       ) : (
-        <span className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-muted shadow-sm shadow-header-top/5">
+        <span className="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-muted shadow-sm shadow-header-top/5">
           Todas configuradas
         </span>
       )}
