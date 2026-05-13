@@ -1,7 +1,7 @@
 "use client"
 
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
-import type { FailedProvider, LoadSubscriptionsData, LoadSubscriptionsInput } from "@/app/actions/subscriptions"
+import type { FailedProvider, LoadSubscriptionsData, LoadSubscriptionsInput, LoadSubscriptionsResult } from "@/app/actions/subscriptions"
 import { loadSubscriptions } from "@/app/actions/subscriptions"
 import { useQueries, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, LoadingState } from "./state-views"
 import { SOURCES, SourceId, STATUS_META, StatusId, T } from "./tokens"
 
 const PROVIDER_IDS = Object.keys(SOURCES) as SourceId[]
+const SEARCHABLE_PROVIDER_IDS: SourceId[] = ["kite", "tele2"]
 const STALE_TIME_MS = 5 * 60 * 1000
 
 const GRID_COLS = "4px 170px 1.1fr 1fr 0.95fr 170px 120px 120px 100px"
@@ -23,71 +24,180 @@ const STATUS_FILTERS: StatusId[] = ["active", "in_test", "suspended", "terminate
 
 type SourceFilter = SourceId | "all"
 type StatusFilter = StatusId | "all"
+type QueryScope = SourceId | "global"
 
+function isSourceId(value: string | undefined): value is SourceId {
+  return !!value && value in SOURCES
+}
+
+function isStatusId(value: string | undefined): value is StatusId {
+  return !!value && value in STATUS_META
+}
+
+function isExactIccidQuery(value: string) {
+  return /^\d{18,22}$/.test(value.trim())
+}
+
+function scopesForQuery(selectedProvider: SourceId | undefined, query: string): QueryScope[] {
+  if (selectedProvider) return [selectedProvider]
+  if (isExactIccidQuery(query)) return ["global"]
+  return query.trim() ? SEARCHABLE_PROVIDER_IDS : PROVIDER_IDS
+}
+
+function mergeRow(existing: SubscriptionRow | undefined, incoming: SubscriptionRow) {
+  if (!existing) return incoming
+  return {
+    ...existing,
+    ...incoming,
+    msisdn: incoming.msisdn ?? existing.msisdn,
+    imsi: incoming.imsi ?? existing.imsi,
+    nativeStatus: incoming.nativeStatus || existing.nativeStatus,
+    customerName: incoming.customerName ?? existing.customerName,
+    customerScope: incoming.customerScope ?? existing.customerScope,
+    planName: incoming.planName ?? existing.planName,
+    planCode: incoming.planCode ?? existing.planCode,
+    activatedAt: incoming.activatedAt ?? existing.activatedAt,
+    updatedAt: incoming.updatedAt ?? existing.updatedAt,
+    detailLevel: incoming.detailLevel === "detail" ? "detail" : existing.detailLevel,
+  }
+}
+
+function mergeRowsIntoResult(cached: LoadSubscriptionsData, incomingRows: SubscriptionRow[]): LoadSubscriptionsData {
+  const rowsByKey = new Map(cached.rows.map((row) => [`${row.provider}:${row.iccid}`, row]))
+  const nextRows = [...cached.rows]
+
+  for (const incoming of incomingRows) {
+    const key = `${incoming.provider}:${incoming.iccid}`
+    const index = nextRows.findIndex((row) => `${row.provider}:${row.iccid}` === key)
+    const merged = mergeRow(rowsByKey.get(key), incoming)
+
+    if (index >= 0) {
+      nextRows[index] = merged
+    } else {
+      nextRows.unshift(merged)
+    }
+    rowsByKey.set(key, merged)
+  }
+
+  return {
+    ...cached,
+    rows: nextRows,
+    pagination: {
+      ...cached.pagination,
+      total: cached.pagination.total == null ? cached.pagination.total : Math.max(cached.pagination.total, nextRows.length),
+    },
+  }
+}
 
 export function SubscriptionsClient({ filters }: { filters?: LoadSubscriptionsInput }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const retry = () => router.refresh()
   const stateOverride = searchParams.get("state")
   if (stateOverride === "loading") return <LoadingState query={filters?.q || undefined} />
-  if (stateOverride === "error") return <ErrorState query={filters?.q || undefined} />
+  if (stateOverride === "error") return <ErrorState query={filters?.q || undefined} onRetry={retry} />
   if (stateOverride === "empty") return <ListEmptyShell query={filters?.q || undefined} />
   return <SubscriptionsLoader filters={filters} />
 }
 
 function SubscriptionsLoader({ filters }: { filters?: LoadSubscriptionsInput }) {
+  const queryClient = useQueryClient()
   const q = filters?.q ?? ""
   const cursor = filters?.cursor ?? ""
+  const selectedProvider = isSourceId(filters?.provider) ? filters.provider : undefined
+  const selectedStatus = isStatusId(filters?.status) ? filters.status : undefined
+  const queryScopes = useMemo(() => scopesForQuery(selectedProvider, q), [q, selectedProvider])
+  const listFilters: LoadSubscriptionsData["filters"] = {
+    provider: selectedProvider,
+    status: selectedStatus,
+    cursor,
+    q,
+  }
 
   const results = useQueries({
-    queries: PROVIDER_IDS.map((provider) => ({
-      queryKey: ["subscriptions", provider, q, cursor] as const,
+    queries: queryScopes.map((scope) => ({
+      queryKey: ["subscriptions", scope, q, cursor] as const,
       queryFn: async () => {
+        const provider = scope === "global" ? undefined : scope
         const result = await loadSubscriptions({ provider, q: filters?.q, cursor: filters?.cursor, limit: 25 })
         if (!result.ok && result.kind === "error") throw new Error(result.error)
         return result
       },
+      retry: false,
       staleTime: STALE_TIME_MS,
     })),
   })
 
   const isLoading = results.some((r) => r.isLoading)
+  const allFailed = results.every((r) => r.isError || (r.data && !r.data.ok))
+  const { allRows, failedProviders, providerStatuses, hasPartial } = useMemo(() => {
+    const rows: SubscriptionRow[] = []
+    const failed: FailedProvider[] = []
+    const statuses: LoadSubscriptionsData["pagination"]["providerStatuses"] = []
+    let partial = false
+
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i]
+      if (r.data?.ok) {
+        rows.push(...(r.data.data.rows ?? []))
+        failed.push(...(r.data.data.pagination.failedProviders ?? []))
+        statuses.push(...(r.data.data.pagination.providerStatuses ?? []))
+        if (r.data.data.pagination.partial) partial = true
+      } else if (r.isError || (r.data && !r.data.ok)) {
+        failed.push({
+          provider: queryScopes[i],
+          code: "provider.unavailable",
+          title: r.isError ? (r.error instanceof Error ? r.error.message : "No se pudo consultar") : "No se pudo consultar",
+        })
+      }
+    }
+
+    return { allRows: rows, failedProviders: failed, providerStatuses: statuses, hasPartial: partial }
+  }, [queryScopes, results])
+
+  useEffect(() => {
+    if (!q.trim() || allRows.length === 0) return
+
+    for (const provider of PROVIDER_IDS) {
+      const providerRows = allRows.filter((row) => row.provider === provider)
+      if (providerRows.length === 0) continue
+
+      queryClient.setQueryData<LoadSubscriptionsResult>(["subscriptions", provider, "", ""], (cached) => {
+        if (!cached?.ok) return cached
+        return {
+          ...cached,
+          data: mergeRowsIntoResult(cached.data, providerRows),
+        }
+      })
+    }
+  }, [allRows, q, queryClient])
+
   if (isLoading) return <LoadingState query={filters?.q || undefined} />
 
-  const allFailed = results.every((r) => r.isError || (r.data && !r.data.ok))
   if (allFailed) {
     const routingEmpty = results.find((r) => r.data && !r.data.ok && r.data.kind === "routing_map_empty")
     if (routingEmpty?.data && !routingEmpty.data.ok && routingEmpty.data.kind === "routing_map_empty") {
       return <RoutingMapEmptyState failedProviders={routingEmpty.data.failedProviders} />
     }
-    return <ErrorState query={filters?.q || undefined} />
+    return (
+      <SubscriptionsList
+        key={`${selectedProvider ?? "all"}:${filters?.status ?? ""}:${q}`}
+        rows={[]}
+        pagination={{ nextCursor: null, total: 0, partial: true, failedProviders, providerStatuses: [] }}
+        filters={listFilters}
+        initialSource={selectedProvider ?? "all"}
+      />
+    )
   }
 
-  const allRows: SubscriptionRow[] = []
-  const failedProviders: FailedProvider[] = []
-  let hasPartial = false
-
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i]
-    if (r.data?.ok) {
-      allRows.push(...r.data.data.rows)
-      failedProviders.push(...r.data.data.pagination.failedProviders)
-      if (r.data.data.pagination.partial) hasPartial = true
-    } else if (r.isError || (r.data && !r.data.ok)) {
-      failedProviders.push({
-        provider: PROVIDER_IDS[i],
-        code: "provider.unavailable",
-        title: r.isError ? (r.error instanceof Error ? r.error.message : "No se pudo consultar") : "No se pudo consultar",
-      })
-    }
-  }
-
-  const initialSource: SourceFilter = (filters?.provider as SourceId | undefined) ?? "all"
+  const initialSource: SourceFilter = selectedProvider ?? "all"
 
   return (
     <SubscriptionsList
+      key={`${initialSource}:${filters?.status ?? ""}:${q}`}
       rows={allRows}
-      pagination={{ nextCursor: null, total: allRows.length, partial: hasPartial || failedProviders.length > 0, failedProviders }}
-      filters={{}}
+      pagination={{ nextCursor: null, total: allRows.length, partial: hasPartial || failedProviders.length > 0, failedProviders, providerStatuses }}
+      filters={listFilters}
       initialSource={initialSource}
     />
   )
@@ -137,9 +247,11 @@ function SubscriptionsList({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
-  const [q, setQ] = useState(filters?.q ?? "")
+  const filterQ = filters?.q ?? ""
+  const filterStatus = isStatusId(filters?.status) ? filters.status : "all"
+  const [q, setQ] = useState(filterQ)
   const [activeSrc, setActiveSrc] = useState<SourceFilter>(initialSource)
-  const [activeStatus, setActiveStatus] = useState<StatusFilter>((filters?.status as StatusId | undefined) ?? "all")
+  const [activeStatus, setActiveStatus] = useState<StatusFilter>(filterStatus)
   const [hovered, setHovered] = useState<string | null>(null)
   const [openRecord, setOpenRecord] = useState<SubscriptionRow | null>(null)
   const [advOpen, setAdvOpen] = useState(false)
@@ -189,12 +301,11 @@ function SubscriptionsList({
   const hasPartialProviders = Boolean(pagination?.partial && failedProviders.length)
 
   const sourceTabs = [
-    { id: "all" as const, name: "Todas", color: T.headerBg, count: initialRows.length },
+    { id: "all" as const, name: "Todas", color: T.headerBg },
     ...Object.values(SOURCES).map((s) => ({
       id: s.id,
       name: s.name,
       color: s.color,
-      count: initialRows.filter((r) => r.provider === s.id).length,
     })),
   ]
 
@@ -264,9 +375,6 @@ function SubscriptionsList({
             <Btn variant="outline" size="sm" icon={<Icon.refresh size={13} />} onClick={handleSincronizar}>
               Sincronizar
             </Btn>
-            <Btn variant="primary" size="sm" icon={<Icon.plus size={12} />}>
-              Nueva suscripción
-            </Btn>
           </div>
         </div>
 
@@ -298,7 +406,31 @@ function SubscriptionsList({
               color: T.text,
             }}
           />
+          {q.trim() && (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              title="Limpiar busqueda"
+              style={{
+                border: "none",
+                background: "transparent",
+                color: T.muted,
+                cursor: "pointer",
+                lineHeight: 0,
+                padding: 4,
+                borderRadius: 4,
+              }}
+            >
+              <Icon.close size={14} />
+            </button>
+          )}
         </div>
+
+        {q.trim() && !isExactIccidQuery(q.trim()) && activeSrc === "all" && (
+          <p style={{ fontSize: 12, color: T.muted, margin: "6px 0 0", lineHeight: 1.4 }}>
+            La búsqueda por texto aplica solo a Kite y Tele2. Moabits no admite filtros de texto — selecciona la fuente Moabits para buscarlo directamente.
+          </p>
+        )}
 
         <div style={{ display: "flex", gap: 6, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ fontSize: 11, color: T.muted, marginRight: 4, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase" }}>
@@ -332,7 +464,7 @@ function SubscriptionsList({
                     width: 14,
                     height: 14,
                     borderRadius: isAll ? "50%" : 3,
-                    background: active ? "rgba(255,255,255,.18)" : isAll ? "transparent" : t.color,
+                    backgroundColor: active ? "rgba(255,255,255,.18)" : isAll ? "transparent" : t.color,
                     backgroundImage: !active && isAll ? conicGradient : undefined,
                     color: "#fff",
                     display: "inline-flex",
@@ -346,9 +478,6 @@ function SubscriptionsList({
                   {!isAll ? t.name[0].toUpperCase() : ""}
                 </span>
                 {t.name}
-                <span style={{ fontFamily: T.fontMono, fontSize: 10.5, fontWeight: 700, padding: "1px 5px", borderRadius: 3, lineHeight: 1.4, background: active ? "rgba(255,255,255,.18)" : T.tableHeaderBg, color: active ? "#fff" : T.muted }}>
-                  {t.count}
-                </span>
               </button>
             )
           })}
@@ -590,7 +719,11 @@ function SubscriptionsList({
         {pagination?.nextCursor && <span>siguiente cursor disponible</span>}
       </div>
 
-      <DetailModal record={openRecord} onClose={() => setOpenRecord(null)} />
+      <DetailModal
+        record={openRecord}
+        selectedProvider={activeSrc === "all" ? undefined : activeSrc}
+        onClose={() => setOpenRecord(null)}
+      />
     </div>
   )
 }

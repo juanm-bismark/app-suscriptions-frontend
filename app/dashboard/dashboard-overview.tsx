@@ -4,9 +4,9 @@ import { getDashboardSubscriptionOverview } from "@/app/actions/dashboard"
 import { loadSubscriptions } from "@/app/actions/subscriptions"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowRight, Database, Loader2, RadioTower, RefreshCcw, ServerCog } from "lucide-react"
-import Link from "next/link"
 import { useEffect, useMemo } from "react"
 import type { Provider } from "@/lib/types/api"
+import { PendingLinkButton } from "./_components/pending-link-button"
 
 const PROVIDERS: Provider[] = ["kite", "tele2", "moabits"]
 const STALE_TIME_MS = 5 * 60 * 1000
@@ -21,6 +21,14 @@ const PROVIDER_CARD_CLASSES: Record<Provider, string> = {
   kite: "bg-[#E5F5F6]",
   tele2: "bg-[#F0EAFB]",
   moabits: "bg-[#FCEADC]",
+}
+
+type ProviderCardItem = {
+  provider: Provider
+  count: number | null
+  partial: boolean
+  status: "ok" | "partial" | "error" | "loading"
+  error: string | null
 }
 
 export function DashboardOverview() {
@@ -90,8 +98,8 @@ export function DashboardOverview() {
             <Metric
               icon={<ServerCog className="h-4 w-4" />}
               label="Consultados"
-              value={overview ? `${overview.providerHints.filter((item) => item.count !== null).length}/${PROVIDERS.length}` : "--"}
-              help="Kite, Tele2 y Moabits"
+              value={overview ? `${overview.providerHints.filter((item) => item.status === "ok").length}/${PROVIDERS.length}` : "--"}
+              help={overview?.providerHints.some((item) => item.status !== "ok") ? "Hay fuentes con error o respuesta parcial" : "Kite, Tele2 y Moabits"}
               loading={isLoading}
             />
           </div>
@@ -118,37 +126,37 @@ export function DashboardOverview() {
             </p>
           )}
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Link
+            <PendingLinkButton
               href="/dashboard/subscriptions"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#0F202A] px-4 text-sm font-semibold text-white shadow-sm shadow-header-top/20 transition-colors hover:bg-[#163C41] hover:text-white"
             >
               Ver suscripciones
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </PendingLinkButton>
             {overview?.needsImport && (
-              <Link
+              <PendingLinkButton
                 href="/dashboard/sims/import"
                 className="inline-flex h-10 items-center justify-center rounded-md bg-white/75 px-4 text-sm font-semibold text-[#12343B] shadow-sm shadow-header-top/5 transition-colors hover:bg-white"
               >
                 Importar SIMs
-              </Link>
+              </PendingLinkButton>
             )}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {(overview?.providerHints ?? PROVIDERS.map((provider) => ({ provider, count: null, partial: false }))).map((item) => (
+        {(overview?.providerHints ?? PROVIDERS.map((provider) => ({ provider, count: null, partial: false, status: "loading" as const, error: null }))).map((item) => (
           <div key={item.provider} className={`rounded-lg px-4 py-2.5 shadow-sm shadow-header-top/5 ${PROVIDER_CARD_CLASSES[item.provider]}`}>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-title">{PROVIDER_LABELS[item.provider]}</p>
                 <p className="mt-1 text-xs text-muted">
-                  {item.count === null ? "Sin respuesta" : `${item.count} registros`}
+                  {getProviderCardDescription(item)}
                 </p>
               </div>
               <span className={getProviderStatusClassName(item)}>
-                {item.partial ? "Parcial" : item.count === null ? "Pendiente" : "OK"}
+                {item.status === "loading" ? "Cargando" : item.status === "error" ? "Error" : item.status === "partial" ? "Parcial" : "OK"}
               </span>
             </div>
           </div>
@@ -158,15 +166,27 @@ export function DashboardOverview() {
   )
 }
 
-function getProviderStatusClassName(item: { count: number | null; partial: boolean }) {
+function getProviderCardDescription(item: ProviderCardItem) {
+  if (item.status === "loading") return "Consultando conexion"
+  if (item.error) return item.error
+  if (item.status === "partial") return "Conexion parcial"
+  if (item.status === "ok") return "Conectado"
+  return "Sin respuesta"
+}
+
+function getProviderStatusClassName(item: Pick<ProviderCardItem, "status">) {
   const base = "rounded-full px-2.5 py-1 text-xs font-semibold"
 
-  if (item.count === null) {
-    return `${base} bg-[#F1F5F9] text-[#475569]`
+  if (item.status === "loading") {
+    return `${base} bg-white/70 text-[#326472]`
   }
 
-  if (item.partial) {
+  if (item.status === "partial") {
     return `${base} bg-[#FFF7E7] text-[#765315]`
+  }
+
+  if (item.status === "error") {
+    return `${base} bg-[#FEE2E2] text-[#991B1B]`
   }
 
   return `${base} bg-[#DDF4EA] text-[#16603B]`

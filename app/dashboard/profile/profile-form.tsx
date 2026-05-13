@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Eye, EyeOff } from "lucide-react"
 import {
   Form,
   FormControl,
@@ -18,6 +19,10 @@ import { updateProfile } from "@/app/actions/profile"
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Mínimo 2 caracteres permitidos"),
+  password: z.union([
+    z.string().min(6, "Contraseña de al menos 6 caracteres"),
+    z.literal(""),
+  ]).optional(),
 })
 
 type ProfileFormData = z.infer<typeof profileSchema>
@@ -32,18 +37,20 @@ export default function ProfileForm({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  const [showPassword, setShowPassword] = useState(false)
+
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { full_name: initialName },
+    defaultValues: { full_name: initialName, password: "" },
   })
 
   async function onSubmit(data: ProfileFormData) {
     setError(null)
     setSuccess(null)
 
-    // We construct a FormData out of the react hook form values
     const fd = new FormData()
     fd.append("full_name", data.full_name)
+    if (data.password) fd.append("password", data.password)
 
     const res = await updateProfile(fd)
     if (res.error) {
@@ -91,12 +98,42 @@ export default function ProfileForm({
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nueva contraseña <span className="text-muted font-normal">(opcional)</span></FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Dejar vacío para no cambiar"
+                      className="border-0 bg-white/80 pr-11 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted transition-colors hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <Button
             type="submit"
-            disabled={form.formState.isSubmitting}
+            loading={form.formState.isSubmitting}
+            loadingText="Guardando..."
             className="bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
           >
-            {form.formState.isSubmitting ? "Guardando..." : "Guardar cambios"}
+            Guardar cambios
           </Button>
         </form>
       </Form>

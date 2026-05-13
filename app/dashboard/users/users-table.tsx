@@ -1,42 +1,60 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Save, X } from "lucide-react"
-import { updateUser } from "@/app/actions/users"
+import { Pencil, Trash2 } from "lucide-react"
+import { deleteUser } from "@/app/actions/users"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { ROLES, type User, type UserRole } from "@/lib/types/user"
 
 type UsersTableProps = {
   users: User[]
   currentRole: UserRole
+  editingUserId: string | null
+  onEdit: (user: User) => void
+  emptyMessage?: string
 }
 
-export default function UsersTable({ users, currentRole }: UsersTableProps) {
-  const [editingId, setEditingId] = useState<string | null>(null)
+export default function UsersTable({
+  users,
+  currentRole,
+  editingUserId,
+  onEdit,
+  emptyMessage = "No hay usuarios adicionales en la empresa.",
+}: UsersTableProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   if (users.length === 0) {
-    return <p className="text-sm text-muted">No hay usuarios adicionales en la empresa.</p>
+    return <p className="text-sm text-muted">{emptyMessage}</p>
   }
 
-  async function onSubmit(formData: FormData) {
+  async function onDelete(userId: string) {
     setError(null)
     setSuccess(null)
-    setIsSaving(true)
+    setDeletingId(userId)
 
-    const result = await updateUser(formData)
-    setIsSaving(false)
+    const formData = new FormData()
+    formData.append("id", userId)
+
+    const result = await deleteUser(formData).finally(() => setDeletingId(null))
 
     if (result.error) {
       setError(result.error)
       return
     }
 
-    setSuccess(result.message || "Usuario actualizado")
-    setEditingId(null)
+    setSuccess(result.message || "Usuario eliminado")
   }
 
   return (
@@ -49,56 +67,54 @@ export default function UsersTable({ users, currentRole }: UsersTableProps) {
           <thead className="text-xs text-[#285F68] uppercase bg-[#EAF6F7]">
             <tr>
               <th scope="col" className="px-6 py-3 rounded-tl-lg">Nombre</th>
+              <th scope="col" className="px-6 py-3">Correo</th>
               <th scope="col" className="px-6 py-3">Rol</th>
               <th scope="col" className="px-6 py-3 rounded-tr-lg text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => {
-              const isEditing = editingId === user.id
               const canEdit = currentRole === ROLES.ADMIN || user.role === ROLES.MEMBER
+              const isSelected = editingUserId === user.id
 
               return (
-                <tr key={user.id} className="hover:bg-white/65 transition-colors">
-                  {isEditing ? (
-                    <EditableUserRow
-                      user={user}
-                      currentRole={currentRole}
-                      isSaving={isSaving}
-                      onSubmit={onSubmit}
-                      onCancel={() => setEditingId(null)}
-                    />
-                  ) : (
-                    <>
-                      <td className="px-6 py-4 font-medium text-title">{user.full_name || "Sin nombre"}</td>
-                      <td className="px-6 py-4">
-                        <span className={roleBadgeClassName(user.role)}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-end">
-                          {canEdit && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              title="Editar usuario"
-                              aria-label="Editar usuario"
-                              className="h-9 w-9 border-[#0891B2]/30 bg-[#ECFEFF] text-[#0E7490] shadow-sm shadow-[#0891B2]/10 hover:bg-[#CFFAFE] hover:text-[#155E75]"
-                              onClick={() => {
-                                setError(null)
-                                setSuccess(null)
-                                setEditingId(user.id)
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </>
-                  )}
+                <tr
+                  key={user.id}
+                  className={
+                    isSelected
+                      ? "bg-white shadow-[inset_3px_0_0_#33A6B2] transition-colors"
+                      : "transition-colors hover:bg-white/65"
+                  }
+                >
+                  <td className="px-6 py-4 font-medium text-title">{user.full_name || "Sin nombre"}</td>
+                  <td className="px-6 py-4 text-muted">{user.email || "—"}</td>
+                  <td className="px-6 py-4">
+                    <span className={roleBadgeClassName(user.role)}>{user.role}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      {canEdit && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            title="Editar usuario"
+                            aria-label="Editar usuario"
+                            className="h-9 w-9 border-[#0891B2]/30 bg-white text-[#0E7490] shadow-sm shadow-[#0891B2]/10 hover:border-[#0E7490] hover:bg-[#ECFEFF] hover:text-[#0F4C5C]"
+                            onClick={() => onEdit(user)}
+                          >
+                            <Pencil className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                          <DeleteUserDialog
+                            user={user}
+                            deleting={deletingId === user.id}
+                            onConfirm={() => onDelete(user.id)}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               )
             })}
@@ -109,68 +125,51 @@ export default function UsersTable({ users, currentRole }: UsersTableProps) {
   )
 }
 
-function EditableUserRow({
+function DeleteUserDialog({
   user,
-  currentRole,
-  isSaving,
-  onSubmit,
-  onCancel,
+  deleting,
+  onConfirm,
 }: {
   user: User
-  currentRole: UserRole
-  isSaving: boolean
-  onSubmit: (formData: FormData) => void
-  onCancel: () => void
+  deleting: boolean
+  onConfirm: () => void
 }) {
   return (
-    <td colSpan={3} className="px-6 py-4">
-      <form action={onSubmit} className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_180px_auto] md:items-center">
-        <input type="hidden" name="id" value={user.id} />
-        <Input
-          name="full_name"
-          defaultValue={user.full_name || ""}
-          placeholder="Nombre completo"
-          className="border-0 bg-white/85 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent"
-        />
-        {currentRole === ROLES.ADMIN ? (
-          <select
-            name="role"
-            defaultValue={user.role}
-            className="h-10 rounded-md bg-white/85 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus:ring-2 focus:ring-header-accent"
-          >
-            <option value="member">Miembro</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Administrador</option>
-          </select>
-        ) : (
-          <input type="hidden" name="role" value="member" />
-        )}
-        <div className="flex justify-end gap-2">
-          <Button
-            type="submit"
-            size="icon"
-            disabled={isSaving}
-            title="Guardar cambios"
-            aria-label="Guardar cambios"
-            className="h-10 w-10 bg-header-bg text-header-text shadow-sm shadow-header-top/15 hover:bg-header-top hover:text-header-text"
-          >
-            <Save className="h-4 w-4" aria-hidden="true" />
-          </Button>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          title="Eliminar usuario"
+          aria-label="Eliminar usuario"
+          className="h-9 w-9 border-[#DC2626]/25 bg-white text-[#B91C1C] shadow-sm shadow-[#DC2626]/10 hover:border-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#7F1D1D]"
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminar usuario</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción eliminará el acceso de {user.full_name || "este usuario"}. No se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
           <Button
             type="button"
-            variant="outline"
-            size="icon"
-            disabled={isSaving}
-            title="Cancelar edición"
-            aria-label="Cancelar edición"
-            className="h-10 w-10 bg-card text-header-bg shadow-sm shadow-header-top/5 hover:bg-badge-bg hover:text-header-bg"
-            onClick={onCancel}
+            variant="destructive"
+            loading={deleting}
+            loadingText="Eliminando..."
+            onClick={onConfirm}
+            className="border-[#DC2626] bg-[#DC2626] text-white hover:bg-[#B91C1C] hover:text-white"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            Eliminar
           </Button>
-        </div>
-      </form>
-    </td>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

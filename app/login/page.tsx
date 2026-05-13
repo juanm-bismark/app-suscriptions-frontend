@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
+import { CircleAlert, Eye, EyeOff } from "lucide-react"
 import {
   Form,
   FormControl,
@@ -25,10 +26,35 @@ const loginSchema = z.object({
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
+type LoginError = {
+  title: string
+  description: string
+}
+
+const loginErrorByCode: Record<string, LoginError> = {
+  auth_service_unavailable: {
+    title: "No se pudo conectar con el servidor",
+    description: "Verifica que el backend esté corriendo e intenta de nuevo.",
+  },
+  invalid_credentials: {
+    title: "Credenciales inválidas",
+    description: "Revisa el correo y la contraseña e intenta de nuevo.",
+  },
+  credentials: {
+    title: "Credenciales inválidas",
+    description: "Revisa el correo y la contraseña e intenta de nuevo.",
+  },
+}
+
+const defaultLoginError: LoginError = {
+  title: "Credenciales inválidas",
+  description: "Revisa el correo y la contraseña e intenta de nuevo.",
+}
 
 export default function LoginPage() {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<LoginError | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -48,18 +74,7 @@ export default function LoginPage() {
     })
 
     if (result?.error) {
-      const errorByCode: Record<string, string> = {
-        invalid_credentials: "Credenciales inválidas",
-        credentials: "Credenciales inválidas",
-      }
-
-      setError(
-        result.code && errorByCode[result.code]
-          ? errorByCode[result.code]
-          : result.error && result.error !== "CredentialsSignin"
-            ? result.error
-            : "Credenciales inválidas"
-      )
+      setError(result.code && loginErrorByCode[result.code] ? loginErrorByCode[result.code] : defaultLoginError)
     } else if (result?.ok) {
       router.push("/dashboard")
     }
@@ -87,8 +102,14 @@ export default function LoginPage() {
             </p>
 
             {error && (
-              <div className="mb-6 rounded-md bg-warn-bg px-4 py-3 text-sm font-medium text-warn-text shadow-sm">
-                {error}
+              <div className="mb-6 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-left shadow-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+                  <CircleAlert className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5 text-red-900">{error.title}</p>
+                  <p className="mt-1 text-sm leading-5 text-red-700">{error.description}</p>
+                </div>
               </div>
             )}
 
@@ -119,14 +140,29 @@ export default function LoginPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-text">Contraseña</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••"
-                          className="h-11 border-border bg-white text-text shadow-sm placeholder:text-muted focus-visible:ring-header-accent"
-                          {...field}
-                        />
-                      </FormControl>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••"
+                            className="h-11 border-border bg-white pr-12 text-text shadow-sm placeholder:text-muted focus-visible:ring-header-accent"
+                            {...field}
+                          />
+                        </FormControl>
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((value) => !value)}
+                          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors hover:bg-[#EAF5F6] hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent focus-visible:ring-offset-2"
+                          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          aria-pressed={showPassword}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <Eye className="h-4 w-4" aria-hidden="true" />
+                          )}
+                        </button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -134,10 +170,11 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  disabled={form.formState.isSubmitting}
+                  loading={form.formState.isSubmitting}
+                  loadingText="Iniciando..."
                   className="mt-6 h-12 w-full bg-[#12343B] text-base font-bold text-white shadow-md shadow-header-top/15 transition-all duration-200 hover:bg-[#1A4A52] hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
                 >
-                  {form.formState.isSubmitting ? "Iniciando..." : "Iniciar sesión"}
+                  Iniciar sesión
                 </Button>
               </form>
             </Form>

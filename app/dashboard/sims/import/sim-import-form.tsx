@@ -1,5 +1,6 @@
 "use client"
 
+import { useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { FormEvent, useMemo, useState } from "react"
 import { importSims } from "@/app/actions/sims"
@@ -99,6 +100,7 @@ function parseSimsCsv(text: string): ParseResult {
 }
 
 export function SimImportForm() {
+  const queryClient = useQueryClient()
   const [fileName, setFileName] = useState("")
   const [csv, setCsv] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -153,6 +155,7 @@ export function SimImportForm() {
       return
     }
 
+    queryClient.invalidateQueries({ queryKey: ["subscriptions"] })
     setSuccess(`${result.data.imported} SIM${result.data.imported === 1 ? "" : "s"} importada${result.data.imported === 1 ? "" : "s"} correctamente.`)
   }
 
@@ -236,8 +239,8 @@ export function SimImportForm() {
           )}
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <Button type="submit" disabled={!ready || submitting}>
-              {submitting ? "Importando..." : "Importar SIMs"}
+            <Button type="submit" disabled={!ready} loading={submitting} loadingText="Importando...">
+              Importar SIMs
             </Button>
           </div>
         </Card>

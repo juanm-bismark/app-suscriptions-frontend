@@ -1,9 +1,20 @@
 export default function ProfileLoading() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-pulse">
-      <div className="mb-8">
-        <div className="h-9 bg-zebra rounded w-40 mb-2" />
-        <div className="h-5 bg-zebra rounded w-72 max-w-full" />
+      <div className="mb-6 rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="h-9 bg-zebra rounded w-40 mb-2" />
+            <div className="h-5 bg-zebra rounded w-72 max-w-full" />
+          </div>
+          <div className="flex max-w-full items-center gap-3 rounded-md border border-[#C9DFE3] bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 sm:w-56">
+            <div className="h-9 w-9 shrink-0 rounded-md bg-[#DDF1F2]" />
+            <div className="min-w-0 flex-1">
+              <div className="mb-1.5 h-3 w-16 rounded bg-zebra" />
+              <div className="h-4 w-28 rounded bg-zebra" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">

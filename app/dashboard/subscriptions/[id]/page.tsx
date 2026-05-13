@@ -1,7 +1,7 @@
 import { getProviderCapabilities } from "@/app/actions/providers";
 import { ApiError } from "@/lib/api-client";
 import { getSim } from "@/lib/api/sims";
-import { getProfile } from "@/lib/auth/current-user";
+import { requireCompanyUser } from "@/lib/auth/current-user";
 import { notFound } from "next/navigation";
 import { SubscriptionPage } from "../subscription-page";
 
@@ -18,12 +18,12 @@ export default async function SubscriptionDetailPage({
 }) {
   const { id } = await params;
   const { tab } = await searchParams;
+  const profile = await requireCompanyUser();
   const subscriptionPromise = getSim(decodeURIComponent(id));
-  const profilePromise = getProfile();
   let data: Awaited<ReturnType<typeof loadDetailData>>;
 
   try {
-    data = await loadDetailData(subscriptionPromise, profilePromise);
+    data = await loadDetailData(subscriptionPromise, profile);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
@@ -45,15 +45,14 @@ function isDetailTab(tab: string | undefined): tab is "detail" | "history" | "us
 
 async function loadDetailData(
   subscriptionPromise: ReturnType<typeof getSim>,
-  profilePromise: ReturnType<typeof getProfile>
+  profile: Awaited<ReturnType<typeof requireCompanyUser>>
 ) {
   const capabilitiesPromise = subscriptionPromise.then((subscription) =>
     getProviderCapabilities(subscription.provider)
   );
-  const [subscription, capabilities, profile] = await Promise.all([
+  const [subscription, capabilities] = await Promise.all([
     subscriptionPromise,
     capabilitiesPromise,
-    profilePromise,
   ]);
 
   return { subscription, capabilities, profile };

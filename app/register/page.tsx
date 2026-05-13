@@ -168,10 +168,11 @@ export default function RegisterPage() {
 
                 <Button
                   type="submit"
-                  disabled={form.formState.isSubmitting}
+                  loading={form.formState.isSubmitting}
+                  loadingText="Creando..."
                   className="mt-6 h-12 w-full bg-[#12343B] text-base font-bold text-white shadow-md shadow-header-top/15 transition-all duration-200 hover:bg-[#1A4A52] hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
                 >
-                  {form.formState.isSubmitting ? "Creando..." : "Crear cuenta"}
+                  Crear cuenta
                 </Button>
               </form>
             </Form>

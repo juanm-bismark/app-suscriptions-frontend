@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import type { ReactNode } from "react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 
@@ -30,7 +31,9 @@ export function ProblemAlert({
   onRetry,
   children,
 }: ProblemAlertProps) {
+  const router = useRouter()
   const [copied, setCopied] = useState(false)
+  const [isRetrying, startRetry] = useTransition()
   const requestId = problem?.instance || problem?.digest || null
   const displayTitle = problem?.title || title
   const detail = problem?.detail || problem?.message || fallbackDetail
@@ -40,6 +43,11 @@ export function ProblemAlert({
     await navigator.clipboard.writeText(requestId)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1600)
+  }
+
+  function retry() {
+    onRetry?.()
+    router.refresh()
   }
 
   return (
@@ -65,7 +73,13 @@ export function ProblemAlert({
       </div>
       {children && <div className="mt-4">{children}</div>}
       {onRetry && (
-        <Button type="button" className="mt-4" onClick={onRetry}>
+        <Button
+          type="button"
+          className="mt-4"
+          loading={isRetrying}
+          loadingText="Cargando..."
+          onClick={() => startRetry(retry)}
+        >
           Intentar de nuevo
         </Button>
       )}

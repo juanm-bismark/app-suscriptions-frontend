@@ -9,6 +9,7 @@ export class ApiError extends Error {
   public detail?: string | null
   public instance?: string | null
   public extra?: Record<string, unknown>
+  public retryAfter?: number
   public raw?: unknown
 
   constructor(
@@ -20,6 +21,7 @@ export class ApiError extends Error {
       detail?: string | null
       instance?: string | null
       extra?: Record<string, unknown>
+      retryAfter?: number
       raw?: unknown
     }
   ) {
@@ -30,6 +32,7 @@ export class ApiError extends Error {
     this.detail = init?.detail
     this.instance = init?.instance
     this.extra = init?.extra
+    this.retryAfter = init?.retryAfter
     this.raw = init?.raw
   }
 }
@@ -59,19 +62,6 @@ export async function fetchApi<T>(
     headers.set("Authorization", `Bearer ${token}`)
   }
 
-  // Forward Idempotency-Key if present
-  if (options.headers instanceof Headers) {
-    const idempotencyKey = options.headers.get("Idempotency-Key")
-    if (idempotencyKey) {
-      headers.set("Idempotency-Key", idempotencyKey)
-    }
-  } else if (typeof options.headers === "object" && options.headers) {
-    const idempotencyKey = (options.headers as Record<string, string>)["Idempotency-Key"]
-    if (idempotencyKey) {
-      headers.set("Idempotency-Key", idempotencyKey)
-    }
-  }
-
   const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
   const normalizedPath = withV1(path)
   const url = `${baseUrl}${normalizedPath}`
@@ -88,6 +78,8 @@ export async function fetchApi<T>(
   }
 
   const requestId = response.headers.get("X-Request-ID")
+  const retryAfterHeader = response.headers.get("Retry-After")
+  const retryAfter = retryAfterHeader ? Number(retryAfterHeader) : undefined
 
   if (!response.ok) {
     const contentType = response.headers.get("content-type")
@@ -102,16 +94,21 @@ export async function fetchApi<T>(
 
     if (isProblem && body && typeof body === "object") {
       const problem = body as Partial<ProblemDetails>
+      const extra = Object.fromEntries(
+        Object.entries(problem).filter(
+          ([key]) => !["type", "title", "status", "code", "detail", "instance"].includes(key)
+        )
+      )
+      if (Number.isFinite(retryAfter) && extra.retry_after == null) {
+        extra.retry_after = retryAfter
+      }
       throw new ApiError(response.status, problem.title || problem.detail || "Error en la petición", {
         code: problem.code,
         title: problem.title,
         detail: problem.detail ?? null,
         instance: problem.instance ?? requestId ?? null,
-        extra: Object.fromEntries(
-          Object.entries(problem).filter(
-            ([key]) => !["type", "title", "status", "code", "detail", "instance"].includes(key)
-          )
-        ),
+        extra,
+        retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
         raw: body,
       })
     } else {
@@ -122,6 +119,7 @@ export async function fetchApi<T>(
       throw new ApiError(response.status, message, {
         detail: typeof detail === "string" ? detail : null,
         instance: requestId ?? null,
+        retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
         raw: body,
       })
     }

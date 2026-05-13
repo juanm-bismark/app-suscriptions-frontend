@@ -1,8 +1,8 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { ApiError } from "@/lib/api-client"
 import { importSims as importSimsApi } from "@/lib/api/sims"
+import { requireCompanyUser } from "@/lib/auth/current-user"
 import type { SimImportIn, SimImportOut } from "@/lib/types/api"
 
 type ActionOk<T> = { ok: true; data: T }
@@ -28,9 +28,10 @@ function toActionError(error: unknown): ActionErr {
 }
 
 export async function importSims(body: SimImportIn): Promise<SimActionResult<SimImportOut>> {
+  await requireCompanyUser()
+
   try {
     const data = await importSimsApi(body)
-    revalidatePath("/dashboard/subscriptions")
     return { ok: true, data }
   } catch (error) {
     return toActionError(error)

@@ -1,15 +1,17 @@
 "use client";
 
 import { newIdempotencyKey } from "@/lib/api/idempotency";
-import { getPresence, getUsage, purgeSim, setSimStatus } from "@/lib/api/sims";
-import { toast, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui";
-import type { CapabilityOut, PresenceOut, ProviderCapabilitiesOut, SubscriptionOut, UsageControl, UsageOut } from "@/lib/types/api";
+import { getPresence, getUsage, setSimStatus } from "@/lib/api/sims";
+import { toast } from "@/components/ui";
+import type { PresenceOut, ProviderCapabilitiesOut, SubscriptionOut, UsageControl, UsageOut } from "@/lib/types/api";
 import type { AdministrativeStatus } from "@/lib/types/api/common";
 import { ROLES, type UserRole } from "@/lib/types/user";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { fmtDate, formatVal, looksMono, prettyKey } from "./data";
-import { SourceBadge, StatusPillWithNative } from "./primitives";
+import { Btn, Icon, SourceBadge, StatusPillWithNative } from "./primitives";
 import { SOURCES, STATUS_META, T } from "./tokens";
 
 type TabId = "detail" | "history" | "usage" | "presence" | "limits" | "actions";
@@ -26,6 +28,19 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "limits", label: "Límites" },
   { id: "actions", label: "Acciones" },
 ];
+
+const VISIBLE_SIM_IDENTIFIER_KEYS = new Set(["iccid", "msisdn", "imsi", "imei", "eid", "euiccid"]);
+
+function isTechnicalIdentifierField(key: string) {
+  const raw = key.trim();
+  const normalized = raw.toLowerCase();
+  if (VISIBLE_SIM_IDENTIFIER_KEYS.has(normalized)) return false;
+  return /(^|[_-])id($|[_-])|[a-z0-9]Id$|uuid|guid|company[_-]?code|account[_-]?id|sim[_-]?profile[_-]?id/i.test(raw);
+}
+
+function isUuidLikeValue(v: unknown) {
+  return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v.trim());
+}
 
 function value(v: string | null | undefined) {
   return v && v.trim() ? v : "—";
@@ -96,23 +111,11 @@ function usageBars(usage: UsageOut) {
   return [{ label: "Periodo", value: totalMb, unit: "MB" }];
 }
 
-function usageWindowQuery(days = 30) {
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - days);
-  const qs = new URLSearchParams({
-    start_date: start.toISOString(),
-    end_date: end.toISOString(),
-    metrics: "data",
-  });
-  return qs.toString();
-}
-
 function mergedAttributes(subscription: SubscriptionOut) {
   return Object.entries({
     ...subscription.provider_fields,
     ...subscription.normalized.custom_fields,
-  }).filter(([, v]) => v !== undefined);
+  }).filter(([key, v]) => v !== undefined && !isTechnicalIdentifierField(key) && !isUuidLikeValue(v));
 }
 
 export function SubscriptionPage({
@@ -126,84 +129,202 @@ export function SubscriptionPage({
   currentUserRole?: UserRole;
   initialTab?: TabId;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabId>(initialTab);
+  const [copiedIccid, setCopiedIccid] = useState(false);
   const src = SOURCES[subscription.provider];
   const n = subscription.normalized;
   const statusLabel = STATUS_META[subscription.status]?.label ?? subscription.status;
-  const services = n.services.active?.length
-    ? n.services.active.join(" / ")
-    : [n.services.data_service ? "data" : null, n.services.sms_service ? "sms" : null].filter(Boolean).join(" / ");
+
+  async function copyIccid() {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(subscription.iccid);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = subscription.iccid;
+        input.style.position = "fixed";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+      }
+      setCopiedIccid(true);
+      toast.success("ICCID copiado");
+      window.setTimeout(() => setCopiedIccid(false), 1600);
+    } catch {
+      toast.error("No pudimos copiar el ICCID");
+    }
+  }
 
   return (
-    <main style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", padding: 24 }}>
-      <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
-        <div style={{ height: 4, background: src.color }} />
-        <div style={{ padding: 22, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <SourceBadge source={subscription.provider} withName />
-              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.muted }}>{subscription.iccid}</span>
+    <div style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}>
+      {/* Breadcrumb bar */}
+      <div style={{ padding: "10px 24px", background: T.cardBg, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
+        <Link
+          href="/dashboard/subscriptions"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, color: T.headerBg, textDecoration: "none", fontWeight: 700 }}
+        >
+          <Icon.arrowLeft size={12} />
+          Suscripciones
+        </Link>
+        <span style={{ color: T.muted }}>/</span>
+        <span style={{ fontFamily: T.fontMono, color: T.title, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {subscription.iccid}
+        </span>
+        <div style={{ flex: 1 }} />
+        <Btn variant="ghost" size="sm" icon={<Icon.copy size={12} />} onClick={copyIccid}>
+          {copiedIccid ? "Copiado" : "Copiar ICCID"}
+        </Btn>
+        <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted, padding: "3px 8px", background: T.zebra, borderRadius: 4, border: `1px solid ${T.border}` }}>
+          /subscriptions/{subscription.iccid.toLowerCase()}
+        </span>
+      </div>
+
+      {/* Hero section */}
+      <div style={{ background: T.cardBg, borderBottom: `1px solid ${T.border}`, padding: "20px 24px 0" }}>
+        {/* Avatar + info + actions */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 18, marginBottom: 18 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+              <HeroMeta label="Fuente">
+                <SourceBadge source={subscription.provider} size="sm" withName />
+              </HeroMeta>
+              <HeroMeta label="Estado">
+                <StatusPillWithNative status={subscription.status} nativeStatus={subscription.native_status} sourceName={src.name} size="sm" />
+              </HeroMeta>
             </div>
-            <h1 style={{ margin: 0, color: T.title, fontSize: 24, letterSpacing: -0.3 }}>{value(n.customer.name)}</h1>
-            <p style={{ margin: "6px 0 0", color: T.muted, fontFamily: T.fontMono, fontSize: 12 }}>
-              {value(subscription.msisdn)} · {value(subscription.imsi)}
-            </p>
+            <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", marginBottom: 3 }}>ICCID</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: 0, fontFamily: T.fontMono, overflowWrap: "anywhere" }}>{subscription.iccid}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
+              {n.customer.name && <HeroMeta label="Cliente">{n.customer.name}</HeroMeta>}
+              {subscription.msisdn && <HeroMeta label="MSISDN" mono>{subscription.msisdn}</HeroMeta>}
+              {subscription.imsi && <HeroMeta label="IMSI" mono>{subscription.imsi}</HeroMeta>}
+            </div>
           </div>
-          <StatusPillWithNative status={subscription.status} nativeStatus={subscription.native_status} sourceName={src.name} size="md" />
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Btn variant="outline" size="md" icon={<Icon.refresh size={13} />} onClick={() => router.refresh()}>
+              Sincronizar
+            </Btn>
+            <Btn variant="primary" size="md" color={src.color} onClick={() => setTab("actions")}>
+              Acciones
+            </Btn>
+          </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", borderTop: `1px solid ${T.divider}` }}>
-          <KV label={n.limits.data == null ? "Último cambio" : "Datos permitidos"} value={n.limits.data == null ? fmtDate(n.status.last_changed_at) : mbToLabel(n.limits.data)} sub={n.limits.data == null ? relativeTime(subscription.updated_at) : `Servicios: ${services || "—"}`} />
-          <KV label="Plan" value={value(n.plan.name)} sub={value(n.plan.code)} />
-          <KV label="Comm. Plan" value={value(n.plan.communication_plan)} />
-          <KV label="Activado" value={fmtDate(subscription.activated_at)} />
-          <KV label="Expira plan" value={fmtDate(n.plan.expires_at)} />
-          <HeroUsage iccid={subscription.iccid} />
+
+        {/* KPI strip */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: T.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+          <Kpi label="Plan" text={value(n.plan.name)} sub={value(n.plan.code)} />
+          <Kpi label="Datos permitidos" text={mbToLabel(n.limits.data)} sub="por SIM" />
+          <Kpi label="Expira plan" text={fmtDate(n.plan.expires_at)} sub={relativeTime(n.plan.expires_at)} />
+          <Kpi label="Antigüedad" text={antiquityFor(subscription.activated_at)} sub={subscription.activated_at ? `Desde ${fmtDate(subscription.activated_at)}` : undefined} />
         </div>
-      </section>
 
-      <nav style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setTab(item.id)}
-            style={{
-              border: `1px solid ${tab === item.id ? src.color : T.border}`,
-              background: tab === item.id ? src.tintBg : T.cardBg,
-              color: tab === item.id ? src.tintText : T.text,
-              borderRadius: 5,
-              padding: "8px 11px",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
+        {/* Underline tabs */}
+        <div style={{ display: "flex", gap: 2, marginBottom: -1 }}>
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              style={{
+                padding: "11px 16px",
+                background: "transparent",
+                border: "none",
+                borderBottom: `2px solid ${tab === item.id ? src.color : "transparent"}`,
+                color: tab === item.id ? T.title : T.muted,
+                fontFamily: T.fontBody,
+                fontSize: 13,
+                fontWeight: tab === item.id ? 700 : 500,
+                cursor: "pointer",
+                letterSpacing: -0.1,
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {tab === "detail" && <DetailTab subscription={subscription} statusLabel={statusLabel} />}
-      {tab === "history" && <HistoryTab subscription={subscription} statusLabel={statusLabel} />}
-      {tab === "usage" && <UsageTab subscription={subscription} />}
-      {tab === "presence" && <PresenceTab iccid={subscription.iccid} />}
-      {tab === "limits" && <LimitsTab subscription={subscription} />}
-      {tab === "actions" && (
-        <ActionsTab
-          subscription={subscription}
-          capabilities={capabilities}
-          currentUserRole={currentUserRole}
-        />
-      )}
-    </main>
+      {/* Tab content */}
+      <div style={{ flex: 1, padding: 24 }}>
+        {tab === "detail" && <DetailTab subscription={subscription} statusLabel={statusLabel} />}
+        {tab === "history" && <HistoryTab subscription={subscription} statusLabel={statusLabel} />}
+        {tab === "usage" && <UsageTab subscription={subscription} />}
+        {tab === "presence" && <PresenceTab iccid={subscription.iccid} />}
+        {tab === "limits" && <LimitsTab subscription={subscription} />}
+        {tab === "actions" && (
+          <ActionsTab
+            subscription={subscription}
+            capabilities={capabilities}
+            currentUserRole={currentUserRole}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
-function HeroUsage({ iccid }: { iccid: string }) {
-  const state = useUsage(iccid, usageWindowQuery(30));
-  if (state.status === "error") return <KV label="Consumo 30 días" value="Datos no disponibles" sub={state.message} />;
-  if (state.status !== "success") return <KV label="Consumo 30 días" value="Cargando..." sub="Consultando proveedor" />;
-  const bars = usageBars(state.data);
-  return <MiniChart label="Consumo 30 días" bars={bars} />;
+function antiquityFor(s: string | null | undefined) {
+  if (!s) return "—";
+  const d = new Date(s);
+  const now = new Date();
+  const months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (months < 1) return "Nueva";
+  if (months < 12) return `${months} mes${months > 1 ? "es" : ""}`;
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  return m ? `${y}a ${m}m` : `${y} año${y > 1 ? "s" : ""}`;
+}
+
+function Kpi({ label, text, sub }: { label: string; text: string; sub?: string }) {
+  return (
+    <div style={{ background: T.cardBg, padding: "12px 16px" }}>
+      <div style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: T.title, letterSpacing: -0.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</div>
+      {sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function HeroMeta({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
+  return (
+    <div
+      style={{
+        minHeight: 34,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        minWidth: 0,
+        padding: "5px 9px",
+        border: `1px solid ${T.border}`,
+        borderRadius: 6,
+        background: T.zebra,
+      }}
+    >
+      <span style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", lineHeight: 1, flexShrink: 0 }}>
+        {label}
+      </span>
+      <span
+        style={{
+          color: T.title,
+          fontSize: 12.5,
+          fontWeight: 700,
+          fontFamily: mono ? T.fontMono : T.fontBody,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          display: "inline-flex",
+          alignItems: "center",
+        }}
+      >
+        {children}
+      </span>
+    </div>
+  );
 }
 
 function DetailTab({ subscription, statusLabel }: { subscription: SubscriptionOut; statusLabel: string }) {
@@ -216,8 +337,7 @@ function DetailTab({ subscription, statusLabel }: { subscription: SubscriptionOu
     ["Estado nativo", subscription.native_status, true],
     ["Activado", fmtDate(subscription.activated_at), false],
     ["Última actualización", fmtDate(subscription.updated_at), false],
-    ["ID compañía", subscription.company_id, true],
-  ] as const;
+  ] as [string, string | null | undefined, boolean][];
   const attrs = mergedAttributes(subscription);
 
   return (
@@ -337,16 +457,6 @@ type PendingAction =
   | { kind: "status"; target: AdministrativeStatus; dataService: boolean; smsService: boolean }
   | { kind: "purge"; confirmText: string };
 
-function canClickCapability(capability: CapabilityOut | undefined) {
-  return capability?.status === "supported" || capability?.status === "requires_confirmation";
-}
-
-function capabilityDisabledReason(capability: CapabilityOut | undefined) {
-  if (!capability) return "El proveedor no reportó esta capacidad.";
-  if (capability.status === "supported" || capability.status === "requires_confirmation") return null;
-  return capability.reason || "Esta operación no está habilitada para el proveedor.";
-}
-
 function actionErrorMessage(err: unknown) {
   const parsed = errorMessage(err);
   return parsed.message || "No pudimos ejecutar la acción.";
@@ -362,50 +472,88 @@ function ActionsTab({
   currentUserRole?: UserRole;
 }) {
   const router = useRouter();
+  const src = SOURCES[subscription.provider];
+  const isAdmin = currentUserRole === ROLES.ADMIN;
+  const statusCapability = capabilities.capabilities.set_administrative_status;
+  const targets = statusCapability?.targets ?? [];
+
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [busy, setBusy] = useState(false);
-  const statusCapability = capabilities.capabilities.set_administrative_status;
-  const purgeCapability = capabilities.capabilities.purge;
-  const isAdmin = currentUserRole === ROLES.ADMIN;
-  const disabledReason = capabilityDisabledReason(statusCapability);
-  const canSetStatus = isAdmin && canClickCapability(statusCapability);
-  const targets = statusCapability?.targets ?? [];
+
   const isMoabitsServiceTarget =
     subscription.provider === "moabits" &&
     pending?.kind === "status" &&
     (pending.target === "active" || pending.target === "suspended");
-  const servicesValid = !isMoabitsServiceTarget || pending.dataService || pending.smsService;
+  const servicesValid = !isMoabitsServiceTarget || (pending?.kind === "status" && (pending.dataService || pending.smsService));
   const purgeConfirmValid = pending?.kind !== "purge" || pending.confirmText === subscription.iccid;
+
+  // Build action rows from capabilities
+  type ActionKey = "reactivate" | "sync" | "purge";
+  interface ActionDef { key: ActionKey; title: string; body: string; color: string; danger: boolean; icon: React.ReactNode }
+
+  const canReactivate = targets.includes("active") && subscription.status !== "active";
+
+  const actionDefs: ActionDef[] = [
+    ...(canReactivate ? [{
+      key: "reactivate" as ActionKey,
+      title: "Reactivar suscripción",
+      body: `Restablece la línea al estado Activa. Mapeado al endpoint de activación en ${src.name}.`,
+      color: T.success,
+      danger: false,
+      icon: <Icon.play size={12} />,
+    }] : []),
+    {
+      key: "sync" as ActionKey,
+      title: "Sincronizar desde fuente",
+      body: `Refresca los datos consultando ${src.name} en tiempo real.`,
+      color: src.color,
+      danger: false,
+      icon: <Icon.refresh size={13} />,
+    },
+    {
+      key: "purge" as ActionKey,
+      title: "Purgar línea",
+      body: "Acción destructiva. Marca la línea como PURGED en la fuente. No se puede deshacer fácilmente.",
+      color: T.danger,
+      danger: true,
+      icon: <Icon.close size={12} />,
+    },
+  ];
 
   if (!isAdmin) {
     return (
-      <Card title="Acciones">
+      <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>Acciones</div>
         <div style={{ padding: 16 }}>
-          <div
-            role="note"
-            style={{
-              border: `1px solid ${T.warning}`,
-              background: "#FBEFD4",
-              color: "#7A4E0B",
-              borderRadius: 6,
-              padding: "10px 12px",
-              fontSize: 13,
-              fontWeight: 700,
-            }}
-          >
+          <div role="note" style={{ border: `1px solid ${T.warning}`, background: "#FBEFD4", color: "#7A4E0B", borderRadius: 6, padding: "10px 12px", fontSize: 13, fontWeight: 700 }}>
             Solo un administrador puede ejecutar cambios de estado o purgas.
           </div>
         </div>
-      </Card>
+      </section>
     );
+  }
+
+  function handleClick(key: ActionKey) {
+    if (key === "purge") {
+      setPending({ kind: "purge", confirmText: "" });
+    } else if (key === "reactivate") {
+      setPending({
+        kind: "status",
+        target: "active",
+        dataService: subscription.normalized.services.data_service ?? true,
+        smsService: subscription.normalized.services.sms_service ?? true,
+      });
+    } else {
+      router.refresh();
+    }
   }
 
   async function submitAction() {
     if (!pending || busy || !servicesValid || !purgeConfirmValid) return;
     setBusy(true);
-    const idempotencyKey = newIdempotencyKey();
     try {
       if (pending.kind === "status") {
+        const idempotencyKey = newIdempotencyKey();
         await setSimStatus(
           subscription.iccid,
           {
@@ -416,12 +564,18 @@ function ActionsTab({
           idempotencyKey
         );
         toast.success(`Estado enviado: ${STATUS_META[pending.target]?.label ?? pending.target}.`);
+        setPending(null);
+        router.refresh();
       } else {
-        await purgeSim(subscription.iccid, idempotencyKey);
-        toast.success("Purga enviada al proveedor.");
+        console.warn("[MOCK] Purga simulada. No se envio ninguna solicitud al backend.", {
+          iccid: subscription.iccid,
+          provider: subscription.provider,
+          endpoint: `/v1/sims/${subscription.iccid}/purge`,
+          idempotencyKey: newIdempotencyKey(),
+        });
+        toast.warning("Mock: purga simulada. No se envio ninguna solicitud.");
+        setPending(null);
       }
-      setPending(null);
-      router.refresh();
     } catch (err) {
       toast.error(actionErrorMessage(err));
     } finally {
@@ -430,113 +584,63 @@ function ActionsTab({
   }
 
   return (
-    <Card title="Acciones">
-      <div style={{ padding: 16, display: "grid", gap: 16 }}>
-        <section style={{ display: "grid", gap: 10 }}>
-          <div>
-            <h3 style={{ margin: 0, color: T.title, fontSize: 14 }}>Cambiar estado administrativo</h3>
-            <p style={{ margin: "4px 0 0", color: T.muted, fontSize: 12 }}>
-              {disabledReason ?? `Capacidad reportada por ${SOURCES[subscription.provider].name}.`}
-            </p>
-          </div>
-
-          {targets.length ? (
-            <TooltipProvider>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {targets.map((target) => {
-                  const meta = STATUS_META[target];
-                  const disabled = !canSetStatus || target === subscription.status;
-                  const title = target === subscription.status
-                      ? "La SIM ya está en este estado."
-                      : disabledReason ?? undefined;
-                  const button = (
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => setPending({
-                        kind: "status",
-                        target,
-                        dataService: subscription.normalized.services.data_service ?? true,
-                        smsService: subscription.normalized.services.sms_service ?? true,
-                      })}
-                      style={{
-                        border: `1px solid ${disabled ? T.border : meta?.color ?? T.border}`,
-                        background: disabled ? "#F3F4F6" : meta?.bg ?? T.cardBg,
-                        color: disabled ? T.muted : meta?.color ?? T.text,
-                        borderRadius: 5,
-                        padding: "9px 11px",
-                        cursor: disabled ? "not-allowed" : "pointer",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        opacity: disabled ? 0.65 : 1,
-                      }}
-                    >
-                      {meta?.label ?? target}
-                    </button>
-                  );
-
-                  return title ? (
-                    <Tooltip key={target}>
-                      <TooltipTrigger asChild>
-                        <span>{button}</span>
-                      </TooltipTrigger>
-                      <TooltipContent>{title}</TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <span key={target}>{button}</span>
-                  );
-                })}
+    <>
+      <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 3, height: 14, background: src.color, borderRadius: 2, flexShrink: 0 }} />
+          <div style={{ color: T.title, fontWeight: 800, fontSize: 13, flex: 1 }}>Acciones disponibles</div>
+          <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>
+            estado: {STATUS_META[subscription.status]?.label ?? subscription.status}
+          </span>
+        </div>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+          {actionDefs.length === 0 && <Empty text="Sin acciones disponibles para el estado actual." />}
+          {actionDefs.map((a) => (
+            <div
+              key={a.key}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "12px 14px",
+                border: `1px solid ${a.danger ? T.danger + "55" : T.border}`,
+                borderRadius: 6,
+                background: a.danger ? "#FFF5F2" : T.cardBg,
+              }}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 6, background: a.color + "22", color: a.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {a.icon}
               </div>
-            </TooltipProvider>
-          ) : (
-            <Empty text="Este proveedor no publicó estados destino para esta SIM." />
-          )}
-        </section>
-
-        {isAdmin && purgeCapability?.status === "supported" && (
-          <section style={{ borderTop: `1px solid ${T.divider}`, paddingTop: 14, display: "grid", gap: 10 }}>
-            <div>
-              <h3 style={{ margin: 0, color: T.title, fontSize: 14 }}>Purga</h3>
-              <p style={{ margin: "4px 0 0", color: T.muted, fontSize: 12 }}>
-                Acción irreversible protegida con confirmación por ICCID.
-              </p>
-            </div>
-            <div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.title, letterSpacing: -0.1 }}>{a.title}</div>
+                <div style={{ fontSize: 12, color: T.muted, marginTop: 2, lineHeight: 1.4 }}>{a.body}</div>
+              </div>
               <button
                 type="button"
-                onClick={() => setPending({ kind: "purge", confirmText: "" })}
+                onClick={() => handleClick(a.key)}
                 style={{
-                  border: `1px solid ${T.danger}`,
-                  background: "#FADDD6",
-                  color: "#A84234",
+                  border: `1px solid ${a.danger ? T.danger + "66" : T.border}`,
+                  background: "#fff",
+                  color: a.danger ? T.danger : T.text,
                   borderRadius: 5,
-                  padding: "9px 11px",
+                  padding: "5px 10px",
                   cursor: "pointer",
                   fontSize: 12,
                   fontWeight: 800,
+                  flexShrink: 0,
+                  fontFamily: T.fontBody,
                 }}
               >
-                Purgar SIM
+                {a.danger ? "Confirmar…" : "Ejecutar"}
               </button>
             </div>
-          </section>
-        )}
-      </div>
+          ))}
+        </div>
+      </section>
 
+      {/* Confirmation dialog */}
       {pending && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 50,
-            background: "rgba(15, 23, 42, 0.42)",
-            display: "grid",
-            placeItems: "center",
-            padding: 18,
-          }}
-        >
+        <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15, 23, 42, 0.42)", display: "grid", placeItems: "center", padding: 18 }}>
           <div style={{ width: "min(520px, 100%)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.22)", overflow: "hidden" }}>
             <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.divider}` }}>
               <h3 style={{ margin: 0, color: T.title, fontSize: 16 }}>
@@ -555,19 +659,11 @@ function ActionsTab({
                   {isMoabitsServiceTarget && (
                     <div style={{ display: "grid", gap: 8 }}>
                       <label style={{ display: "flex", alignItems: "center", gap: 8, color: T.text, fontSize: 13, fontWeight: 700 }}>
-                        <input
-                          type="checkbox"
-                          checked={pending.dataService}
-                          onChange={(event) => setPending({ ...pending, dataService: event.target.checked })}
-                        />
+                        <input type="checkbox" checked={pending.dataService} onChange={(e) => setPending({ ...pending, dataService: e.target.checked })} />
                         Habilitar servicio de datos
                       </label>
                       <label style={{ display: "flex", alignItems: "center", gap: 8, color: T.text, fontSize: 13, fontWeight: 700 }}>
-                        <input
-                          type="checkbox"
-                          checked={pending.smsService}
-                          onChange={(event) => setPending({ ...pending, smsService: event.target.checked })}
-                        />
+                        <input type="checkbox" checked={pending.smsService} onChange={(e) => setPending({ ...pending, smsService: e.target.checked })} />
                         Habilitar servicio SMS
                       </label>
                       {!servicesValid && <p style={{ margin: 0, color: T.danger, fontSize: 12 }}>Moabits requiere datos o SMS activo para este cambio.</p>}
@@ -578,8 +674,8 @@ function ActionsTab({
                 <label style={{ display: "grid", gap: 7, color: T.text, fontSize: 13, fontWeight: 700 }}>
                   Escribe el ICCID para confirmar
                   <input
-                    value={pending.confirmText}
-                    onChange={(event) => setPending({ ...pending, confirmText: event.target.value })}
+                    value={pending.confirmText ?? ""}
+                    onChange={(e) => setPending({ ...pending, confirmText: e.target.value })}
                     style={{ border: `1px solid ${T.border}`, borderRadius: 5, padding: "9px 10px", fontFamily: T.fontMono, color: T.text }}
                     autoFocus
                   />
@@ -587,27 +683,24 @@ function ActionsTab({
               )}
             </div>
             <div style={{ padding: 14, borderTop: `1px solid ${T.divider}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => setPending(null)}
-                disabled={busy}
-                style={{ border: `1px solid ${T.border}`, background: T.cardBg, color: T.text, borderRadius: 5, padding: "9px 11px", cursor: busy ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800 }}
-              >
+              <button type="button" onClick={() => setPending(null)} disabled={busy} style={{ border: `1px solid ${T.border}`, background: T.cardBg, color: T.text, borderRadius: 5, padding: "9px 11px", cursor: busy ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800 }}>
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={submitAction}
                 disabled={busy || !servicesValid || !purgeConfirmValid}
-                style={{ border: "1px solid transparent", background: busy || !servicesValid || !purgeConfirmValid ? "#C7CDD4" : T.title, color: "#FFFFFF", borderRadius: 5, padding: "9px 11px", cursor: busy || !servicesValid || !purgeConfirmValid ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800 }}
+                aria-busy={busy || undefined}
+                style={{ border: "1px solid transparent", background: busy || !servicesValid || !purgeConfirmValid ? "#C7CDD4" : T.title, color: "#FFFFFF", borderRadius: 5, padding: "9px 11px", cursor: busy || !servicesValid || !purgeConfirmValid ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 7 }}
               >
-                {busy ? "Enviando..." : "Confirmar"}
+                {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {busy ? "Cargando..." : "Confirmar"}
               </button>
             </div>
           </div>
         </div>
       )}
-    </Card>
+    </>
   );
 }
 
@@ -705,20 +798,6 @@ function KV({ label, value, sub, mono, dot }: { label: string; value: string; su
 
 function Empty({ text }: { text: string }) {
   return <div style={{ padding: 18, color: T.muted, fontSize: 13 }}>{text}</div>;
-}
-
-function MiniChart({ label, bars }: { label: string; bars: { label: string; value: number; unit: string }[] }) {
-  const max = Math.max(...bars.map((b) => b.value), 1);
-  return (
-    <div style={{ padding: 16, borderRight: `1px solid ${T.divider}`, borderBottom: `1px solid ${T.divider}` }}>
-      <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.6, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>{label}</div>
-      <div style={{ height: 40, display: "flex", alignItems: "end", gap: 3 }}>
-        {bars.slice(-18).map((b, i) => (
-          <span key={`${b.label}-${i}`} title={`${b.label}: ${b.value} ${b.unit}`} style={{ flex: 1, minWidth: 3, height: `${Math.max(8, (b.value / max) * 40)}px`, background: T.info, borderRadius: 2, opacity: 0.35 + (b.value / max) * 0.55 }} />
-        ))}
-      </div>
-    </div>
-  );
 }
 
 function BarChart({ bars }: { bars: { label: string; value: number; unit: string }[] }) {

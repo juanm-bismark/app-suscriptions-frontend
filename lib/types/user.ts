@@ -12,6 +12,7 @@ export interface Profile {
   company_id: string | null
   role: UserRole
   full_name: string | null
+  email: string | null
   created_at: string
 }
 
@@ -31,14 +32,15 @@ export interface CompanySettings {
 
 export interface Page<T> {
   items: T[]
-  total: number | null
+  total: number
   page: number
   size: number
-  pages: number | null
+  pages: number
 }
 
 export const isAdmin = (role?: UserRole) => role === ROLES.ADMIN
+export const canAccessDashboard = (role?: UserRole) =>
+  role === ROLES.ADMIN || role === ROLES.MANAGER || role === ROLES.MEMBER
 export const canManageUsers = (role?: UserRole) =>
   role === ROLES.ADMIN || role === ROLES.MANAGER
-export const canViewCompany = (role?: UserRole) =>
-  role === ROLES.ADMIN || role === ROLES.MANAGER || role === ROLES.MEMBER
+export const canManageCompanies = isAdmin

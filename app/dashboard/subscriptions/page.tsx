@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { requireCompanyUser } from "@/lib/auth/current-user"
 import { LoadingState } from "./state-views"
 import { SubscriptionsClient } from "./subscriptions-client"
 
@@ -13,6 +14,8 @@ function single(v: string | string[] | undefined) {
 }
 
 export default async function SubscriptionsPage({ searchParams }: { searchParams: SearchParams }) {
+  await requireCompanyUser()
+
   const params = await searchParams
   const filters = {
     provider: single(params.provider),

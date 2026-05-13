@@ -52,20 +52,19 @@ export function LoadingState({ query }: { query?: string }) {
           </Btn>
         </div>
 
-        {hasQuery && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: T.pageBg,
-              border: `1px solid ${T.headerAccent}`,
-              boxShadow: `0 0 0 3px ${T.headerAccent}22`,
-              borderRadius: 6,
-              padding: "9px 12px",
-              marginBottom: 16,
-            }}
-          >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: T.pageBg,
+            border: `1px solid ${hasQuery ? T.headerAccent : T.border}`,
+            boxShadow: hasQuery ? `0 0 0 3px ${T.headerAccent}22` : undefined,
+            borderRadius: 6,
+            padding: "9px 12px",
+          }}
+        >
+          {hasQuery && (
             <div
               style={{
                 width: 15,
@@ -76,15 +75,17 @@ export function LoadingState({ query }: { query?: string }) {
                 animation: "bismark-spin 0.7s linear infinite",
               }}
             />
-            <span style={{ color: T.muted, display: "inline-flex" }}>
-              <Icon.search size={15} />
-            </span>
-            <span style={{ flex: 1, fontSize: 13.5, color: T.text }}>{query}</span>
-            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>buscando…</span>
-          </div>
-        )}
+          )}
+          <span style={{ color: T.muted, display: "inline-flex" }}>
+            <Icon.search size={15} />
+          </span>
+          <span style={{ flex: 1, fontSize: 13.5, color: hasQuery ? T.text : T.muted }}>
+            {hasQuery ? query : "Buscar por ICCID, MSISDN, IMSI, cliente o plan..."}
+          </span>
+          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>cargando...</span>
+        </div>
 
-        <div style={{ display: "flex", gap: 6, marginTop: hasQuery ? 0 : 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ fontSize: 11, color: T.muted, marginRight: 4, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase" }}>
             Fuente
           </div>
@@ -169,108 +170,147 @@ export function LoadingState({ query }: { query?: string }) {
             cargando...
           </div>
         </div>
-
-        <div style={{ display: "flex", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
-          {Object.values(SOURCES).map((s, i) => (
-            <div
-              key={s.id}
-              style={{
-                flex: "1 1 200px",
-                padding: "10px 12px",
-                border: `1px solid ${T.border}`,
-                borderRadius: 6,
-                background: T.cardBg,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: T.title }}>{s.name}</div>
-                <div style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono, marginTop: 2 }}>
-                  {i === 0 ? "consultando API..." : i === 1 ? "esperando respuesta..." : "procesando respuesta"}
-                </div>
-              </div>
-              <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: "50%",
-                  border: `2px solid ${s.color}`,
-                  borderTopColor: "transparent",
-                  animation: "bismark-spin 0.7s linear infinite",
-                }}
-              />
-            </div>
-          ))}
-        </div>
       </div>
-      <div style={{ flex: 1, background: T.cardBg, padding: "12px 0" }}>
+      <div style={{ flex: 1, overflow: "auto", background: T.cardBg }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: GRID_COLS,
+            fontSize: 10.5,
+            letterSpacing: 0.6,
+            color: T.tableHeaderText,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            background: T.tableHeaderBg,
+            borderBottom: `1px solid ${T.border}`,
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
+          }}
+        >
+          <div />
+          <div style={cellH}>ICCID</div>
+          <div style={cellH}>Identidad</div>
+          <div style={cellH}>Plan</div>
+          <div style={cellH}>Cliente</div>
+          <div style={cellH}>Estado</div>
+          <div style={cellH}>Operador</div>
+          <div style={cellH}>Última actualización</div>
+          <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }}>Detalle</div>
+        </div>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
             style={{
-              display: "flex",
+              display: "grid",
+              gridTemplateColumns: GRID_COLS,
               alignItems: "center",
-              gap: 14,
-              padding: "12px 24px",
               borderBottom: `1px solid ${T.rowDivider}`,
+              minHeight: 54,
             }}
           >
-            <div
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                background: SHIMMER_BG,
-                backgroundSize: "200% 100%",
-                animation: "bismark-shimmer 1.3s infinite",
-              }}
-            />
-            <div
-              style={{
-                width: 90,
-                height: 10,
-                borderRadius: 2,
-                background: SHIMMER_BG,
-                backgroundSize: "200% 100%",
-                animation: "bismark-shimmer 1.3s infinite",
-              }}
-            />
-            <div
-              style={{
-                flex: 1,
-                height: 10,
-                borderRadius: 2,
-                background: SHIMMER_BG,
-                backgroundSize: "200% 100%",
-                animation: "bismark-shimmer 1.3s infinite",
-              }}
-            />
-            <div
-              style={{
-                width: 70,
-                height: 14,
-                borderRadius: 3,
-                background: SHIMMER_BG,
-                backgroundSize: "200% 100%",
-                animation: "bismark-shimmer 1.3s infinite",
-              }}
-            />
-            <div
-              style={{
-                width: 100,
-                height: 10,
-                borderRadius: 2,
-                background: SHIMMER_BG,
-                backgroundSize: "200% 100%",
-                animation: "bismark-shimmer 1.3s infinite",
-              }}
-            />
+            <div style={{ alignSelf: "stretch", background: Object.values(SOURCES)[i % 3].color }} />
+            <SkeletonCell width={116} />
+            <SkeletonStack top={95} bottom={122} />
+            <SkeletonStack top={110} bottom={72} />
+            <SkeletonStack top={130} bottom={92} />
+            <div style={{ padding: "9px 12px" }}>
+              <div
+                style={{
+                  width: 86,
+                  height: 22,
+                  borderRadius: 999,
+                  background: SHIMMER_BG,
+                  backgroundSize: "200% 100%",
+                  animation: "bismark-shimmer 1.3s infinite",
+                }}
+              />
+            </div>
+            <div style={{ padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  background: SHIMMER_BG,
+                  backgroundSize: "200% 100%",
+                  animation: "bismark-shimmer 1.3s infinite",
+                }}
+              />
+              <div
+                style={{
+                  width: 48,
+                  height: 10,
+                  borderRadius: 2,
+                  background: SHIMMER_BG,
+                  backgroundSize: "200% 100%",
+                  animation: "bismark-shimmer 1.3s infinite",
+                }}
+              />
+            </div>
+            <SkeletonCell width={84} />
+            <div style={{ padding: "9px 16px 9px 12px", display: "flex", justifyContent: "flex-end" }}>
+              <div
+                style={{
+                  width: 70,
+                  height: 18,
+                  borderRadius: 4,
+                  background: SHIMMER_BG,
+                  backgroundSize: "200% 100%",
+                  animation: "bismark-shimmer 1.3s infinite",
+                }}
+              />
+            </div>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SkeletonCell({ width }: { width: number }) {
+  return (
+    <div style={{ padding: "9px 12px" }}>
+      <div
+        style={{
+          width,
+          maxWidth: "100%",
+          height: 10,
+          borderRadius: 2,
+          background: SHIMMER_BG,
+          backgroundSize: "200% 100%",
+          animation: "bismark-shimmer 1.3s infinite",
+        }}
+      />
+    </div>
+  );
+}
+
+function SkeletonStack({ top, bottom }: { top: number; bottom: number }) {
+  return (
+    <div style={{ padding: "9px 12px", display: "grid", gap: 7 }}>
+      <div
+        style={{
+          width: top,
+          maxWidth: "100%",
+          height: 10,
+          borderRadius: 2,
+          background: SHIMMER_BG,
+          backgroundSize: "200% 100%",
+          animation: "bismark-shimmer 1.3s infinite",
+        }}
+      />
+      <div
+        style={{
+          width: bottom,
+          maxWidth: "100%",
+          height: 9,
+          borderRadius: 2,
+          background: SHIMMER_BG,
+          backgroundSize: "200% 100%",
+          animation: "bismark-shimmer 1.3s infinite",
+        }}
+      />
     </div>
   );
 }
@@ -474,8 +514,9 @@ function SourceStatus({
   );
 }
 
-export function ErrorState({ query }: { query?: string }) {
+export function ErrorState({ query, onRetry }: { query?: string; onRetry?: () => void }) {
   const hasQuery = Boolean(query?.trim());
+  const retry = onRetry ?? (() => window.location.reload());
 
   return (
     <div
@@ -529,7 +570,7 @@ export function ErrorState({ query }: { query?: string }) {
             <strong style={{ fontWeight: 700 }}>No se pudo cargar la lista.</strong> Revisa la conexión con el backend
             o prueba filtrando por un proveedor específico.
           </div>
-          <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />}>
+          <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />} onClick={retry}>
             Reintentar
           </Btn>
         </div>
@@ -607,7 +648,7 @@ export function ErrorState({ query }: { query?: string }) {
               )}
             </div>
           </div>
-          <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />}>
+          <Btn variant="outline" size="sm" icon={<Icon.refresh size={12} />} onClick={retry}>
             Reintentar fuente
           </Btn>
         </div>

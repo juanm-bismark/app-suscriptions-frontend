@@ -51,6 +51,10 @@ class InvalidCredentialsError extends CredentialsSignin {
   code = "invalid_credentials"
 }
 
+class AuthServiceUnavailableError extends CredentialsSignin {
+  code = "auth_service_unavailable"
+}
+
 function decodeJwtSubject(accessToken: string): string | null {
   try {
     const payload = accessToken.split(".")[1]
@@ -160,6 +164,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }),
           })
 
+          if (response.status >= 500) {
+            throw new AuthServiceUnavailableError()
+          }
+
           if (!response.ok) {
             throw new InvalidCredentialsError()
           }
@@ -175,6 +183,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               Authorization: `Bearer ${data.access_token}`,
             },
           })
+
+          if (profileResponse.status >= 500) {
+            throw new AuthServiceUnavailableError()
+          }
 
           if (!profileResponse.ok) {
             return null
@@ -198,7 +210,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         } catch (error) {
           if (error instanceof CredentialsSignin) throw error
           console.error("Auth Error:", error)
-          return null
+          throw new AuthServiceUnavailableError()
         }
       },
     }),

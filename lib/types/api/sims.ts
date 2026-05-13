@@ -59,6 +59,13 @@ export interface SimListOut {
   total: number | null;
   partial: boolean;
   failed_providers: { provider: string; code: string; title: string }[];
+  provider_statuses: {
+    provider: string;
+    status: "ok" | "partial" | "error" | "not_queried";
+    count: number;
+    code: string | null;
+    title: string | null;
+  }[];
 }
 
 export interface UsageOut {

@@ -1,10 +1,12 @@
 "use client";
 
 import type { SubscriptionRow } from "@/lib/api/sim-mapper";
+import { toast } from "@/components/ui";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { fmtShortDate } from "./data";
 import { Btn, Icon, SourceBadge, StatusPill } from "./primitives";
-import { SOURCES, T } from "./tokens";
+import { SOURCES, type SourceId, T } from "./tokens";
 
 function ModalStat({
   label,
@@ -45,6 +47,7 @@ function ModalStat({
 
 export interface DetailModalProps {
   record: SubscriptionRow | null;
+  selectedProvider?: SourceId;
   onClose: () => void;
 }
 
@@ -52,10 +55,53 @@ function value(v: string | null | undefined) {
   return v && v.trim() ? v : "—";
 }
 
-export function DetailModal({ record, onClose }: DetailModalProps) {
+function detailHref(record: SubscriptionRow, selectedProvider?: SourceId, tab?: "actions") {
+  const params = new URLSearchParams({ provider: selectedProvider ?? record.provider });
+  if (tab) params.set("tab", tab);
+  return `/dashboard/subscriptions/${encodeURIComponent(record.iccid)}?${params.toString()}`;
+}
+
+export function DetailModal({ record, selectedProvider, onClose }: DetailModalProps) {
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
+  const [purgeMockOpen, setPurgeMockOpen] = useState(false);
   if (!record) return null;
+  const iccid = record.iccid;
+  const provider = record.provider;
   const src = SOURCES[record.provider];
+
+  async function copyIccid() {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(iccid);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = iccid;
+        input.style.position = "fixed";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+      }
+      setCopied(true);
+      toast.success("ICCID copiado");
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast.error("No pudimos copiar el ICCID");
+    }
+  }
+
+  function simulatePurge() {
+    console.warn("[MOCK] Purga simulada. No se envio ninguna solicitud al backend.", {
+      iccid,
+      provider,
+      endpoint: `/v1/sims/${iccid}/purge`,
+    });
+    toast.warning("Mock: purga simulada. No se envio ninguna solicitud.");
+    setPurgeMockOpen(false);
+  }
 
   return (
     <div
@@ -133,26 +179,33 @@ export function DetailModal({ record, onClose }: DetailModalProps) {
         </div>
 
         <div style={{ borderTop: `1px solid ${T.border}`, background: T.tableHeaderBg, padding: "12px 22px", display: "flex", alignItems: "center", gap: 10 }}>
-          <Btn variant="ghost" size="md" icon={<Icon.copy size={12} />}>
-            Copiar ICCID
+          <Btn variant="ghost" size="md" icon={<Icon.copy size={12} />} onClick={copyIccid}>
+            {copied ? "Copiado" : "Copiar ICCID"}
           </Btn>
           <Btn
             variant="outline"
             size="md"
             onClick={() => {
               onClose();
-              router.push(`/dashboard/subscriptions/${encodeURIComponent(record.iccid)}?tab=actions`);
+              router.push(detailHref(record, selectedProvider, "actions"));
             }}
           >
             Acciones
           </Btn>
           <div style={{ flex: 1 }} />
           <Btn
+            variant="outline"
+            size="md"
+            onClick={() => setPurgeMockOpen(true)}
+          >
+            Purgar
+          </Btn>
+          <Btn
             variant="primary"
             size="md"
             onClick={() => {
               onClose();
-              router.push(`/dashboard/subscriptions/${encodeURIComponent(record.iccid)}`);
+              router.push(detailHref(record, selectedProvider));
             }}
             icon={<Icon.arrowRight size={12} />}
           >
@@ -160,6 +213,54 @@ export function DetailModal({ record, onClose }: DetailModalProps) {
           </Btn>
         </div>
       </div>
+
+      {purgeMockOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPurgeMockOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 70,
+            background: "rgba(15, 23, 42, 0.42)",
+            display: "grid",
+            placeItems: "center",
+            padding: 18,
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{ width: "min(460px, 100%)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.22)", overflow: "hidden" }}
+          >
+            <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.divider}` }}>
+              <h3 style={{ margin: 0, color: T.title, fontSize: 16 }}>Purgar SIM</h3>
+              <p style={{ margin: "6px 0 0", color: T.muted, fontSize: 13 }}>
+                Mockup para <span style={{ fontFamily: T.fontMono }}>{iccid}</span>
+              </p>
+            </div>
+            <div style={{ padding: 18, color: T.text, fontSize: 14, lineHeight: 1.5 }}>
+              Esta accion solo simula el flujo de purga para {src.name}. No se llamara al endpoint del backend.
+            </div>
+            <div style={{ padding: 14, borderTop: `1px solid ${T.divider}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setPurgeMockOpen(false)}
+                style={{ border: `1px solid ${T.border}`, background: T.cardBg, color: T.text, borderRadius: 5, padding: "9px 11px", cursor: "pointer", fontSize: 12, fontWeight: 800 }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={simulatePurge}
+                style={{ border: `1px solid ${T.danger}`, background: "#FADDD6", color: "#A84234", borderRadius: 5, padding: "9px 11px", cursor: "pointer", fontSize: 12, fontWeight: 800 }}
+              >
+                Simular purga
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

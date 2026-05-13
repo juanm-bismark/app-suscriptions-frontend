@@ -13,9 +13,10 @@ type SelectProps = Omit<
   className?: string
   name?: string
   onChange?: React.ChangeEventHandler<HTMLSelectElement>
+  placeholder?: React.ReactNode
 }
 
-function Select({ children, className, name, onChange, ...props }: SelectProps) {
+function Select({ children, className, name, onChange, placeholder, ...props }: SelectProps) {
   return (
     <SelectPrimitive.Root
       {...props}
@@ -25,19 +26,28 @@ function Select({ children, className, name, onChange, ...props }: SelectProps) 
       }}
     >
       <SelectPrimitive.Trigger
+        type="button"
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-title ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-title shadow-sm shadow-header-top/5 ring-offset-white transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
       >
-        <SelectPrimitive.Value />
+        <SelectPrimitive.Value placeholder={placeholder} />
         <SelectPrimitive.Icon asChild>
           <ChevronDown className="h-4 w-4 opacity-50" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
-        <SelectPrimitive.Content className="z-[80] min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-title shadow-md">
-          <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+        <SelectPrimitive.Content
+          className="z-[80] min-w-[8rem] overflow-hidden rounded-md border border-border bg-white text-title shadow-md"
+          style={{
+            background: "#FFFFFF",
+            opacity: 1,
+          }}
+        >
+          <SelectPrimitive.Viewport className="p-1" style={{ background: "#FFFFFF" }}>
+            {children}
+          </SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>
@@ -51,7 +61,7 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-page data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-page data-[highlighted]:bg-page data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}

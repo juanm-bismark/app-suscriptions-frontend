@@ -25,13 +25,22 @@ export interface ListSimsParams {
   custom?: string[];
 }
 
+function tele2DefaultModifiedSince() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
 export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
+  const modifiedSince = p.provider === "tele2" && !p.modified_since
+    ? tele2DefaultModifiedSince()
+    : p.modified_since;
   const qs = new URLSearchParams();
   if (p.cursor) qs.set("cursor", p.cursor);
   if (p.limit) qs.set("limit", String(p.limit));
   if (p.provider) qs.set("provider", p.provider);
   if (p.status) qs.set("status", p.status);
-  if (p.modified_since) qs.set("modified_since", p.modified_since);
+  if (modifiedSince) qs.set("modified_since", modifiedSince);
   if (p.modified_till) qs.set("modified_till", p.modified_till);
   if (p.iccid) qs.set("iccid", p.iccid);
   if (p.imsi) qs.set("imsi", p.imsi);
@@ -39,7 +48,7 @@ export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
   for (const c of p.custom ?? []) qs.append("custom", c);
 
   const q = qs.toString();
-  return fetchApi<SimListOut>(`/sims${q ? `?${q}` : ""}`);
+  return fetchApi<SimListOut>(`/sims${q ? `?${q}` : ""}`, { cache: "no-store" });
 }
 
 export async function getSim(iccid: string): Promise<SubscriptionOut> {

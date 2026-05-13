@@ -3,6 +3,7 @@
 import { toRow, type SubscriptionRow } from "@/lib/api/sim-mapper"
 import { ApiError } from "@/lib/api-client"
 import { listSims, type ListSimsParams } from "@/lib/api/sims"
+import { requireCompanyUser } from "@/lib/auth/current-user"
 import type { AdministrativeStatus, Provider, SimListOut } from "@/lib/types/api"
 
 const PROVIDERS: Provider[] = ["kite", "tele2", "moabits"]
@@ -24,6 +25,7 @@ const STATUSES: AdministrativeStatus[] = [
 ]
 
 export type FailedProvider = { provider: string; code: string; title: string }
+export type ProviderStatus = { provider: string; status: "ok" | "partial" | "error" | "not_queried"; count: number; code: string | null; title: string | null }
 
 export interface LoadSubscriptionsInput {
   provider?: string
@@ -40,6 +42,7 @@ export interface LoadSubscriptionsData {
     total: number | null
     partial: boolean
     failedProviders: FailedProvider[]
+    providerStatuses: ProviderStatus[]
   }
   filters: {
     provider?: Provider
@@ -62,18 +65,31 @@ function isStatus(v: string | undefined): v is AdministrativeStatus {
   return !!v && STATUSES.includes(v as AdministrativeStatus)
 }
 
-function tele2DefaultModifiedSince() {
-  const d = new Date()
-  d.setDate(d.getDate() - 7)
-  return d.toISOString().replace(/\.\d{3}Z$/, "Z")
+function applySearchParam(apiParams: ListSimsParams, query: string | undefined) {
+  const normalized = query?.trim()
+  if (!normalized) return
+
+  const digitsOnly = normalized.replace(/\D/g, "")
+  if (digitsOnly === normalized && digitsOnly.length >= 18 && digitsOnly.length <= 22) {
+    apiParams.iccid = normalized
+    return
+  }
+
+  // custom requires a provider scope — global listing with custom returns 409
+  if (apiParams.provider) {
+    apiParams.custom = [normalized]
+  }
 }
 
 export async function loadSubscriptions(input: LoadSubscriptionsInput): Promise<LoadSubscriptionsResult> {
+  await requireCompanyUser()
+
+  const normalizedQuery = input.q?.trim() || undefined
   const filters = {
     provider: isProvider(input.provider) ? input.provider : undefined,
     status: isStatus(input.status) ? input.status : undefined,
     cursor: input.cursor,
-    q: input.q,
+    q: normalizedQuery,
   }
 
   const apiParams: ListSimsParams = {
@@ -83,9 +99,7 @@ export async function loadSubscriptions(input: LoadSubscriptionsInput): Promise<
     limit: input.limit ?? 50,
   }
 
-  if (filters.q) {
-    apiParams.custom = [filters.q]
-  }
+  applySearchParam(apiParams, filters.q)
 
   try {
     let result = await listSims(apiParams)
@@ -94,12 +108,13 @@ export async function loadSubscriptions(input: LoadSubscriptionsInput): Promise<
     return {
       ok: true,
       data: {
-        rows: result.items.map(toRow),
+        rows: (result.items ?? []).map(toRow),
         pagination: {
           nextCursor: result.next_cursor,
           total: result.total,
           partial: result.partial,
-          failedProviders: dedupeFailedProviders(result.failed_providers),
+          failedProviders: dedupeFailedProviders(result.failed_providers ?? []),
+          providerStatuses: result.provider_statuses ?? [],
         },
         filters,
       },
@@ -130,7 +145,9 @@ export async function loadSubscriptions(input: LoadSubscriptionsInput): Promise<
 async function findFirstUsefulGlobalPage(initial: SimListOut, baseParams: ListSimsParams): Promise<SimListOut> {
   const normalizedResult = {
     ...initial,
-    failed_providers: dedupeFailedProviders(initial.failed_providers),
+    items: initial.items ?? [],
+    failed_providers: dedupeFailedProviders(initial.failed_providers ?? []),
+    provider_statuses: initial.provider_statuses ?? [],
   }
 
   if (normalizedResult.items.length > 0 || normalizedResult.failed_providers.length === 0) {
@@ -141,9 +158,9 @@ async function findFirstUsefulGlobalPage(initial: SimListOut, baseParams: ListSi
 }
 
 async function fallbackToProviderListings(globalResult: SimListOut, baseParams: ListSimsParams): Promise<SimListOut> {
-  const failedProviderIds = new Set(globalResult.failed_providers.map((f) => f.provider))
+  const failedProviderIds = new Set((globalResult.failed_providers ?? []).map((f) => f.provider))
   const items: SimListOut["items"] = []
-  const failedProviders = [...globalResult.failed_providers]
+  const failedProviders = [...(globalResult.failed_providers ?? [])]
   const limit = baseParams.limit ?? 50
 
   for (const provider of PROVIDERS) {
@@ -155,10 +172,10 @@ async function fallbackToProviderListings(globalResult: SimListOut, baseParams: 
         provider,
         cursor: null,
         limit: limit - items.length,
-        modified_since: provider === "tele2" ? baseParams.modified_since ?? tele2DefaultModifiedSince() : undefined,
+        modified_since: provider === "tele2" ? baseParams.modified_since : undefined,
       })
-      items.push(...providerResult.items)
-      failedProviders.push(...providerResult.failed_providers)
+      items.push(...(providerResult.items ?? []))
+      failedProviders.push(...(providerResult.failed_providers ?? []))
     } catch (error) {
       failedProviders.push(toFailedProvider(provider, error))
     }
@@ -171,6 +188,7 @@ async function fallbackToProviderListings(globalResult: SimListOut, baseParams: 
     total: items.length > 0 ? null : globalResult.total,
     partial: true,
     failed_providers: dedupeFailedProviders(failedProviders),
+    provider_statuses: globalResult.provider_statuses ?? [],
   }
 }
 

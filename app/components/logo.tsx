@@ -4,10 +4,10 @@ const LOGO_URL = "https://bismark.net.co/wp-content/uploads/2020/02/bismark-logo
 
 type LogoSize = "sm" | "md" | "lg"
 
-const SIZE_CONFIG: Record<LogoSize, { width: number; height: number; className: string }> = {
-  sm: { width: 104, height: 34, className: "h-7 w-auto" },
-  md: { width: 120, height: 32, className: "h-8 w-auto" },
-  lg: { width: 160, height: 64, className: "h-16 w-auto" },
+const SIZE_CONFIG: Record<LogoSize, { width: number; height: number }> = {
+  sm: { width: 104, height: 34 },
+  md: { width: 120, height: 32 },
+  lg: { width: 160, height: 64 },
 }
 
 interface LogoProps {
@@ -25,7 +25,8 @@ export function Logo({ size = "md", priority = false, className = "" }: LogoProp
       width={config.width}
       height={config.height}
       priority={priority}
-      className={`${config.className} object-contain ${className}`}
+      style={{ width: "auto", height: "auto" }}
+      className={`object-contain ${className}`}
     />
   )
 }

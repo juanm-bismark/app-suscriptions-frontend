@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { getCredential } from "@/app/actions/credentials"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
 import type { Provider } from "@/lib/types/api"
+import { ROLES } from "@/lib/types/user"
 import { CredentialForm } from "../credential-form"
 import { isProvider, providerName } from "../credential-utils"
 
@@ -11,7 +12,8 @@ export default async function ProviderCredentialPage({
 }: {
   params: Promise<{ provider: string }>
 }) {
-  await requireManagerOrAdmin()
+  const profile = await requireManagerOrAdmin()
+  const isAdmin = profile.role === ROLES.ADMIN
   const { provider: rawProvider } = await params
   if (!isProvider(rawProvider) || rawProvider === "moabits") notFound()
 
@@ -36,7 +38,7 @@ export default async function ProviderCredentialPage({
       )}
 
       <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
-        <CredentialForm provider={provider} credential={credential} />
+        <CredentialForm provider={provider} credential={credential} isAdmin={isAdmin} />
       </div>
     </div>
   )

@@ -6,12 +6,15 @@ import { z } from "zod"
 
 const updateProfileSchema = z.object({
   full_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+  password: z.string().min(6, "Contraseña de al menos 6 caracteres").optional(),
 })
 
 export async function updateProfile(formData: FormData) {
   try {
+    const password = formData.get("password")
     const rawData = {
       full_name: formData.get("full_name"),
+      password: typeof password === "string" && password.length > 0 ? password : undefined,
     }
 
     const parsed = updateProfileSchema.safeParse(rawData)
@@ -20,7 +23,7 @@ export async function updateProfile(formData: FormData) {
     }
 
     await fetchApi("/me", {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify(parsed.data),
     })
 
