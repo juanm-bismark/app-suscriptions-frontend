@@ -14,7 +14,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   if (session.user.error === "RefreshAccessTokenError") return null
 
   try {
-    return await fetchApi<Profile>("/me")
+    return await fetchApi<Profile>("/me", { cache: "no-store" })
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 0)) return null
     throw error
@@ -27,7 +27,7 @@ export const getCompany = cache(async (): Promise<Company | null> => {
   if (session.user.error === "RefreshAccessTokenError") return null
 
   try {
-    return await fetchApi<Company>("/companies/me")
+    return await fetchApi<Company>("/companies/me", { cache: "no-store" })
   } catch (error) {
     if (error instanceof ApiError && (error.status === 0 || error.status === 401 || error.status === 404)) {
       return null

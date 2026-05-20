@@ -75,10 +75,9 @@ function applySearchParam(apiParams: ListSimsParams, query: string | undefined) 
     return
   }
 
-  // custom requires a provider scope — global listing with custom returns 409
-  if (apiParams.provider) {
-    apiParams.custom = [normalized]
-  }
+  // Free-text search is handled entirely client-side over the returned page
+  // (see SubscriptionsList row filter). The contract's `custom` filter
+  // requires `key=value` items, so sending raw text would be malformed.
 }
 
 export async function loadSubscriptions(input: LoadSubscriptionsInput): Promise<LoadSubscriptionsResult> {

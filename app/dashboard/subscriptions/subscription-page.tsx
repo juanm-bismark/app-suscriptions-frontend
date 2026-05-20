@@ -454,12 +454,22 @@ function LimitsTab({ subscription }: { subscription: SubscriptionOut }) {
 }
 
 type PendingAction =
-  | { kind: "status"; target: AdministrativeStatus; dataService: boolean; smsService: boolean }
-  | { kind: "purge"; confirmText: string };
+  | { kind: "status"; target: AdministrativeStatus; dataService: boolean; smsService: boolean; idempotencyKey: string }
+  | { kind: "purge"; confirmText: string; idempotencyKey: string };
 
 function actionErrorMessage(err: unknown) {
   const parsed = errorMessage(err);
   return parsed.message || "No pudimos ejecutar la acción.";
+}
+
+function purgeBodyFor(provider: SubscriptionOut["provider"]) {
+  if (provider === "kite") {
+    return "Ejecuta networkReset en Kite. Reinicia la sesión y la IP, pero no cambia el estado administrativo.";
+  }
+  if (provider === "tele2") {
+    return "Acción destructiva. Transiciona la SIM a PURGED en Tele2. Estado terminal, no reversible.";
+  }
+  return "Acción destructiva. Marca la SIM como purgada en Moabits. Permanente, no se puede deshacer.";
 }
 
 function ActionsTab({
@@ -476,6 +486,8 @@ function ActionsTab({
   const isAdmin = currentUserRole === ROLES.ADMIN;
   const statusCapability = capabilities.capabilities.set_administrative_status;
   const targets = statusCapability?.targets ?? [];
+  const purgeCapability = capabilities.capabilities.purge;
+  const canPurge = purgeCapability?.status === "supported";
 
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [busy, setBusy] = useState(false);
@@ -510,14 +522,14 @@ function ActionsTab({
       danger: false,
       icon: <Icon.refresh size={13} />,
     },
-    {
+    ...(canPurge ? [{
       key: "purge" as ActionKey,
       title: "Purgar línea",
-      body: "Acción destructiva. Marca la línea como PURGED en la fuente. No se puede deshacer fácilmente.",
+      body: purgeBodyFor(subscription.provider),
       color: T.danger,
       danger: true,
       icon: <Icon.close size={12} />,
-    },
+    }] : []),
   ];
 
   if (!isAdmin) {
@@ -535,13 +547,14 @@ function ActionsTab({
 
   function handleClick(key: ActionKey) {
     if (key === "purge") {
-      setPending({ kind: "purge", confirmText: "" });
+      setPending({ kind: "purge", confirmText: "", idempotencyKey: newIdempotencyKey() });
     } else if (key === "reactivate") {
       setPending({
         kind: "status",
         target: "active",
         dataService: subscription.normalized.services.data_service ?? true,
         smsService: subscription.normalized.services.sms_service ?? true,
+        idempotencyKey: newIdempotencyKey(),
       });
     } else {
       router.refresh();
@@ -553,7 +566,6 @@ function ActionsTab({
     setBusy(true);
     try {
       if (pending.kind === "status") {
-        const idempotencyKey = newIdempotencyKey();
         await setSimStatus(
           subscription.iccid,
           {
@@ -561,17 +573,18 @@ function ActionsTab({
             data_service: isMoabitsServiceTarget ? pending.dataService : undefined,
             sms_service: isMoabitsServiceTarget ? pending.smsService : undefined,
           },
-          idempotencyKey
+          pending.idempotencyKey
         );
         toast.success(`Estado enviado: ${STATUS_META[pending.target]?.label ?? pending.target}.`);
         setPending(null);
         router.refresh();
       } else {
+        // Purge is intentionally mocked — do NOT call the backend from the UI.
         console.warn("[MOCK] Purga simulada. No se envio ninguna solicitud al backend.", {
           iccid: subscription.iccid,
           provider: subscription.provider,
           endpoint: `/v1/sims/${subscription.iccid}/purge`,
-          idempotencyKey: newIdempotencyKey(),
+          idempotencyKey: pending.idempotencyKey,
         });
         toast.warning("Mock: purga simulada. No se envio ninguna solicitud.");
         setPending(null);

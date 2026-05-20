@@ -127,6 +127,7 @@ async function ScopedCredentialsPage() {
                     <TableCell className="py-4 align-middle text-muted">{formatDate(credential?.rotated_at)}</TableCell>
                     <TableCell className="py-4 align-middle">
                       <div className="flex items-center justify-end gap-3 whitespace-nowrap">
+                        {credential?.active && <TestCredentialButton provider={provider} />}
                         <PendingLinkButton className="inline-flex h-9 items-center rounded-md bg-[#0F202A] px-3 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
                           {credential?.active ? "Editar" : "Agregar"}
                         </PendingLinkButton>
@@ -381,12 +382,12 @@ function CredentialsTable({
                 <TableCell className="py-4 align-middle text-muted">{formatDate(credential?.rotated_at)}</TableCell>
                 <TableCell className="py-4 align-middle">
                   <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                    {credential?.active && companyId && (
+                      <TestCredentialButton provider={provider} companyId={companyId} />
+                    )}
                     <PendingLinkButton className="inline-flex h-9 items-center rounded-md bg-[#0F202A] px-3 text-sm font-semibold text-white hover:bg-[#163C41]" href={href}>
                       {credential?.active ? "Editar" : "Agregar"}
                     </PendingLinkButton>
-                    {credential?.active && companyId && (
-                      <TestCredentialButton provider={provider} companyId={companyId} credential={credential} />
-                    )}
                     {credential?.active && companyId && (
                       <DeleteCredentialButton provider={provider} companyId={companyId} />
                     )}

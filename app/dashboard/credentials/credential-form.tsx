@@ -81,7 +81,6 @@ const moabitsSchema = z.object({
     x_api_key: z.string().min(1, "Ingresa el x-api-key"),
   }),
   account_scope: z.object({
-    parent_company_code: z.string().min(1, "Ingresa el codigo de compania padre"),
     environment: z.enum(["production", "staging"]).default("production"),
   }),
 })
@@ -148,7 +147,6 @@ const FIELDS: Record<Provider, Field[]> = {
   moabits: [
     { kind: "text", name: "credentials.base_url", label: "Base URL", adminOnly: true },
     { kind: "password", name: "credentials.x_api_key", label: "x-api-key" },
-    { kind: "text", name: "account_scope.parent_company_code", label: "Codigo de compania padre", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging"], adminOnly: true },
   ],
 }
@@ -166,18 +164,6 @@ async function fileToBase64(file: File) {
   const bytes = new Uint8Array(buffer)
   for (let i = 0; i < bytes.byteLength; i += 1) binary += String.fromCharCode(bytes[i])
   return window.btoa(binary)
-}
-
-function alignCredentialPayload(provider: Provider, payload: CredentialUpsertIn) {
-  if (provider !== "moabits") return
-  const scope = payload.account_scope
-  const parentCompanyCode = scope?.parent_company_code
-  if (!parentCompanyCode) return
-
-  payload.credentials = {
-    ...(payload.credentials ?? {}),
-    parent_company_code: parentCompanyCode,
-  }
 }
 
 export function CredentialForm({
@@ -231,8 +217,6 @@ export function CredentialForm({
         }
       }
       delete payload.account_scope
-    } else {
-      alignCredentialPayload(provider, payload)
     }
 
     try {

@@ -52,15 +52,15 @@ export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
 }
 
 export async function getSim(iccid: string): Promise<SubscriptionOut> {
-  return fetchApi<SubscriptionOut>(`/sims/${encodeURIComponent(iccid)}`);
+  return fetchApi<SubscriptionOut>(`/sims/${encodeURIComponent(iccid)}`, { cache: "no-store" });
 }
 
 export async function getUsage(iccid: string, qs?: string): Promise<UsageOut> {
-  return fetchApi<UsageOut>(`/sims/${encodeURIComponent(iccid)}/usage${qs ? `?${qs}` : ""}`);
+  return fetchApi<UsageOut>(`/sims/${encodeURIComponent(iccid)}/usage${qs ? `?${qs}` : ""}`, { cache: "no-store" });
 }
 
 export async function getPresence(iccid: string): Promise<PresenceOut> {
-  return fetchApi<PresenceOut>(`/sims/${encodeURIComponent(iccid)}/presence`);
+  return fetchApi<PresenceOut>(`/sims/${encodeURIComponent(iccid)}/presence`, { cache: "no-store" });
 }
 
 export async function setSimStatus(

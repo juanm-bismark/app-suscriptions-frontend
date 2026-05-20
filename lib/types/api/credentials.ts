@@ -20,6 +20,13 @@ export interface CredentialTestOut {
   detail: string | null;
 }
 
+export interface CredentialProbeOut {
+  provider: string;
+  ok: boolean;
+  detail: string;
+  sample_count: number;
+}
+
 export interface MoabitsCompanyOut {
   companyCode: string;
   companyName: string;

@@ -47,19 +47,27 @@ function withV1(path: string): string {
 /**
  * Cliente de API a usar en Server Components o Server Actions.
  * Inyecta el token de NextAuth automáticamente si existe la sesión.
+ * Pasa `skipAuth: true` para omitir el header Authorization (e.g. signup anónimo).
  */
 export async function fetchApi<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit & { skipAuth?: boolean } = {}
 ): Promise<T> {
-  const session = await auth()
-  const token = session?.user?.accessToken
+  const { skipAuth, ...fetchOptions } = options
+  const headers = new Headers(fetchOptions.headers)
+  // Only declare JSON content-type when there's actually a body — the
+  // contract requires it for POST/PUT/PATCH with a body, and adding it to
+  // bodiless GET/DELETE requests can trip strict CORS preflight checks.
+  if (fetchOptions.body != null && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
 
-  const headers = new Headers(options.headers)
-  headers.set("Content-Type", "application/json")
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`)
+  if (!skipAuth) {
+    const session = await auth()
+    const token = session?.user?.accessToken
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`)
+    }
   }
 
   const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL
@@ -69,7 +77,7 @@ export async function fetchApi<T>(
   let response: Response
   try {
     response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
     })
   } catch (err: unknown) {

@@ -1,5 +1,6 @@
 import type { CredentialMetadataOut, CredentialUpsertIn, Provider } from "@/lib/types/api"
 
+
 export function credentialDefaults(provider: Provider, credential?: CredentialMetadataOut | null): CredentialUpsertIn {
   const scope = credential?.account_scope ?? {}
 
@@ -41,7 +42,6 @@ export function credentialDefaults(provider: Provider, credential?: CredentialMe
       x_api_key: "",
     },
     account_scope: {
-      parent_company_code: scope.parent_company_code ?? "",
       environment: scope.environment ?? "production",
     },
   }
@@ -58,6 +58,3 @@ export function pruneEmptyStrings(value: unknown): unknown {
   )
 }
 
-export function credentialTestPayload(provider: Provider, credential: CredentialMetadataOut): CredentialUpsertIn {
-  return pruneEmptyStrings(credentialDefaults(provider, credential)) as CredentialUpsertIn
-}
