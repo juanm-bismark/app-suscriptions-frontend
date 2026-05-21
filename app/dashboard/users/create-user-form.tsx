@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Eye, EyeOff } from "lucide-react"
+import { Building2, Eye, EyeOff, Search } from "lucide-react"
 import {
   Form,
   FormControl,
@@ -43,6 +43,8 @@ export default function CreateUserForm({
     resolver: zodResolver(createUserSchema),
     defaultValues: { email: "", password: "", full_name: "", role: "member", company_id: "" },
   })
+
+  const selectedCompanyId = form.watch("company_id")
 
   async function onSubmit(data: CreateUserFormData) {
     setError(null)
@@ -139,26 +141,11 @@ export default function CreateUserForm({
           />
 
           {currentRole === ROLES.ADMIN && (
-            <FormField
-              control={form.control}
-              name="company_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Empresa</FormLabel>
-                  <FormControl>
-                    <select
-                      {...field}
-                      className="mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus:ring-2 focus:ring-header-accent"
-                    >
-                      <option value="">Selecciona una empresa</option>
-                      {companies.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <CompanyPicker
+              companies={companies}
+              value={selectedCompanyId ?? ""}
+              onChange={(id) => form.setValue("company_id", id, { shouldValidate: true })}
+              error={form.formState.errors.company_id?.message}
             />
           )}
 
@@ -200,6 +187,68 @@ export default function CreateUserForm({
           </Button>
         </form>
       </Form>
+    </div>
+  )
+}
+
+function CompanyPicker({
+  companies,
+  value,
+  onChange,
+  error,
+}: {
+  companies: Company[]
+  value: string
+  onChange: (id: string) => void
+  error?: string
+}) {
+  const [query, setQuery] = useState("")
+  const filtered = query.trim()
+    ? companies.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
+    : companies
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium leading-none text-title">Empresa</p>
+
+      <div className="flex h-9 items-center rounded-md border border-[#C9DFE3] bg-white px-2.5 shadow-sm shadow-header-top/5 focus-within:ring-2 focus-within:ring-header-accent">
+        <Search className="mr-2 h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar empresa..."
+          className="h-full flex-1 bg-transparent text-sm text-title outline-none placeholder:text-muted"
+        />
+      </div>
+
+      <div className="max-h-40 overflow-y-auto rounded-md border border-[#C9DFE3] bg-white shadow-sm shadow-header-top/5">
+        {filtered.length === 0 ? (
+          <p className="p-3 text-sm text-muted">
+            {companies.length === 0 ? "No hay empresas disponibles" : "Sin resultados"}
+          </p>
+        ) : (
+          filtered.map((company) => (
+            <button
+              key={company.id}
+              type="button"
+              onClick={() => onChange(company.id)}
+              className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-header-accent ${
+                value === company.id
+                  ? "bg-[#DDF1F2] text-title"
+                  : "text-muted hover:bg-[#EAF6F7] hover:text-title"
+              }`}
+            >
+              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate font-semibold">{company.name}</span>
+              {value === company.id && (
+                <span className="ml-auto shrink-0 text-xs font-normal text-header-bg">Seleccionada</span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+
+      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
     </div>
   )
 }
