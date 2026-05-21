@@ -1,4 +1,5 @@
 import { fetchApi, ApiError } from "@/lib/api-client"
+import { PageSchema, ProfileSchema } from "@/lib/api-validation"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
 import { ROLES, type Company, type Page, type User, type UserRole } from "@/lib/types/user"
 import { positiveInt } from "@/lib/utils"
@@ -29,7 +30,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   let companies: Company[] = []
 
   const [usersResult, companiesResult] = await Promise.allSettled([
-    fetchApi<Page<User>>(`/users?${usersParams.toString()}`, { cache: "no-store" }),
+    fetchApi(`/users?${usersParams.toString()}`, { schema: PageSchema(ProfileSchema), cache: "no-store" }),
     profile.role === ROLES.ADMIN ? searchCompanies({ size: 200 }) : Promise.resolve(null),
   ])
 

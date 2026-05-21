@@ -1,6 +1,7 @@
 "use server";
 
 import { fetchApi } from "@/lib/api-client";
+import { ProviderCapabilitiesOutSchema } from "@/lib/api-validation";
 import { requireProfile } from "@/lib/auth/current-user";
 import type { ProviderCapabilitiesOut } from "@/lib/types/api";
 import type { Provider } from "@/lib/types/api/common";
@@ -10,7 +11,8 @@ export async function getProviderCapabilities(provider: Provider): Promise<Provi
   // 10-minute revalidate: capabilities depend on the LIFECYCLE_WRITES_ENABLED
   // feature flag, so we want flips to propagate within a coffee break without
   // hitting the backend on every page render.
-  return fetchApi<ProviderCapabilitiesOut>(`/providers/${provider}/capabilities`, {
+  return fetchApi(`/providers/${provider}/capabilities`, {
+    schema: ProviderCapabilitiesOutSchema,
     next: { revalidate: 600 },
   });
 }
