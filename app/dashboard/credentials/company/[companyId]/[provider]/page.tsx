@@ -3,8 +3,10 @@ import { notFound } from "next/navigation"
 import { getCompanyById } from "@/app/actions/company"
 import { getCompanyCredential } from "@/app/actions/credentials"
 import { requireAdmin } from "@/lib/auth/current-user"
+import { formatDate } from "@/lib/utils"
 import type { CredentialExpiryStatus, Provider } from "@/lib/types/api"
 import { Badge } from "@/components/ui"
+import { WarningAlert } from "../../../../_components/alerts"
 import { CredentialForm } from "../../../credential-form"
 import { isProvider, providerName } from "../../../credential-utils"
 
@@ -15,14 +17,6 @@ function StatusBadge({ active, expiry }: { active: boolean; expiry: CredentialEx
     <Badge className="border-[#F2D49B] bg-[#FFF7E7] text-[#6D4D16]">Por vencer</Badge>
   )
   return <Badge variant="success">Activa</Badge>
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-CO", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
 }
 
 export default async function AdminCompanyCredentialPage({
@@ -69,14 +63,14 @@ export default async function AdminCompanyCredentialPage({
 
       {/* Alerts */}
       {companyResult.error && (
-        <div className="mb-5 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
+        <WarningAlert className="mb-5">
           {companyResult.error}
-        </div>
+        </WarningAlert>
       )}
       {!credentialResult.ok && credentialResult.status !== 404 && (
-        <div className="mb-5 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
+        <WarningAlert className="mb-5">
           {credentialResult.error}
-        </div>
+        </WarningAlert>
       )}
 
       {/* Metadata strip */}

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { listCompanyCredentials, listCredentials } from "@/app/actions/credentials"
 import { searchCompanies } from "@/app/actions/company"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
+import { positiveInt } from "@/lib/utils"
 import type { CredentialMetadataOut, Provider } from "@/lib/types/api"
 import { ROLES, type Company } from "@/lib/types/user"
 import { KeyRound, Plus, X } from "lucide-react"
@@ -9,6 +10,8 @@ import { SourceBadge } from "@/app/dashboard/subscriptions/primitives"
 import { Alert, AlertDescription, Badge, Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui"
 import { PendingLinkButton } from "../_components/pending-link-button"
 import { SearchSubmitButton } from "../_components/search-submit-button"
+import { PageHeader } from "../_components/page-header"
+import { WarningAlert } from "../_components/alerts"
 import { CompanyPaginationControls } from "./company-pagination-controls"
 import { EXPIRY_META, PROVIDERS, formatDate, providerName, scopeValue } from "./credential-utils"
 import { AdminAddCredentialDialog } from "./admin-add-credential-dialog"
@@ -76,9 +79,9 @@ async function ScopedCredentialsPage() {
       </div>
 
       {!result.ok && (
-        <Alert className="mb-6" variant="destructive">
-          <AlertDescription>{result.error}</AlertDescription>
-        </Alert>
+        <WarningAlert className="mb-6">
+          {result.error}
+        </WarningAlert>
       )}
 
       <Card className="overflow-hidden border-0 bg-[#F5FAFA] shadow-sm shadow-header-top/5">
@@ -438,9 +441,4 @@ function AddCredentialActions({
 
 function credentialHref(provider: Provider, companyId?: string) {
   return companyId ? `/dashboard/credentials/company/${companyId}/${provider}` : `/dashboard/credentials/${provider}`
-}
-
-function positiveInt(value: string | undefined, fallback: number) {
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }

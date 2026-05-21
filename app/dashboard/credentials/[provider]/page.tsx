@@ -4,6 +4,7 @@ import { getCredential } from "@/app/actions/credentials"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
 import type { Provider } from "@/lib/types/api"
 import { ROLES } from "@/lib/types/user"
+import { WarningAlert } from "../../_components/alerts"
 import { CredentialForm } from "../credential-form"
 import { isProvider, providerName } from "../credential-utils"
 
@@ -32,9 +33,9 @@ export default async function ProviderCredentialPage({
       </div>
 
       {!result.ok && result.status !== 404 && (
-        <div className="mb-6 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
+        <WarningAlert className="mb-6">
           {result.error}
-        </div>
+        </WarningAlert>
       )}
 
       <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-5 sm:p-6">
