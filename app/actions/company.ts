@@ -2,6 +2,14 @@
 
 import { revalidatePath } from "next/cache"
 import { ApiError, fetchApi } from "@/lib/api-client"
+import {
+  CompanySchema,
+  PageSchema,
+  CompanyProviderMappingOutSchema,
+  MoabitsProviderMappingDiscoveryOutSchema,
+  MoabitsSourceCompanyOutSchema,
+  LocalCompanyMoabitsMappingOutSchema,
+} from "@/lib/api-validation"
 import { requireAdmin, requireManagerOrAdmin } from "@/lib/auth/current-user"
 import type {
   CompanyProviderMappingIn,
@@ -39,7 +47,10 @@ export async function searchCompanies(input?: { q?: string; page?: number; size?
     const q = input?.q?.trim()
     if (q) params.set("q", q)
 
-    const page = await fetchApi<Page<Company>>(`/companies?${params.toString()}`, { cache: "no-store" })
+    const page = await fetchApi(`/companies?${params.toString()}`, { 
+      schema: PageSchema(CompanySchema),
+      cache: "no-store" 
+    })
     return {
       success: true,
       companies: page.items,
@@ -58,7 +69,10 @@ export async function getCompanyById(id: string) {
   await requireAdmin()
 
   try {
-    const company = await fetchApi<Company>(`/companies/${id}`, { cache: "no-store" })
+    const company = await fetchApi(`/companies/${id}`, { 
+      schema: CompanySchema,
+      cache: "no-store" 
+    })
     return { success: true, company }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : null
@@ -77,9 +91,10 @@ export async function createCompany(formData: FormData) {
       return { error: parsed.error.issues[0].message }
     }
 
-    const company = await fetchApi<Company>("/companies", {
+    const company = await fetchApi("/companies", {
       method: "POST",
       body: JSON.stringify(parsed.data),
+      schema: CompanySchema,
     })
 
     revalidatePath("/dashboard")
@@ -108,9 +123,10 @@ export async function updateCompany(formData: FormData) {
     }
 
     const { id, ...body } = parsed.data
-    const company = await fetchApi<Company>(`/companies/${id}`, {
+    const company = await fetchApi(`/companies/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
+      schema: CompanySchema,
     })
 
     revalidatePath("/dashboard")
@@ -136,7 +152,7 @@ export async function deleteCompany(formData: FormData) {
       return { error: parsed.error.issues[0].message }
     }
 
-    await fetchApi<Record<string, never>>(`/companies/${parsed.data.id}`, {
+    await fetchApi(`/companies/${parsed.data.id}`, {
       method: "DELETE",
     })
 
@@ -156,7 +172,9 @@ export async function getMyMoabitsProviderMapping() {
   await requireManagerOrAdmin()
 
   try {
-    const data = await fetchApi<CompanyProviderMappingOut>("/companies/me/provider-mappings/moabits")
+    const data = await fetchApi("/companies/me/provider-mappings/moabits", {
+      schema: CompanyProviderMappingOutSchema,
+    })
     return { ok: true as const, data }
   } catch (error: unknown) {
     if (error instanceof ApiError && error.status === 404) {
@@ -172,9 +190,12 @@ export async function discoverMoabitsProviderMappings() {
   await requireAdmin()
 
   try {
-    const data = await fetchApi<MoabitsProviderMappingDiscoveryOut>(
+    const data = await fetchApi(
       "/companies/provider-mappings/moabits/discover",
-      { cache: "no-store" }
+      { 
+        schema: MoabitsProviderMappingDiscoveryOutSchema,
+        cache: "no-store" 
+      }
     )
     return { success: true, data }
   } catch (error: unknown) {
@@ -199,9 +220,12 @@ export async function listMoabitsSourceCompanies(input?: {
     if (input?.q?.trim()) params.set("q", input.q.trim())
     if (input?.activeOnly !== undefined) params.set("active_only", String(input.activeOnly))
 
-    const data = await fetchApi<Page<MoabitsSourceCompanyOut>>(
+    const data = await fetchApi(
       `/companies/provider-mappings/moabits/source-companies?${params.toString()}`,
-      { cache: "no-store" }
+      { 
+        schema: PageSchema(MoabitsSourceCompanyOutSchema),
+        cache: "no-store" 
+      }
     )
     return { success: true as const, data }
   } catch (error: unknown) {
@@ -226,9 +250,12 @@ export async function listMoabitsProviderMappings(input?: {
     if (input?.q?.trim()) params.set("q", input.q.trim())
     if (input?.linkedOnly) params.set("linked_only", "true")
 
-    const data = await fetchApi<Page<LocalCompanyMoabitsMappingOut>>(
+    const data = await fetchApi(
       `/companies/provider-mappings/moabits?${params.toString()}`,
-      { cache: "no-store" }
+      { 
+        schema: PageSchema(LocalCompanyMoabitsMappingOutSchema),
+        cache: "no-store" 
+      }
     )
     return { success: true as const, data }
   } catch (error: unknown) {
@@ -241,11 +268,12 @@ export async function upsertMoabitsProviderMapping(companyId: string, body: Comp
   await requireAdmin()
 
   try {
-    const data = await fetchApi<CompanyProviderMappingOut>(
+    const data = await fetchApi(
       `/companies/${companyId}/provider-mappings/moabits`,
       {
         method: "PUT",
         body: JSON.stringify(body),
+        schema: CompanyProviderMappingOutSchema,
       }
     )
     revalidatePath("/dashboard/company")
@@ -267,7 +295,7 @@ export async function deleteMoabitsProviderMapping(companyId: string) {
   await requireAdmin()
 
   try {
-    await fetchApi<Record<string, never>>(
+    await fetchApi(
       `/companies/${companyId}/provider-mappings/moabits`,
       { method: "DELETE" }
     )

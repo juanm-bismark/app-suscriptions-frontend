@@ -694,6 +694,50 @@ function SubscriptionsList({
                   )
                 })}
               </DrawerGroup>
+
+              {isAdmin && (
+                <>
+                  <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
+                  <DrawerGroup title="BÚSQUEDA AVANZADA">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                        <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Plan</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: T.pageBg, border: `1px solid ${advPlan.trim() ? T.headerBg : T.border}`, borderRadius: 4, padding: "6px 9px" }}>
+                          <span style={{ color: T.muted, display: "inline-flex", flexShrink: 0 }}><Icon.search size={13} /></span>
+                          <input
+                            value={advPlan}
+                            onChange={(e) => setAdvPlan(e.target.value)}
+                            placeholder="Nombre o código..."
+                            style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, fontFamily: T.fontBody, color: T.text, minWidth: 0 }}
+                          />
+                          {advPlan && (
+                            <button type="button" onClick={() => setAdvPlan("")} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", lineHeight: 0, padding: 2, flexShrink: 0 }}>
+                              <Icon.close size={11} />
+                            </button>
+                          )}
+                        </div>
+                      </label>
+                      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                        <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Cliente</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: T.pageBg, border: `1px solid ${advClient.trim() ? T.headerBg : T.border}`, borderRadius: 4, padding: "6px 9px" }}>
+                          <span style={{ color: T.muted, display: "inline-flex", flexShrink: 0 }}><Icon.search size={13} /></span>
+                          <input
+                            value={advClient}
+                            onChange={(e) => setAdvClient(e.target.value)}
+                            placeholder="Nombre o scope..."
+                            style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, fontFamily: T.fontBody, color: T.text, minWidth: 0 }}
+                          />
+                          {advClient && (
+                            <button type="button" onClick={() => setAdvClient("")} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", lineHeight: 0, padding: 2, flexShrink: 0 }}>
+                              <Icon.close size={11} />
+                            </button>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  </DrawerGroup>
+                </>
+              )}
             </div>
 
             <div style={{ padding: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, background: T.cardBg }}>

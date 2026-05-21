@@ -2,7 +2,10 @@ import { z } from "zod"
 import type { Profile, Company, User } from "@/lib/types/user"
 import type { SimListOut, UsageOut, PresenceOut, SimImportOut } from "@/lib/types/api/sims"
 import type { SubscriptionOut, NormalizedSubscription } from "@/lib/types/api/sims"
-import type { CredentialMetadataOut, Provider } from "@/lib/types/api"
+import type { CredentialMetadataOut, Provider, CredentialProbeOut, CompanyProviderMappingOut, MoabitsSourceCompanyOut, LocalCompanyMoabitsMappingOut, MoabitsProviderMappingDiscoveryOut, CredentialTestOut } from "@/lib/types/api"
+import type { ProviderCapabilitiesOut, CapabilityOut } from "@/lib/types/api/providers"
+import type { CapabilityStatus } from "@/lib/types/api/common"
+import type { TokenResponse } from "@/lib/types/api/auth"
 
 const DateString = z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/))
 
@@ -181,7 +184,7 @@ export const CredentialMetadataOutSchema: z.ZodSchema<CredentialMetadataOut> = z
   expiry_status: CredentialExpiryStatusSchema,
   created_at: DateString,
   rotated_at: DateString.nullable(),
-  account_scope: z.record(z.string(), z.string()),
+  account_scope: z.record(z.string(), z.unknown()),
 })
 
 export const ProblemDetailsSchema = z.object({
@@ -245,11 +248,82 @@ export const SimImportOutSchema: z.ZodSchema<SimImportOut> = z.object({
   imported: z.number().int().nonnegative(),
 })
 
-import type { TokenResponse } from "@/lib/types/api/auth"
-
 export const TokenResponseSchema: z.ZodSchema<TokenResponse> = z.object({
   access_token: z.string(),
   token_type: z.literal("bearer"),
   expires_in: z.number().int().positive(),
   refresh_token: z.string(),
+})
+
+const CapabilityStatusSchema: z.ZodSchema<CapabilityStatus> = z.enum(["supported", "not_supported", "requires_feature_flag", "requires_confirmation"])
+
+const CapabilityOutSchema: z.ZodSchema<CapabilityOut> = z.object({
+  status: CapabilityStatusSchema,
+  reason: z.string().nullable(),
+  targets: z.array(AdministrativeStatusSchema),
+})
+
+export const ProviderCapabilitiesOutSchema: z.ZodSchema<ProviderCapabilitiesOut> = z.object({
+  provider: z.string(),
+  capabilities: z.record(z.string(), CapabilityOutSchema),
+}) as any
+
+export const CredentialProbeOutSchema: z.ZodSchema<CredentialProbeOut> = z.object({
+  provider: z.string(),
+  ok: z.boolean(),
+  detail: z.string(),
+  sample_count: z.number().int().nonnegative(),
+})
+
+export const CredentialTestOutSchema: z.ZodSchema<CredentialTestOut> = z.object({
+  provider: z.string(),
+  ok: z.boolean(),
+  detail: z.string().nullable(),
+})
+
+const MoabitsCompanyOutSchema = z.object({
+  companyCode: z.string(),
+  companyName: z.string(),
+  clie_id: z.number().int().nullable(),
+})
+
+export const MoabitsSourceCompanyOutSchema: z.ZodSchema<MoabitsSourceCompanyOut> = MoabitsCompanyOutSchema.extend({
+  source_company_id: z.string(),
+  active: z.boolean(),
+  last_seen_at: DateString,
+  updated_at: DateString,
+  created_at: DateString,
+})
+
+export const CompanyProviderMappingOutSchema: z.ZodSchema<CompanyProviderMappingOut> = z.object({
+  company_id: z.string(),
+  provider: z.literal("moabits"),
+  companyCode: z.string(),
+  companyName: z.string().nullable(),
+  clie_id: z.number().int().nullable(),
+  settings: z.record(z.string(), z.unknown()),
+  active: z.boolean(),
+  updated_at: DateString,
+  created_at: DateString,
+})
+
+export const LocalCompanyMoabitsMappingOutSchema: z.ZodSchema<LocalCompanyMoabitsMappingOut> = z.object({
+  company_id: z.string(),
+  company_name: z.string(),
+  mapping: CompanyProviderMappingOutSchema.nullable(),
+})
+
+export const MoabitsProviderMappingDiscoveryOutSchema: z.ZodSchema<MoabitsProviderMappingDiscoveryOut> = z.object({
+  cache_message: z.string(),
+  source_company_codes: z.array(z.string()),
+  local_companies: z.array(LocalCompanyMoabitsMappingOutSchema),
+  moabits_companies: z.array(
+    MoabitsCompanyOutSchema.extend({
+      selected_in_source: z.boolean(),
+      linked_companies: z.array(z.object({
+        company_id: z.string(),
+        company_name: z.string(),
+      })),
+    })
+  ),
 })

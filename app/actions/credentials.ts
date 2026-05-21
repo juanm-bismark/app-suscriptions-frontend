@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import { ApiError, fetchApi } from "@/lib/api-client"
+import {
+  CredentialMetadataOutSchema,
+  CredentialProbeOutSchema,
+  CredentialTestOutSchema,
+} from "@/lib/api-validation"
 import { listSims } from "@/lib/api/sims"
 import { requireAdmin, requireManagerOrAdmin } from "@/lib/auth/current-user"
 import type {
@@ -110,7 +115,10 @@ function toAdminProbeError(error: unknown): ActionErr {
 export async function listCredentials(): Promise<CredentialActionResult<CredentialMetadataOut[]>> {
   await requireManagerOrAdmin()
   try {
-    const data = await fetchApi<CredentialMetadataOut[]>("/companies/me/credentials", { cache: "no-store" })
+    const data = await fetchApi("/companies/me/credentials", { 
+      schema: CredentialMetadataOutSchema.array(),
+      cache: "no-store" 
+    })
     return { ok: true, data }
   } catch (error) {
     return toActionError(error)
@@ -120,7 +128,10 @@ export async function listCredentials(): Promise<CredentialActionResult<Credenti
 export async function listCompanyCredentials(companyId: string): Promise<CredentialActionResult<CredentialMetadataOut[]>> {
   await requireAdmin()
   try {
-    const data = await fetchApi<CredentialMetadataOut[]>(`/admin/companies/${companyId}/credentials`, { cache: "no-store" })
+    const data = await fetchApi(`/admin/companies/${companyId}/credentials`, { 
+      schema: CredentialMetadataOutSchema.array(),
+      cache: "no-store" 
+    })
     return { ok: true, data }
   } catch (error) {
     return toActionError(error)
@@ -132,7 +143,10 @@ export async function getCredential(provider: string): Promise<CredentialActionR
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialMetadataOut>(`/companies/me/credentials/${provider}`, { cache: "no-store" })
+    const data = await fetchApi(`/companies/me/credentials/${provider}`, { 
+      schema: CredentialMetadataOutSchema,
+      cache: "no-store" 
+    })
     return { ok: true, data }
   } catch (error) {
     return toActionError(error)
@@ -147,7 +161,10 @@ export async function getCompanyCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialMetadataOut>(`/admin/companies/${companyId}/credentials/${provider}`, { cache: "no-store" })
+    const data = await fetchApi(`/admin/companies/${companyId}/credentials/${provider}`, { 
+      schema: CredentialMetadataOutSchema,
+      cache: "no-store" 
+    })
     return { ok: true, data }
   } catch (error) {
     return toActionError(error)
@@ -162,9 +179,10 @@ export async function testCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialTestOut>(`/companies/me/credentials/${provider}/test`, {
+    const data = await fetchApi(`/companies/me/credentials/${provider}/test`, {
       method: "POST",
       body: JSON.stringify(body),
+      schema: CredentialTestOutSchema,
     })
     return toCredentialTestResult(data)
   } catch (error) {
@@ -181,9 +199,10 @@ export async function testCompanyCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialTestOut>(`/admin/companies/${companyId}/credentials/${provider}/test`, {
+    const data = await fetchApi(`/admin/companies/${companyId}/credentials/${provider}/test`, {
       method: "POST",
       body: JSON.stringify(body),
+      schema: CredentialTestOutSchema,
     })
     return toCredentialTestResult(data)
   } catch (error) {
@@ -199,9 +218,10 @@ export async function upsertCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialMetadataOut>(`/companies/me/credentials/${provider}`, {
+    const data = await fetchApi(`/companies/me/credentials/${provider}`, {
       method: "PATCH",
       body: JSON.stringify(body),
+      schema: CredentialMetadataOutSchema,
     })
     revalidatePath("/dashboard/credentials")
     return { ok: true, data }
@@ -219,9 +239,10 @@ export async function upsertCompanyCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialMetadataOut>(`/admin/companies/${companyId}/credentials/${provider}`, {
+    const data = await fetchApi(`/admin/companies/${companyId}/credentials/${provider}`, {
       method: "PATCH",
       body: JSON.stringify(body),
+      schema: CredentialMetadataOutSchema,
     })
     revalidatePath("/dashboard/credentials")
     revalidatePath(`/dashboard/credentials/company/${companyId}/${provider}`)
@@ -242,9 +263,9 @@ export async function probeCompanyCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<CredentialProbeOut>(
+    const data = await fetchApi(
       `/admin/companies/${companyId}/credentials/${provider}/probe`,
-      { method: "POST", cache: "no-store" }
+      { method: "POST", cache: "no-store", schema: CredentialProbeOutSchema }
     )
     return toCredentialProbeResult(data)
   } catch (error) {
@@ -315,11 +336,11 @@ export async function deactivateCredential(provider: string): Promise<Credential
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<Record<string, never>>(`/companies/me/credentials/${provider}`, {
+    await fetchApi(`/companies/me/credentials/${provider}`, {
       method: "DELETE",
     })
     revalidatePath("/dashboard/credentials")
-    return { ok: true, data }
+    return { ok: true, data: {} }
   } catch (error) {
     return toActionError(error)
   }
@@ -333,12 +354,12 @@ export async function deactivateCompanyCredential(
   if (!isProvider(provider)) return invalidProviderError()
 
   try {
-    const data = await fetchApi<Record<string, never>>(`/admin/companies/${companyId}/credentials/${provider}`, {
+    await fetchApi(`/admin/companies/${companyId}/credentials/${provider}`, {
       method: "DELETE",
     })
     revalidatePath("/dashboard/credentials")
     revalidatePath(`/dashboard/credentials/company/${companyId}/${provider}`)
-    return { ok: true, data }
+    return { ok: true, data: {} }
   } catch (error) {
     return toActionError(error)
   }
