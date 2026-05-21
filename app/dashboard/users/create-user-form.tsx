@@ -19,11 +19,11 @@ import { createUser } from "@/app/actions/users"
 import { ROLES, type Company, type UserRole } from "@/lib/types/user"
 
 const createUserSchema = z.object({
-  email: z.string().email("Correo inválido"),
+  email: z.email("Correo inválido"),
   password: z.string().min(6, "Contraseña de al menos 6 caracteres"),
   full_name: z.string().min(2, "Mínimo 2 caracteres").or(z.literal("")).optional(),
   role: z.enum(["admin", "manager", "member", "public"], { error: "Rol inválido" }),
-  company_id: z.string().uuid("Empresa inválida").or(z.literal("")).optional(),
+  company_id: z.uuid("Empresa inválida").or(z.literal("")).optional(),
 })
 
 type CreateUserFormData = z.infer<typeof createUserSchema>
@@ -149,33 +149,29 @@ export default function CreateUserForm({
             />
           )}
 
-          <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Rol de acceso</FormLabel>
-                <FormControl>
-                  <select
-                    {...field}
-                    className="mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus:ring-2 focus:ring-header-accent"
-                  >
-                    <option value="member">Miembro (Visualizar e interactuar base)</option>
-                    {currentRole === ROLES.ADMIN && (
-                      <option value="manager">Manager (Añadir miembros y editar planes)</option>
-                    )}
-                    {currentRole === ROLES.ADMIN && (
+          {currentRole === ROLES.ADMIN && (
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rol de acceso</FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      className="mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
+                    >
+                      <option value="member">Miembro (Visualizar e interactuar base)</option>
+                      <option value="manager">Manager (Añadir miembros)</option>
                       <option value="admin">Administrador (Control total)</option>
-                    )}
-                    {currentRole === ROLES.ADMIN && (
                       <option value="public">Público (Sin empresa asignada)</option>
-                    )}
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <Button
             type="submit"

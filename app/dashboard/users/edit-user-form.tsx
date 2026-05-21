@@ -163,10 +163,10 @@ export function EditUserForm({
                   <FormControl>
                     <select
                       {...field}
-                      className="mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus:ring-2 focus:ring-header-accent"
+                      className="mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-sm text-title shadow-sm shadow-header-top/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
                     >
                       <option value="member">Miembro (Visualizar e interactuar base)</option>
-                      <option value="manager">Manager (Añadir miembros y editar planes)</option>
+                      <option value="manager">Manager (Añadir miembros)</option>
                       <option value="admin">Administrador (Control total)</option>
                       <option value="public">Público (Sin empresa asignada)</option>
                     </select>

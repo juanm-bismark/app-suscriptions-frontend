@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { auth } from "@/auth"
 import type { ProblemDetails } from "@/lib/types/api"
 
@@ -37,6 +38,19 @@ export class ApiError extends Error {
   }
 }
 
+export class ValidationError extends ApiError {
+  constructor(
+    public zodError: z.ZodError,
+    message: string = "API response validation failed"
+  ) {
+    super(400, message, {
+      code: "VALIDATION_ERROR",
+      detail: zodError.issues.map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", "),
+    })
+    this.name = "ValidationError"
+  }
+}
+
 function withV1(path: string): string {
   if (path.startsWith("/health") || path.startsWith("/ready") || path.startsWith("/v1/")) {
     return path
@@ -48,12 +62,16 @@ function withV1(path: string): string {
  * Cliente de API a usar en Server Components o Server Actions.
  * Inyecta el token de NextAuth automáticamente si existe la sesión.
  * Pasa `skipAuth: true` para omitir el header Authorization (e.g. signup anónimo).
+ * Pasa `schema` para validar la respuesta en tiempo de ejecución.
  */
 export async function fetchApi<T>(
   path: string,
-  options: RequestInit & { skipAuth?: boolean } = {}
+  options: RequestInit & {
+    skipAuth?: boolean
+    schema?: z.ZodSchema<T>
+  } = {}
 ): Promise<T> {
-  const { skipAuth, ...fetchOptions } = options
+  const { skipAuth, schema, ...fetchOptions } = options
   const headers = new Headers(fetchOptions.headers)
   // Only declare JSON content-type when there's actually a body — the
   // contract requires it for POST/PUT/PATCH with a body, and adding it to
@@ -137,5 +155,18 @@ export async function fetchApi<T>(
     return {} as T
   }
 
-  return response.json()
+  const data = await response.json()
+
+  if (schema) {
+    try {
+      return schema.parse(data)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        throw new ValidationError(err, `Failed to validate response from ${path}`)
+      }
+      throw err
+    }
+  }
+
+  return data
 }

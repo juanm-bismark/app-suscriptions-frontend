@@ -20,7 +20,7 @@
  * Alert/Banner:
  * ✅ Advertencias de sesión (va a expirar en 5 min)
  * ✅ Estado de onboarding incompleto
- * ✅ Límites de plan alcanzados
+ * ✅ Acciones que requieren atención del administrador
  * ✅ Mensajes de error de formulario globales
  * ❌ Mensajes de éxito transitorios → usa Toast
  *
@@ -279,16 +279,16 @@ export { Alert, EmptyState, Skeleton, SkeletonCard }
   // Alert de advertencia con acción
   <Alert
     variant="warning"
-    title="Tu plan vence pronto"
+    title="Credenciales próximas a vencer"
     action={
       <Button size="sm" variant="secondary">
-        Renovar plan
+        Revisar credenciales
       </Button>
     }
     onDismiss={() => dismiss()}
   >
-    Tienes 3 días restantes en tu plan Professional.
-    Después de ese momento no podrás crear nuevos proyectos.
+    Las credenciales de Kite vencen en 3 días.
+    Actualízalas para evitar interrupciones en la sincronización.
   </Alert>
 
   // Estado vacío - primera vez

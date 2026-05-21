@@ -115,6 +115,7 @@ export default function ProfileForm({
                     <button
                       type="button"
                       aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-pressed={showPassword}
                       onClick={() => setShowPassword((v) => !v)}
                       className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted transition-colors hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
                     >

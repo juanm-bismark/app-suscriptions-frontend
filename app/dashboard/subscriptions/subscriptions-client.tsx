@@ -395,7 +395,7 @@ function SubscriptionsList({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por ICCID, MSISDN, IMSI, cliente o plan..."
+            placeholder="Buscar por ICCID, MSISDN, IMSI o cliente..."
             style={{
               flex: 1,
               border: "none",

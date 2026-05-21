@@ -80,7 +80,7 @@ export function LoadingState({ query }: { query?: string }) {
             <Icon.search size={15} />
           </span>
           <span style={{ flex: 1, fontSize: 13.5, color: hasQuery ? T.text : T.muted }}>
-            {hasQuery ? query : "Buscar por ICCID, MSISDN, IMSI, cliente o plan..."}
+            {hasQuery ? query : "Buscar por ICCID, MSISDN, IMSI o cliente..."}
           </span>
           <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>cargando...</span>
         </div>
