@@ -1,6 +1,7 @@
 import { fetchApi, ApiError } from "@/lib/api-client"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
-import { ROLES, type Page, type User, type UserRole } from "@/lib/types/user"
+import { ROLES, type Company, type Page, type User, type UserRole } from "@/lib/types/user"
+import { searchCompanies } from "@/app/actions/company"
 import { UsersRound } from "lucide-react"
 import { UsersContent } from "./users-content"
 
@@ -22,16 +23,25 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   let users: User[] = []
   let pageData: Page<User> | null = null
   let networkError = false
+  let companies: Company[] = []
 
-  try {
-    pageData = await fetchApi<Page<User>>(`/users?${usersParams.toString()}`, { cache: "no-store" })
+  const [usersResult, companiesResult] = await Promise.allSettled([
+    fetchApi<Page<User>>(`/users?${usersParams.toString()}`, { cache: "no-store" }),
+    profile.role === ROLES.ADMIN ? searchCompanies({ size: 200 }) : Promise.resolve(null),
+  ])
+
+  if (usersResult.status === "fulfilled") {
+    pageData = usersResult.value
     users = visibleUsersForRole(pageData.items, profile.role, profile.company_id)
-  } catch (err: unknown) {
-    console.error("Error loading users:", err)
-    if (err instanceof ApiError && err.status === 0) {
+  } else {
+    console.error("Error loading users:", usersResult.reason)
+    if (usersResult.reason instanceof ApiError && usersResult.reason.status === 0) {
       networkError = true
     }
-    // keep users as empty array to allow rendering the page
+  }
+
+  if (companiesResult.status === "fulfilled" && companiesResult.value && "companies" in companiesResult.value) {
+    companies = companiesResult.value.companies ?? []
   }
 
   return (
@@ -66,6 +76,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         pageData={pageData}
         query={query}
         pageSize={pageSize}
+        companies={companies}
       />
     </div>
   )

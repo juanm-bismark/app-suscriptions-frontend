@@ -1,4 +1,3 @@
-import { auth } from "@/auth"
 import { getCompany, requireProfile } from "@/lib/auth/current-user"
 import { canAccessDashboard } from "@/lib/types/user"
 import { Building2 } from "lucide-react"
@@ -6,7 +5,6 @@ import { DashboardOverview } from "./dashboard-overview"
 import ProfileForm from "./profile/profile-form"
 
 export default async function DashboardPage() {
-  const session = await auth()
   const profile = await requireProfile()
 
   if (!canAccessDashboard(profile.role)) {
@@ -22,7 +20,7 @@ export default async function DashboardPage() {
         <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
           <ProfileForm
             initialName={profile.full_name || ""}
-            email={session?.user?.email || ""}
+            email={profile.email || ""}
             role={profile.role}
           />
         </div>
@@ -61,7 +59,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-lg bg-white/75 p-4 shadow-sm shadow-header-top/5 sm:p-6">
             <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Correo</label>
-            <p className="text-title font-mono text-sm sm:text-base break-all">{session?.user?.email || "N/A"}</p>
+            <p className="text-title font-mono text-sm sm:text-base break-all">{profile.email || "N/A"}</p>
           </div>
 
           <div className="rounded-lg bg-white/75 p-4 shadow-sm shadow-header-top/5 sm:p-6">

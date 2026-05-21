@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { X } from "lucide-react"
-import { type Page, type User, type UserRole } from "@/lib/types/user"
+import { type Company, type Page, type User, type UserRole } from "@/lib/types/user"
 import CreateUserForm from "./create-user-form"
 import { EditUserForm } from "./edit-user-form"
 import UsersTable from "./users-table"
@@ -16,12 +16,14 @@ export function UsersContent({
   pageData,
   query,
   pageSize,
+  companies = [],
 }: {
   users: User[]
   currentRole: UserRole
   pageData: Page<User> | null
   query: string
   pageSize: number
+  companies?: Company[]
 }) {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const clearSearchHref = `/dashboard/users?page=1&size=${pageSize}`
@@ -93,7 +95,7 @@ export function UsersContent({
         ) : (
           <>
             <h2 className="text-xl font-semibold mb-4 text-title">Añadir usuario</h2>
-            <CreateUserForm currentRole={currentRole} />
+            <CreateUserForm currentRole={currentRole} companies={companies} />
           </>
         )}
       </div>

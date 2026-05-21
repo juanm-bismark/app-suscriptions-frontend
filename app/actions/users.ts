@@ -14,6 +14,10 @@ const createUserSchema = z.object({
     z.string().min(2, "Mínimo 2 caracteres").optional()
   ),
   role: z.enum(["admin", "manager", "member", "public"], { error: "Rol inválido" }),
+  company_id: z.preprocess(
+    (v) => (!v ? undefined : v),
+    z.string().uuid("Empresa inválida").optional()
+  ),
 })
 
 const updateUserSchema = z.object({
@@ -40,6 +44,7 @@ export async function createUser(formData: FormData) {
       password: formData.get("password"),
       full_name: formData.get("full_name"),
       role: formData.get("role"),
+      company_id: formData.get("company_id"),
     }
 
     const parsed = createUserSchema.safeParse(rawData)
@@ -48,6 +53,9 @@ export async function createUser(formData: FormData) {
     }
     if (profile.role === ROLES.MANAGER && parsed.data.role !== ROLES.MEMBER) {
       return { error: "Managers solo pueden crear miembros" }
+    }
+    if (profile.role === ROLES.ADMIN && !parsed.data.company_id) {
+      return { error: "Debes seleccionar una empresa" }
     }
 
     await fetchApi("/users", {

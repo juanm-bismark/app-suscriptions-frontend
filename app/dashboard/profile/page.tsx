@@ -1,10 +1,8 @@
-import { auth } from "@/auth"
 import { getCompany, requireProfile } from "@/lib/auth/current-user"
 import { Building2 } from "lucide-react"
 import ProfileForm from "./profile-form"
 
 export default async function ProfilePage() {
-  const session = await auth()
   const profile = await requireProfile()
   const company = await getCompany()
 
@@ -31,7 +29,7 @@ export default async function ProfilePage() {
       <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
         <ProfileForm
           initialName={profile.full_name || ""}
-          email={session?.user?.email || ""}
+          email={profile.email || ""}
           role={profile.role}
         />
       </div>
