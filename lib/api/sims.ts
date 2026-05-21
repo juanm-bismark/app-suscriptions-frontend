@@ -1,6 +1,13 @@
 "use server";
 
 import { fetchApi } from "@/lib/api-client";
+import {
+  SimListOutSchema,
+  SubscriptionOutSchema,
+  UsageOutSchema,
+  PresenceOutSchema,
+  SimImportOutSchema,
+} from "@/lib/api-validation";
 import type {
   PresenceOut,
   SimImportIn,
@@ -48,19 +55,19 @@ export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
   for (const c of p.custom ?? []) qs.append("custom", c);
 
   const q = qs.toString();
-  return fetchApi<SimListOut>(`/sims${q ? `?${q}` : ""}`, { cache: "no-store" });
+  return fetchApi(`/sims${q ? `?${q}` : ""}`, { schema: SimListOutSchema, cache: "no-store" });
 }
 
 export async function getSim(iccid: string): Promise<SubscriptionOut> {
-  return fetchApi<SubscriptionOut>(`/sims/${encodeURIComponent(iccid)}`, { cache: "no-store" });
+  return fetchApi(`/sims/${encodeURIComponent(iccid)}`, { schema: SubscriptionOutSchema, cache: "no-store" });
 }
 
 export async function getUsage(iccid: string, qs?: string): Promise<UsageOut> {
-  return fetchApi<UsageOut>(`/sims/${encodeURIComponent(iccid)}/usage${qs ? `?${qs}` : ""}`, { cache: "no-store" });
+  return fetchApi(`/sims/${encodeURIComponent(iccid)}/usage${qs ? `?${qs}` : ""}`, { schema: UsageOutSchema, cache: "no-store" });
 }
 
 export async function getPresence(iccid: string): Promise<PresenceOut> {
-  return fetchApi<PresenceOut>(`/sims/${encodeURIComponent(iccid)}/presence`, { cache: "no-store" });
+  return fetchApi(`/sims/${encodeURIComponent(iccid)}/presence`, { schema: PresenceOutSchema, cache: "no-store" });
 }
 
 export async function setSimStatus(
@@ -83,8 +90,9 @@ export async function purgeSim(iccid: string, idempotencyKey: string): Promise<v
 }
 
 export async function importSims(body: SimImportIn): Promise<SimImportOut> {
-  return fetchApi<SimImportOut>("/sims/import", {
+  return fetchApi("/sims/import", {
     method: "POST",
     body: JSON.stringify(body),
+    schema: SimImportOutSchema,
   });
 }

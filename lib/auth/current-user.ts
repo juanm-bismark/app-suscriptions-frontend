@@ -2,6 +2,7 @@ import { cache } from "react"
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { ApiError, fetchApi } from "@/lib/api-client"
+import { ProfileSchema, CompanySchema } from "@/lib/api-validation"
 import { ROLES, type Company, type Profile, type UserRole } from "@/lib/types/user"
 
 export const getSession = cache(async () => {
@@ -14,7 +15,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   if (session.user.error === "RefreshAccessTokenError") return null
 
   try {
-    return await fetchApi<Profile>("/me", { cache: "no-store" })
+    return await fetchApi("/me", { schema: ProfileSchema, cache: "no-store" })
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 0)) return null
     throw error
@@ -27,7 +28,7 @@ export const getCompany = cache(async (): Promise<Company | null> => {
   if (session.user.error === "RefreshAccessTokenError") return null
 
   try {
-    return await fetchApi<Company>("/companies/me", { cache: "no-store" })
+    return await fetchApi("/companies/me", { schema: CompanySchema, cache: "no-store" })
   } catch (error) {
     if (error instanceof ApiError && (error.status === 0 || error.status === 401 || error.status === 404)) {
       return null

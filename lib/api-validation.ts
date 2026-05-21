@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { Profile, Company, User } from "@/lib/types/user"
+import type { SimListOut, UsageOut, PresenceOut, SimImportOut } from "@/lib/types/api/sims"
 import type { SubscriptionOut, NormalizedSubscription } from "@/lib/types/api/sims"
 import type { CredentialMetadataOut, Provider } from "@/lib/types/api"
 
@@ -191,3 +192,64 @@ export const ProblemDetailsSchema = z.object({
   detail: z.string().nullable().optional(),
   instance: z.string().nullable().optional(),
 }).catchall(z.unknown())
+
+const FailedProviderSchema = z.object({
+  provider: z.string(),
+  code: z.string(),
+  title: z.string(),
+})
+
+const ProviderStatusSchema = z.object({
+  provider: z.string(),
+  status: z.enum(["ok", "partial", "error", "not_queried"]),
+  count: z.number().int().nonnegative(),
+  code: z.string().nullable(),
+  title: z.string().nullable(),
+})
+
+export const SimListOutSchema: z.ZodSchema<SimListOut> = z.object({
+  items: z.array(SubscriptionOutSchema),
+  next_cursor: z.string().nullable(),
+  total: z.number().int().nonnegative().nullable(),
+  partial: z.boolean(),
+  failed_providers: z.array(FailedProviderSchema),
+  provider_statuses: z.array(ProviderStatusSchema),
+})
+
+export const UsageOutSchema: z.ZodSchema<UsageOut> = z.object({
+  iccid: z.string(),
+  period_start: DateString,
+  period_end: DateString,
+  data_used_bytes: z.string(),
+  sms_count: z.number().int().nonnegative(),
+  voice_seconds: z.number().int().nonnegative(),
+  provider_metrics: z.record(z.string(), z.unknown()),
+  usage_metrics: z.array(z.object({
+    metric_type: z.string(),
+    usage: z.string(),
+    unit: z.string().nullable(),
+  })),
+})
+
+export const PresenceOutSchema: z.ZodSchema<PresenceOut> = z.object({
+  iccid: z.string(),
+  state: z.enum(["online", "offline", "unknown"]),
+  ip_address: z.string().nullable(),
+  country_code: z.string().nullable(),
+  rat_type: z.string().nullable(),
+  network_name: z.string().nullable(),
+  last_seen_at: DateString.nullable(),
+})
+
+export const SimImportOutSchema: z.ZodSchema<SimImportOut> = z.object({
+  imported: z.number().int().nonnegative(),
+})
+
+import type { TokenResponse } from "@/lib/types/api/auth"
+
+export const TokenResponseSchema: z.ZodSchema<TokenResponse> = z.object({
+  access_token: z.string(),
+  token_type: z.literal("bearer"),
+  expires_in: z.number().int().positive(),
+  refresh_token: z.string(),
+})

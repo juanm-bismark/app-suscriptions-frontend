@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { requireCompanyUser } from "@/lib/auth/current-user"
+import { ROLES } from "@/lib/types/user"
 import { LoadingState } from "./state-views"
 import { SubscriptionsClient } from "./subscriptions-client"
 
@@ -14,7 +15,7 @@ function single(v: string | string[] | undefined) {
 }
 
 export default async function SubscriptionsPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireCompanyUser()
+  const profile = await requireCompanyUser()
 
   const params = await searchParams
   const filters = {
@@ -26,7 +27,7 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
 
   return (
     <Suspense fallback={<LoadingState />}>
-      <SubscriptionsClient filters={filters} />
+      <SubscriptionsClient filters={filters} isAdmin={profile.role === ROLES.ADMIN} />
     </Suspense>
   )
 }

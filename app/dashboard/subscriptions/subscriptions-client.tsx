@@ -89,7 +89,7 @@ function mergeRowsIntoResult(cached: LoadSubscriptionsData, incomingRows: Subscr
   }
 }
 
-export function SubscriptionsClient({ filters }: { filters?: LoadSubscriptionsInput }) {
+export function SubscriptionsClient({ filters, isAdmin = false }: { filters?: LoadSubscriptionsInput; isAdmin?: boolean }) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const retry = () => router.refresh()
@@ -97,10 +97,10 @@ export function SubscriptionsClient({ filters }: { filters?: LoadSubscriptionsIn
   if (stateOverride === "loading") return <LoadingState query={filters?.q || undefined} />
   if (stateOverride === "error") return <ErrorState query={filters?.q || undefined} onRetry={retry} />
   if (stateOverride === "empty") return <ListEmptyShell query={filters?.q || undefined} />
-  return <SubscriptionsLoader filters={filters} />
+  return <SubscriptionsLoader filters={filters} isAdmin={isAdmin} />
 }
 
-function SubscriptionsLoader({ filters }: { filters?: LoadSubscriptionsInput }) {
+function SubscriptionsLoader({ filters, isAdmin }: { filters?: LoadSubscriptionsInput; isAdmin?: boolean }) {
   const queryClient = useQueryClient()
   const q = filters?.q ?? ""
   const cursor = filters?.cursor ?? ""
@@ -186,6 +186,7 @@ function SubscriptionsLoader({ filters }: { filters?: LoadSubscriptionsInput }) 
         pagination={{ nextCursor: null, total: 0, partial: true, failedProviders, providerStatuses: [] }}
         filters={listFilters}
         initialSource={selectedProvider ?? "all"}
+        isAdmin={isAdmin}
       />
     )
   }
@@ -199,6 +200,7 @@ function SubscriptionsLoader({ filters }: { filters?: LoadSubscriptionsInput }) 
       pagination={{ nextCursor: null, total: allRows.length, partial: hasPartial || failedProviders.length > 0, failedProviders, providerStatuses }}
       filters={listFilters}
       initialSource={initialSource}
+      isAdmin={isAdmin}
     />
   )
 }
@@ -237,11 +239,13 @@ function SubscriptionsList({
   pagination,
   filters,
   initialSource = "all",
+  isAdmin = false,
 }: {
   rows: SubscriptionRow[]
   pagination: LoadSubscriptionsData["pagination"]
   filters: LoadSubscriptionsData["filters"]
   initialSource?: SourceFilter
+  isAdmin?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -257,6 +261,8 @@ function SubscriptionsList({
   const [advOpen, setAdvOpen] = useState(false)
   const [advSrcs, setAdvSrcs] = useState<Set<SourceId> | null>(null)
   const [advStatuses, setAdvStatuses] = useState<Set<StatusId> | null>(null)
+  const [advPlan, setAdvPlan] = useState("")
+  const [advClient, setAdvClient] = useState("")
 
   useEffect(() => {
     if (!advOpen) return
@@ -285,17 +291,21 @@ function SubscriptionsList({
         if (activeStatus !== "all" && r.status !== activeStatus) return false
         if (advSrcs && advSrcs.size > 0 && !advSrcs.has(r.provider)) return false
         if (advStatuses && advStatuses.size > 0 && !advStatuses.has(r.status as StatusId)) return false
+        const planQ = advPlan.trim().toLowerCase()
+        if (planQ && !`${r.planName ?? ""} ${r.planCode ?? ""}`.toLowerCase().includes(planQ)) return false
+        const clientQ = advClient.trim().toLowerCase()
+        if (clientQ && !`${r.customerName ?? ""} ${r.customerScope ?? ""}`.toLowerCase().includes(clientQ)) return false
         if (!q.trim()) return true
-        const haystack = [r.iccid, r.msisdn, r.imsi, r.planName, r.planCode, r.customerName, r.customerScope, r.nativeStatus, r.provider]
+        const haystack = [r.iccid, r.msisdn, r.imsi, r.nativeStatus, r.provider]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
         return haystack.includes(q.trim().toLowerCase())
       }),
-    [activeSrc, activeStatus, advSrcs, advStatuses, initialRows, q],
+    [activeSrc, activeStatus, advClient, advPlan, advSrcs, advStatuses, initialRows, q],
   )
 
-  const advCount = (advSrcs && advSrcs.size > 0 ? 1 : 0) + (advStatuses && advStatuses.size > 0 ? 1 : 0)
+  const advCount = (advSrcs && advSrcs.size > 0 ? 1 : 0) + (advStatuses && advStatuses.size > 0 ? 1 : 0) + (advPlan.trim() ? 1 : 0) + (advClient.trim() ? 1 : 0)
   const total = pagination?.total ?? initialRows.length
   const failedProviders = pagination?.failedProviders ?? []
   const hasPartialProviders = Boolean(pagination?.partial && failedProviders.length)
@@ -319,6 +329,8 @@ function SubscriptionsList({
   const clearAdv = () => {
     setAdvSrcs(null)
     setAdvStatuses(null)
+    setAdvPlan("")
+    setAdvClient("")
   }
 
   const allSelected = <V,>(set: Set<V> | null, options: readonly V[]) => !set || set.size === options.length
@@ -395,7 +407,7 @@ function SubscriptionsList({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por ICCID, MSISDN, IMSI o cliente..."
+            placeholder="Buscar por ICCID, MSISDN o IMSI..."
             style={{
               flex: 1,
               border: "none",
