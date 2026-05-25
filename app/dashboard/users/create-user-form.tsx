@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Building2, Eye, EyeOff, Search } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import {
   Form,
   FormControl,
@@ -17,13 +17,14 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { createUser } from "@/app/actions/users"
 import { ROLES, type Company, type UserRole } from "@/lib/types/user"
+import { CompanyPicker } from "./company-picker"
 
 const createUserSchema = z.object({
   email: z.email("Correo inválido"),
   password: z.string().min(6, "Contraseña de al menos 6 caracteres"),
   full_name: z.string().min(2, "Mínimo 2 caracteres").or(z.literal("")).optional(),
   role: z.enum(["admin", "manager", "member", "public"], { error: "Rol inválido" }),
-  company_id: z.uuid("Empresa inválida").or(z.literal("")).optional(),
+  company_id: z.string().trim().min(1, "Empresa inválida").or(z.literal("")).optional(),
 })
 
 type CreateUserFormData = z.infer<typeof createUserSchema>
@@ -44,7 +45,7 @@ export default function CreateUserForm({
     defaultValues: { email: "", password: "", full_name: "", role: "member", company_id: "" },
   })
 
-  const selectedCompanyId = form.watch("company_id")
+  const selectedCompanyId = useWatch({ control: form.control, name: "company_id" })
 
   async function onSubmit(data: CreateUserFormData) {
     setError(null)
@@ -183,68 +184,6 @@ export default function CreateUserForm({
           </Button>
         </form>
       </Form>
-    </div>
-  )
-}
-
-function CompanyPicker({
-  companies,
-  value,
-  onChange,
-  error,
-}: {
-  companies: Company[]
-  value: string
-  onChange: (id: string) => void
-  error?: string
-}) {
-  const [query, setQuery] = useState("")
-  const filtered = query.trim()
-    ? companies.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
-    : companies
-
-  return (
-    <div className="space-y-1.5">
-      <p className="text-sm font-medium leading-none text-title">Empresa</p>
-
-      <div className="flex h-9 items-center rounded-md border border-[#C9DFE3] bg-white px-2.5 shadow-sm shadow-header-top/5 focus-within:ring-2 focus-within:ring-header-accent">
-        <Search className="mr-2 h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar empresa..."
-          className="h-full flex-1 bg-transparent text-sm text-title outline-none placeholder:text-muted"
-        />
-      </div>
-
-      <div className="max-h-40 overflow-y-auto rounded-md border border-[#C9DFE3] bg-white shadow-sm shadow-header-top/5">
-        {filtered.length === 0 ? (
-          <p className="p-3 text-sm text-muted">
-            {companies.length === 0 ? "No hay empresas disponibles" : "Sin resultados"}
-          </p>
-        ) : (
-          filtered.map((company) => (
-            <button
-              key={company.id}
-              type="button"
-              onClick={() => onChange(company.id)}
-              className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-header-accent ${
-                value === company.id
-                  ? "bg-[#DDF1F2] text-title"
-                  : "text-muted hover:bg-[#EAF6F7] hover:text-title"
-              }`}
-            >
-              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="min-w-0 flex-1 truncate font-semibold">{company.name}</span>
-              {value === company.id && (
-                <span className="ml-auto shrink-0 text-xs font-normal text-header-bg">Seleccionada</span>
-              )}
-            </button>
-          ))
-        )}
-      </div>
-
-      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
     </div>
   )
 }

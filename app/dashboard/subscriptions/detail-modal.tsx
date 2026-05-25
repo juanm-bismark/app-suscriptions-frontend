@@ -5,42 +5,64 @@ import { toast } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { fmtShortDate } from "./data";
-import { Btn, Icon, SourceBadge, StatusPill } from "./primitives";
-import { SOURCES, type SourceId, T } from "./tokens";
+import { Btn, Icon, SourceBadge, StatusPillWithNative } from "./primitives";
+import { SOURCES, type SourceId } from "./tokens";
 
-function ModalStat({
+// Per-identifier accent colors — kept inline since they're not provider-related
+// and exist only to help users tell ICCID / MSISDN / IMSI apart visually.
+const ICCID_COLOR = "#33A6B2";
+const MSISDN_COLOR = "#7B4FE0";
+const IMSI_COLOR = "#E07A3A";
+
+function IdentifierRow({
   label,
+  description,
   value,
-  sub,
-  mono,
-  divider,
+  color,
+  onCopy,
+  isCopied,
+  isMissing,
 }: {
   label: string;
+  description: string;
   value: string;
-  sub?: string;
-  mono?: boolean;
-  divider?: boolean;
+  color: string;
+  onCopy?: () => void;
+  isCopied?: boolean;
+  isMissing?: boolean;
 }) {
   return (
-    <div style={{ padding: "12px 16px", borderLeft: divider ? `1px solid ${T.divider}` : "none", minWidth: 0 }}>
-      <div style={{ fontSize: 10.5, letterSpacing: 0.6, color: T.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>
-        {label}
+    <div className="flex items-center gap-3.5 px-[18px] py-[13px] border-b border-divider">
+      <div className="w-[3px] self-stretch rounded-sm shrink-0" style={{ background: color }} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+          <span className="text-xs font-extrabold text-title tracking-wider uppercase">{label}</span>
+          <span className="text-[11.5px] text-muted font-medium">{description}</span>
+        </div>
+        <div
+          className={`font-mono text-[14.5px] font-semibold truncate ${
+            isMissing ? "text-muted italic" : "text-title"
+          }`}
+        >
+          {isMissing ? "No disponible en este proveedor" : value}
+        </div>
       </div>
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 700,
-          color: T.title,
-          fontFamily: mono ? T.fontMono : T.fontBody,
-          letterSpacing: -0.2,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-      {sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{sub}</div>}
+      {!isMissing && onCopy && (
+        <button
+          type="button"
+          onClick={onCopy}
+          title={`Copiar ${label}`}
+          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-bold border border-border bg-card text-text transition-colors"
+          style={
+            isCopied
+              ? { borderColor: color, background: `${color}1a`, color: color }
+              : undefined
+          }
+        >
+          {isCopied ? <Icon.check size={11} /> : <Icon.copy size={11} />}
+          {isCopied ? "Copiado" : "Copiar"}
+        </button>
+      )}
     </div>
   );
 }
@@ -63,20 +85,20 @@ function detailHref(record: SubscriptionRow, selectedProvider?: SourceId, tab?: 
 
 export function DetailModal({ record, selectedProvider, onClose }: DetailModalProps) {
   const router = useRouter();
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [purgeMockOpen, setPurgeMockOpen] = useState(false);
   if (!record) return null;
   const iccid = record.iccid;
   const provider = record.provider;
   const src = SOURCES[record.provider];
 
-  async function copyIccid() {
+  async function copyToClipboard(text: string, fieldKey: string, label: string) {
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(iccid);
+        await navigator.clipboard.writeText(text);
       } else {
         const input = document.createElement("textarea");
-        input.value = iccid;
+        input.value = text;
         input.style.position = "fixed";
         input.style.left = "-9999px";
         document.body.appendChild(input);
@@ -85,11 +107,11 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
         document.execCommand("copy");
         input.remove();
       }
-      setCopied(true);
-      toast.success("ICCID copiado");
-      window.setTimeout(() => setCopied(false), 1600);
+      setCopiedField(fieldKey);
+      toast.success(`${label} copiado`);
+      window.setTimeout(() => setCopiedField((c) => (c === fieldKey ? null : c)), 1600);
     } catch {
-      toast.error("No pudimos copiar el ICCID");
+      toast.error(`No pudimos copiar el ${label}`);
     }
   }
 
@@ -106,82 +128,109 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
   return (
     <div
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        background: "rgba(15, 32, 42, 0.55)",
-        backdropFilter: "blur(2px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-[rgba(15,32,42,0.55)] backdrop-blur-sm"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: 640,
-          maxHeight: "90vh",
-          background: T.cardBg,
-          borderRadius: 8,
-          boxShadow: "0 20px 60px rgba(15, 32, 42, 0.25), 0 2px 8px rgba(15, 32, 42, 0.1)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          border: `1px solid ${T.border}`,
-          fontFamily: T.fontBody,
-        }}
+        className="w-full max-w-[640px] max-h-[90vh] bg-card rounded-lg border border-border flex flex-col overflow-hidden font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
       >
-        <div style={{ position: "relative", background: T.cardBg, padding: "18px 22px 16px", borderBottom: `1px solid ${T.divider}` }}>
-          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: src.color }} />
+        {/* Header */}
+        <div className="relative bg-card px-[22px] pt-[18px] pb-4 border-b border-divider">
+          <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: src.color }} />
           <button
+            type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            style={{ position: "absolute", top: 14, right: 14, background: "transparent", border: "none", color: T.muted, padding: 6, borderRadius: 4, cursor: "pointer" }}
+            className="absolute top-3.5 right-3.5 p-1.5 rounded text-muted hover:bg-zebra cursor-pointer"
           >
             <Icon.close size={15} />
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, paddingLeft: 4 }}>
+          <div className="flex items-center gap-2.5 mb-3 pl-1">
             <SourceBadge source={record.provider} size="sm" withName />
-            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>·</span>
-            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>{record.iccid}</span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, paddingLeft: 4 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: -0.4 }}>{value(record.customerName)}</div>
-              <div style={{ fontSize: 12, color: T.muted, marginTop: 2, fontFamily: T.fontMono }}>{value(record.customerScope)}</div>
+          <div className="flex items-end gap-3 pl-1">
+            <div className="flex-1 min-w-0">
+              <div className="text-[22px] font-bold text-title -tracking-[0.4px]">
+                {record.customerName?.trim() || `SIM · ${src.name}`}
+              </div>
+              {record.customerScope?.trim() && (
+                <div className="text-xs text-muted mt-0.5 font-mono">{record.customerScope}</div>
+              )}
             </div>
-            <div style={{ textAlign: "right" }}>
-              <StatusPill status={record.status} size="md" />
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 6, fontFamily: T.fontMono }}>
-                Act. {fmtShortDate(record.updatedAt)}
+            <div className="text-right">
+              <StatusPillWithNative
+                provider={record.provider}
+                status={record.status}
+                nativeStatus={record.nativeStatus}
+                displayLabel={record.status}
+                statusGroup={record.statusGroup}
+                showContext={false}
+                size="md"
+              />
+              <div className="text-[11px] text-muted mt-1.5">
+                Actualizado {fmtShortDate(record.updatedAt)}
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ flex: 1, overflow: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderBottom: `1px solid ${T.divider}` }}>
-            <ModalStat label="Plan" value={value(record.planName)} sub={value(record.planCode)} />
-            <ModalStat label="MSISDN" value={value(record.msisdn)} mono divider />
-            <ModalStat label="IMSI" value={value(record.imsi)} mono divider />
+        {/* Body */}
+        <div className="flex-1 overflow-auto">
+          {/* Plan banner */}
+          <div className="flex items-start gap-3.5 px-[18px] pt-3.5 pb-3 border-b border-divider">
+            <div className="w-[3px] self-stretch rounded-sm shrink-0" style={{ background: src.color }} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                <span className="text-xs font-extrabold text-title tracking-wider uppercase">Plan</span>
+                <span className="text-[11.5px] text-muted font-medium">Servicio contratado para esta SIM</span>
+              </div>
+              <div className="text-[15px] font-bold text-title -tracking-[0.2px] truncate">
+                {record.planDisplay}
+              </div>
+              {record.planName && (record.planCode || record.planId) && (
+                <div className="text-[11.5px] text-muted mt-0.5 font-mono">
+                  {value(record.planCode ?? record.planId)}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div style={{ padding: "16px 22px", display: "grid", gap: 10 }}>
-            <ModalStat label="ICCID" value={record.iccid} mono />
-            <ModalStat label="Estado nativo" value={value(record.nativeStatus)} mono />
-            <ModalStat label="Nivel de detalle" value={record.detailLevel} mono />
+          {/* Identifiers section */}
+          <div className="px-[22px] pt-3 pb-1.5 text-[10.5px] tracking-wider text-muted font-bold uppercase">
+            Identificadores
           </div>
+          <IdentifierRow
+            label="ICCID"
+            description="Chip físico de la SIM (18-22 dígitos)"
+            value={record.iccid}
+            color={ICCID_COLOR}
+            onCopy={() => copyToClipboard(record.iccid, "iccid", "ICCID")}
+            isCopied={copiedField === "iccid"}
+          />
+          <IdentifierRow
+            label="MSISDN"
+            description="Número de línea telefónica"
+            value={value(record.msisdn)}
+            color={MSISDN_COLOR}
+            isMissing={!record.msisdn?.trim()}
+            onCopy={record.msisdn ? () => copyToClipboard(record.msisdn!, "msisdn", "MSISDN") : undefined}
+            isCopied={copiedField === "msisdn"}
+          />
+          <IdentifierRow
+            label="IMSI"
+            description="Identidad del abonado en la red móvil"
+            value={value(record.imsi)}
+            color={IMSI_COLOR}
+            isMissing={!record.imsi?.trim()}
+            onCopy={record.imsi ? () => copyToClipboard(record.imsi!, "imsi", "IMSI") : undefined}
+            isCopied={copiedField === "imsi"}
+          />
         </div>
 
-        <div style={{ borderTop: `1px solid ${T.border}`, background: T.tableHeaderBg, padding: "12px 22px", display: "flex", alignItems: "center", gap: 10 }}>
-          <Btn variant="ghost" size="md" icon={<Icon.copy size={12} />} onClick={copyIccid}>
-            {copied ? "Copiado" : "Copiar ICCID"}
-          </Btn>
+        {/* Footer */}
+        <div className="border-t border-border bg-table-header-bg px-[22px] py-3 flex items-center gap-2.5">
           <Btn
             variant="outline"
             size="md"
@@ -192,12 +241,8 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
           >
             Acciones
           </Btn>
-          <div style={{ flex: 1 }} />
-          <Btn
-            variant="outline"
-            size="md"
-            onClick={() => setPurgeMockOpen(true)}
-          >
+          <div className="flex-1" />
+          <Btn variant="outline" size="md" onClick={() => setPurgeMockOpen(true)}>
             Purgar
           </Btn>
           <Btn
@@ -209,51 +254,44 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
             }}
             icon={<Icon.arrowRight size={12} />}
           >
-            Ver detalle completo
+            Abrir suscripción
           </Btn>
         </div>
       </div>
 
+      {/* Purge confirmation mock */}
       {purgeMockOpen && (
         <div
           role="dialog"
           aria-modal="true"
           onClick={() => setPurgeMockOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 70,
-            background: "rgba(15, 23, 42, 0.42)",
-            display: "grid",
-            placeItems: "center",
-            padding: 18,
-          }}
+          className="fixed inset-0 z-[70] grid place-items-center p-4 bg-[rgba(15,23,42,0.42)]"
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            style={{ width: "min(460px, 100%)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.22)", overflow: "hidden" }}
+            className="w-[min(460px,100%)] bg-card rounded-lg border border-border overflow-hidden shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
           >
-            <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.divider}` }}>
-              <h3 style={{ margin: 0, color: T.title, fontSize: 16 }}>Purgar SIM</h3>
-              <p style={{ margin: "6px 0 0", color: T.muted, fontSize: 13 }}>
-                Mockup para <span style={{ fontFamily: T.fontMono }}>{iccid}</span>
+            <div className="px-[18px] py-4 border-b border-divider">
+              <h3 className="m-0 text-title text-base">Purgar SIM</h3>
+              <p className="mt-1.5 mb-0 text-muted text-[13px]">
+                Mockup para <span className="font-mono">{iccid}</span>
               </p>
             </div>
-            <div style={{ padding: 18, color: T.text, fontSize: 14, lineHeight: 1.5 }}>
+            <div className="p-[18px] text-text text-sm leading-snug">
               Esta accion solo simula el flujo de purga para {src.name}. No se llamara al endpoint del backend.
             </div>
-            <div style={{ padding: 14, borderTop: `1px solid ${T.divider}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <div className="px-3.5 py-3.5 border-t border-divider flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setPurgeMockOpen(false)}
-                style={{ border: `1px solid ${T.border}`, background: T.cardBg, color: T.text, borderRadius: 5, padding: "9px 11px", cursor: "pointer", fontSize: 12, fontWeight: 800 }}
+                className="border border-border bg-card text-text rounded-md px-2.5 py-2 cursor-pointer text-xs font-extrabold"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={simulatePurge}
-                style={{ border: `1px solid ${T.danger}`, background: "#FADDD6", color: "#A84234", borderRadius: 5, padding: "9px 11px", cursor: "pointer", fontSize: 12, fontWeight: 800 }}
+                className="rounded-md px-2.5 py-2 cursor-pointer text-xs font-extrabold border bg-[#FADDD6] text-[#A84234] border-[#C85A4A]"
               >
                 Simular purga
               </button>

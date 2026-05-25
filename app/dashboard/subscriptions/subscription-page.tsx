@@ -4,7 +4,6 @@ import { newIdempotencyKey } from "@/lib/api/idempotency";
 import { getPresence, getUsage, setSimStatus } from "@/lib/api/sims";
 import { toast } from "@/components/ui";
 import type { PresenceOut, ProviderCapabilitiesOut, SubscriptionOut, UsageControl, UsageOut } from "@/lib/types/api";
-import type { AdministrativeStatus } from "@/lib/types/api/common";
 import { ROLES, type UserRole } from "@/lib/types/user";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -12,17 +11,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { fmtDate, formatVal, looksMono, prettyKey } from "./data";
 import { Btn, Icon, SourceBadge, StatusPillWithNative } from "./primitives";
-import { SOURCES, STATUS_META, T } from "./tokens";
+import { SOURCES, T } from "./tokens";
 
-type TabId = "detail" | "history" | "usage" | "presence" | "limits" | "actions";
+type TabId = "detail" | "usage" | "presence" | "limits" | "actions";
 type AsyncState<T> =
   | { status: "idle" | "loading" }
   | { status: "success"; data: T }
   | { status: "error"; message: string; code?: string };
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "detail", label: "Detalle" },
-  { id: "history", label: "Estado e historial" },
+  { id: "detail", label: "Resumen" },
   { id: "usage", label: "Consumo" },
   { id: "presence", label: "Presencia y red" },
   { id: "limits", label: "Límites" },
@@ -46,6 +44,24 @@ function value(v: string | null | undefined) {
   return v && v.trim() ? v : "—";
 }
 
+function clean(v: string | number | null | undefined) {
+  const trimmed = v == null ? undefined : String(v).trim();
+  return trimmed || undefined;
+}
+
+function planDisplay(plan: SubscriptionOut["normalized"]["plan"]) {
+  return clean(plan.name) ?? clean(plan.code) ?? clean(plan.id) ?? "—";
+}
+
+function subscriptionStatusInfo(subscription: SubscriptionOut) {
+  const normalized = subscription.normalized.status;
+  const providerStatus = clean(subscription.status) ?? "UNKNOWN";
+  return {
+    value: providerStatus,
+    group: clean(normalized.group) ?? null,
+  };
+}
+
 function bytesToDataLabel(bytes: string | number | null | undefined) {
   const n = typeof bytes === "string" ? Number(bytes) : bytes;
   if (!n || Number.isNaN(n)) return "0 MB";
@@ -65,18 +81,6 @@ function daysBetween(start: string, end: string) {
   const b = new Date(end).getTime();
   if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return 1;
   return Math.max(1, Math.ceil((b - a) / 86_400_000));
-}
-
-function relativeTime(s: string | null | undefined) {
-  if (!s) return "—";
-  const d = new Date(s).getTime();
-  if (Number.isNaN(d)) return "—";
-  const diffDays = Math.max(0, Math.round((Date.now() - d) / 86_400_000));
-  if (diffDays === 0) return "hoy";
-  if (diffDays === 1) return "hace 1 día";
-  if (diffDays < 31) return `hace ${diffDays} días`;
-  const months = Math.round(diffDays / 30);
-  return months === 1 ? "hace 1 mes" : `hace ${months} meses`;
 }
 
 function errorMessage(err: unknown) {
@@ -134,7 +138,7 @@ export function SubscriptionPage({
   const [copiedIccid, setCopiedIccid] = useState(false);
   const src = SOURCES[subscription.provider];
   const n = subscription.normalized;
-  const statusLabel = STATUS_META[subscription.status]?.label ?? subscription.status;
+  const statusInfo = subscriptionStatusInfo(subscription);
 
   async function copyIccid() {
     try {
@@ -171,16 +175,13 @@ export function SubscriptionPage({
           Suscripciones
         </Link>
         <span style={{ color: T.muted }}>/</span>
-        <span style={{ fontFamily: T.fontMono, color: T.title, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {subscription.iccid}
+        <span style={{ color: T.title, fontWeight: 600 }}>
+          Suscripción
         </span>
         <div style={{ flex: 1 }} />
         <Btn variant="ghost" size="sm" icon={<Icon.copy size={12} />} onClick={copyIccid}>
           {copiedIccid ? "Copiado" : "Copiar ICCID"}
         </Btn>
-        <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted, padding: "3px 8px", background: T.zebra, borderRadius: 4, border: `1px solid ${T.border}` }}>
-          /subscriptions/{subscription.iccid.toLowerCase()}
-        </span>
       </div>
 
       {/* Hero section */}
@@ -188,21 +189,10 @@ export function SubscriptionPage({
         {/* Avatar + info + actions */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 18, marginBottom: 18 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
-              <HeroMeta label="Fuente">
-                <SourceBadge source={subscription.provider} size="sm" withName />
-              </HeroMeta>
-              <HeroMeta label="Estado">
-                <StatusPillWithNative status={subscription.status} nativeStatus={subscription.native_status} sourceName={src.name} size="sm" />
-              </HeroMeta>
-            </div>
-            <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", marginBottom: 3 }}>ICCID</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: 0, fontFamily: T.fontMono, overflowWrap: "anywhere" }}>{subscription.iccid}</h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
-              {n.customer.name && <HeroMeta label="Cliente">{n.customer.name}</HeroMeta>}
-              {subscription.msisdn && <HeroMeta label="MSISDN" mono>{subscription.msisdn}</HeroMeta>}
-              {subscription.imsi && <HeroMeta label="IMSI" mono>{subscription.imsi}</HeroMeta>}
-            </div>
+            <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", marginBottom: 3 }}>Resumen operativo</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: 0 }}>
+              Suscripción SIM
+            </h1>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Btn variant="outline" size="md" icon={<Icon.refresh size={13} />} onClick={() => router.refresh()}>
@@ -214,12 +204,28 @@ export function SubscriptionPage({
           </div>
         </div>
 
-        {/* KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: T.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
-          <Kpi label="Plan" text={value(n.plan.name)} sub={value(n.plan.code)} />
-          <Kpi label="Datos permitidos" text={mbToLabel(n.limits.data)} sub="por SIM" />
-          <Kpi label="Expira plan" text={fmtDate(n.plan.expires_at)} sub={relativeTime(n.plan.expires_at)} />
-          <Kpi label="Antigüedad" text={antiquityFor(subscription.activated_at)} sub={subscription.activated_at ? `Desde ${fmtDate(subscription.activated_at)}` : undefined} />
+        {/* Canonical summary strip */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 1, background: T.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+          <SummaryField label="Fuente">
+            <SourceBadge source={subscription.provider} size="sm" withName />
+          </SummaryField>
+          <SummaryField label="Estado">
+            <StatusPillWithNative
+              provider={subscription.provider}
+              status={statusInfo.value}
+              nativeStatus={statusInfo.value}
+              displayLabel={statusInfo.value}
+              statusGroup={statusInfo.group}
+              showContext={false}
+              size="sm"
+            />
+          </SummaryField>
+          <SummaryField label="ICCID" mono preserveValue>{subscription.iccid}</SummaryField>
+          <SummaryField label="MSISDN" mono>{value(subscription.msisdn)}</SummaryField>
+          <SummaryField label="IMSI" mono>{value(subscription.imsi)}</SummaryField>
+          <SummaryField label="Plan" sub={clean(n.plan.name) ? clean(n.plan.code) ?? clean(n.plan.id) : undefined}>{planDisplay(n.plan)}</SummaryField>
+          <SummaryField label="Activado">{fmtDate(subscription.activated_at)}</SummaryField>
+          <SummaryField label="Actualizado">{fmtDate(subscription.updated_at)}</SummaryField>
         </div>
 
         {/* Underline tabs */}
@@ -249,8 +255,7 @@ export function SubscriptionPage({
 
       {/* Tab content */}
       <div style={{ flex: 1, padding: 24 }}>
-        {tab === "detail" && <DetailTab subscription={subscription} statusLabel={statusLabel} />}
-        {tab === "history" && <HistoryTab subscription={subscription} statusLabel={statusLabel} />}
+        {tab === "detail" && <DetailTab subscription={subscription} />}
         {tab === "usage" && <UsageTab subscription={subscription} />}
         {tab === "presence" && <PresenceTab iccid={subscription.iccid} />}
         {tab === "limits" && <LimitsTab subscription={subscription} />}
@@ -266,113 +271,173 @@ export function SubscriptionPage({
   );
 }
 
-function antiquityFor(s: string | null | undefined) {
-  if (!s) return "—";
-  const d = new Date(s);
-  const now = new Date();
-  const months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
-  if (months < 1) return "Nueva";
-  if (months < 12) return `${months} mes${months > 1 ? "es" : ""}`;
-  const y = Math.floor(months / 12);
-  const m = months % 12;
-  return m ? `${y}a ${m}m` : `${y} año${y > 1 ? "s" : ""}`;
-}
-
-function Kpi({ label, text, sub }: { label: string; text: string; sub?: string }) {
+function SummaryField({
+  label,
+  children,
+  sub,
+  mono,
+  preserveValue,
+}: {
+  label: string;
+  children: React.ReactNode;
+  sub?: string;
+  mono?: boolean;
+  preserveValue?: boolean;
+}) {
   return (
     <div style={{ background: T.cardBg, padding: "12px 16px" }}>
       <div style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: T.title, letterSpacing: -0.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</div>
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          color: T.title,
+          letterSpacing: -0.2,
+          overflow: preserveValue ? "visible" : "hidden",
+          textOverflow: preserveValue ? "clip" : "ellipsis",
+          whiteSpace: preserveValue ? "normal" : "nowrap",
+          overflowWrap: preserveValue ? "anywhere" : undefined,
+          lineHeight: preserveValue ? 1.35 : undefined,
+          fontFamily: mono ? T.fontMono : T.fontBody,
+        }}
+      >
+        {children}
+      </div>
       {sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
 
-function HeroMeta({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
-  return (
-    <div
-      style={{
-        minHeight: 34,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        minWidth: 0,
-        padding: "5px 9px",
-        border: `1px solid ${T.border}`,
-        borderRadius: 6,
-        background: T.zebra,
-      }}
-    >
-      <span style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", lineHeight: 1, flexShrink: 0 }}>
-        {label}
-      </span>
-      <span
-        style={{
-          color: T.title,
-          fontSize: 12.5,
-          fontWeight: 700,
-          fontFamily: mono ? T.fontMono : T.fontBody,
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          lineHeight: 1,
-          display: "inline-flex",
-          alignItems: "center",
-        }}
-      >
-        {children}
-      </span>
-    </div>
-  );
-}
+type DetailRow = { label: string; value: string; mono?: boolean; sub?: string; dot?: string };
 
-function DetailTab({ subscription, statusLabel }: { subscription: SubscriptionOut; statusLabel: string }) {
-  const rows = [
-    ["ICCID", subscription.iccid, true],
-    ["MSISDN", subscription.msisdn, true],
-    ["IMSI", subscription.imsi, true],
-    ["Operador", SOURCES[subscription.provider].name, false],
-    ["Estado", statusLabel, false],
-    ["Estado nativo", subscription.native_status, true],
-    ["Activado", fmtDate(subscription.activated_at), false],
-    ["Última actualización", fmtDate(subscription.updated_at), false],
-  ] as [string, string | null | undefined, boolean][];
+function DetailTab({ subscription }: { subscription: SubscriptionOut }) {
+  const providerName = SOURCES[subscription.provider].name;
+  const n = subscription.normalized;
   const attrs = mergedAttributes(subscription);
+  const secondaryIdentityRows = [
+    { label: "IMEI", value: value(n.identity.imei), mono: true },
+    { label: "Alias", value: value(n.identity.alias) },
+    { label: "EID", value: value(n.identity.eid), mono: true },
+    { label: "eUICCID", value: value(n.identity.euiccid), mono: true },
+    { label: "SIM profile", value: value(n.identity.sim_profile_id), mono: true },
+  ].filter((row) => row.value !== "—");
+  const planRows = [
+    { label: "Nombre", value: value(n.plan.name) },
+    { label: "Código", value: value(n.plan.code), mono: true },
+    { label: "ID", value: formatVal(n.plan.id), mono: true },
+    { label: "Communication plan", value: value(n.plan.communication_plan) },
+    { label: "APN", value: value(n.plan.apn), mono: true },
+    { label: "APNs", value: formatVal(n.plan.apns), mono: true },
+    { label: "Inicio", value: fmtDate(n.plan.started_at) },
+    { label: "Expira", value: fmtDate(n.plan.expires_at) },
+  ].filter((row) => row.value !== "—");
+  const dateRows = [
+    { label: "Agregado", value: fmtDate(n.dates.added_at) },
+    { label: "Provisionado", value: fmtDate(n.dates.provisioned_at) },
+  ].filter((row) => row.value !== "—");
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <Card title="Información general">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
-          {rows.map(([label, val, mono]) => <KV key={label} label={label} value={value(val)} mono={mono} />)}
-        </div>
+      {secondaryIdentityRows.length > 0 && (
+        <Card title="Identificadores secundarios">
+          <FieldGrid rows={secondaryIdentityRows} />
+        </Card>
+      )}
+
+      <Card title="Plan">
+        {planRows.length ? <FieldGrid rows={planRows} /> : <Empty text="Este proveedor no envió información de plan." />}
       </Card>
-      <Card title={`Atributos específicos · ${SOURCES[subscription.provider].name}`}>
+
+      <Card title="Cliente">
+        <FieldGrid rows={[
+          { label: "Nombre", value: value(n.customer.name) },
+          { label: "ID", value: value(n.customer.id), mono: true },
+          { label: "Company code", value: value(n.customer.company_code), mono: true },
+          { label: "Account ID", value: value(n.customer.account_id), mono: true },
+        ]} />
+      </Card>
+
+      <Card title="Red">
+        <FieldGrid rows={[
+          { label: "Operador", value: value(n.network.operator) },
+          { label: "País", value: value(n.network.country), mono: true },
+          { label: "RAT", value: value(n.network.rat_type), mono: true },
+          { label: "Última red", value: value(n.network.last_network) },
+          { label: "IP actual/sesión", value: value(n.network.ip_address), mono: true },
+          { label: "IPv6 actual/sesión", value: value(n.network.ipv6_address), mono: true },
+          { label: "IP fija", value: value(n.network.fixed_ip_address), mono: true },
+          { label: "IPv6 fija", value: value(n.network.fixed_ipv6_address), mono: true },
+          { label: "IPs estáticas", value: formatVal(n.network.static_ips), mono: true },
+          { label: "IPs estáticas adicionales", value: formatVal(n.network.additional_static_ips), mono: true },
+          { label: "Estado GPRS", value: formatVal(n.network.gprs_status) },
+          { label: "Estado servicio IP", value: formatVal(n.network.ip_status) },
+          { label: "SGSN IP", value: value(n.network.sgsn_ip), mono: true },
+          { label: "GGSN IP", value: value(n.network.ggsn_ip), mono: true },
+          { label: "Ubicación", value: formatVal(n.network.location) },
+          { label: "Último tráfico", value: fmtDate(n.network.last_traffic_at) },
+          { label: "Primer LU", value: fmtDate(n.network.first_lu_at) },
+          { label: "Último LU", value: fmtDate(n.network.last_lu_at) },
+          { label: "Primer CDR", value: fmtDate(n.network.first_cdr_at) },
+          { label: "Último CDR", value: fmtDate(n.network.last_cdr_at) },
+        ]} />
+      </Card>
+
+      <Card title="Hardware">
+        <FieldGrid rows={[
+          { label: "Modelo SIM", value: value(n.hardware.sim_model) },
+          { label: "Fabricante módulo", value: value(n.hardware.module_manufacturer) },
+          { label: "Modelo módulo", value: value(n.hardware.module_model) },
+          { label: "Device ID", value: value(n.hardware.device_id), mono: true },
+          { label: "Modem ID", value: value(n.hardware.modem_id), mono: true },
+          { label: "Cambio IMEI", value: fmtDate(n.hardware.imei_last_changed_at) },
+          { label: "Despachado", value: fmtDate(n.hardware.shipped_at) },
+        ]} />
+      </Card>
+
+      <Card title="Servicios">
+        <FieldGrid rows={[
+          { label: "Activos", value: formatVal(n.services.active) },
+          { label: "Básicos", value: formatVal(n.services.basic) },
+          { label: "Suplementarios", value: formatVal(n.services.supplementary) },
+          { label: "Datos", value: formatVal(n.services.data_service) },
+          { label: "SMS", value: formatVal(n.services.sms_service) },
+        ]} />
+      </Card>
+
+      <Card title="Límites">
+        <FieldGrid rows={[
+          { label: "Datos", value: mbToLabel(n.limits.data) },
+          { label: "SMS", value: n.limits.sms == null ? "Sin límite contractual" : n.limits.sms.toLocaleString("es-CO") },
+          { label: "Controles diarios", value: Object.keys(n.limits.daily ?? {}).length.toLocaleString("es-CO") },
+          { label: "Controles mensuales", value: Object.keys(n.limits.monthly ?? {}).length.toLocaleString("es-CO") },
+        ]} />
+      </Card>
+
+      {dateRows.length > 0 && (
+        <Card title="Fechas">
+          <FieldGrid rows={dateRows} />
+        </Card>
+      )}
+
+      <Card title={`Campos avanzados · ${providerName}`}>
         {attrs.length ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
             {attrs.map(([k, v]) => <KV key={k} label={prettyKey(k)} value={formatVal(v)} mono={looksMono(k)} />)}
           </div>
         ) : (
-          <Empty text="Este proveedor no envió atributos adicionales para esta SIM." />
+          <Empty text="Sin atributos adicionales." />
         )}
       </Card>
     </div>
   );
 }
 
-function HistoryTab({ subscription, statusLabel }: { subscription: SubscriptionOut; statusLabel: string }) {
+function FieldGrid({ rows }: { rows: DetailRow[] }) {
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <Card title="Histórico de estado">
-        <Empty text={subscription.provider === "kite" ? "El histórico nativo aún no está disponible vía Bismark API." : `El proveedor ${SOURCES[subscription.provider].name} no expone histórico de estados en Bismark API.`} />
-      </Card>
-      <Card title="Mapeo de estados">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          <KV label="Estado normalizado" value={statusLabel} />
-          <KV label="Código canónico" value={subscription.status} mono />
-          <KV label={`Estado ${SOURCES[subscription.provider].name}`} value={value(subscription.native_status)} mono />
-        </div>
-      </Card>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
+      {rows.map((row) => (
+        <KV key={row.label} label={row.label} value={row.value} mono={row.mono} sub={row.sub} dot={row.dot} />
+      ))}
     </div>
   );
 }
@@ -454,7 +519,7 @@ function LimitsTab({ subscription }: { subscription: SubscriptionOut }) {
 }
 
 type PendingAction =
-  | { kind: "status"; target: AdministrativeStatus; dataService: boolean; smsService: boolean; idempotencyKey: string }
+  | { kind: "status"; target: string; dataService: boolean; smsService: boolean; idempotencyKey: string }
   | { kind: "purge"; confirmText: string; idempotencyKey: string };
 
 function actionErrorMessage(err: unknown) {
@@ -464,7 +529,7 @@ function actionErrorMessage(err: unknown) {
 
 function purgeBodyFor(provider: SubscriptionOut["provider"]) {
   if (provider === "kite") {
-    return "Ejecuta networkReset en Kite. Reinicia la sesión y la IP, pero no cambia el estado administrativo.";
+    return "Ejecuta networkReset en Kite. Reinicia la sesión y la IP, pero no cambia el estado.";
   }
   if (provider === "tele2") {
     return "Acción destructiva. Transiciona la SIM a PURGED en Tele2. Estado terminal, no reversible.";
@@ -485,35 +550,29 @@ function ActionsTab({
   const src = SOURCES[subscription.provider];
   const isAdmin = currentUserRole === ROLES.ADMIN;
   const statusCapability = capabilities.capabilities.set_administrative_status;
-  const targets = statusCapability?.targets ?? [];
+  const targets = useMemo(() => statusCapability?.targets ?? [], [statusCapability?.targets]);
+  const currentStatus = subscriptionStatusInfo(subscription);
   const purgeCapability = capabilities.capabilities.purge;
   const canPurge = purgeCapability?.status === "supported";
+  const canChangeStatus = statusCapability?.status === "supported" && targets.length > 0;
 
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState(targets[0] ?? "");
   const [busy, setBusy] = useState(false);
+  const effectiveTarget = targets.includes(selectedTarget) ? selectedTarget : targets[0] ?? "";
 
   const isMoabitsServiceTarget =
     subscription.provider === "moabits" &&
     pending?.kind === "status" &&
-    (pending.target === "active" || pending.target === "suspended");
+    (pending.target.toLowerCase() === "active" || pending.target.toLowerCase() === "suspended");
   const servicesValid = !isMoabitsServiceTarget || (pending?.kind === "status" && (pending.dataService || pending.smsService));
   const purgeConfirmValid = pending?.kind !== "purge" || pending.confirmText === subscription.iccid;
 
   // Build action rows from capabilities
-  type ActionKey = "reactivate" | "sync" | "purge";
+  type ActionKey = "sync" | "purge";
   interface ActionDef { key: ActionKey; title: string; body: string; color: string; danger: boolean; icon: React.ReactNode }
 
-  const canReactivate = targets.includes("active") && subscription.status !== "active";
-
   const actionDefs: ActionDef[] = [
-    ...(canReactivate ? [{
-      key: "reactivate" as ActionKey,
-      title: "Reactivar suscripción",
-      body: `Restablece la línea al estado Activa. Mapeado al endpoint de activación en ${src.name}.`,
-      color: T.success,
-      danger: false,
-      icon: <Icon.play size={12} />,
-    }] : []),
     {
       key: "sync" as ActionKey,
       title: "Sincronizar desde fuente",
@@ -548,17 +607,20 @@ function ActionsTab({
   function handleClick(key: ActionKey) {
     if (key === "purge") {
       setPending({ kind: "purge", confirmText: "", idempotencyKey: newIdempotencyKey() });
-    } else if (key === "reactivate") {
-      setPending({
-        kind: "status",
-        target: "active",
-        dataService: subscription.normalized.services.data_service ?? true,
-        smsService: subscription.normalized.services.sms_service ?? true,
-        idempotencyKey: newIdempotencyKey(),
-      });
     } else {
       router.refresh();
     }
+  }
+
+  function beginStatusChange() {
+    if (!canChangeStatus || !effectiveTarget) return;
+    setPending({
+      kind: "status",
+      target: effectiveTarget,
+      dataService: subscription.normalized.services.data_service ?? true,
+      smsService: subscription.normalized.services.sms_service ?? true,
+      idempotencyKey: newIdempotencyKey(),
+    });
   }
 
   async function submitAction() {
@@ -575,7 +637,7 @@ function ActionsTab({
           },
           pending.idempotencyKey
         );
-        toast.success(`Estado enviado: ${STATUS_META[pending.target]?.label ?? pending.target}.`);
+        toast.success(`Estado enviado: ${pending.target}.`);
         setPending(null);
         router.refresh();
       } else {
@@ -602,12 +664,79 @@ function ActionsTab({
         <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ width: 3, height: 14, background: src.color, borderRadius: 2, flexShrink: 0 }} />
           <div style={{ color: T.title, fontWeight: 800, fontSize: 13, flex: 1 }}>Acciones disponibles</div>
-          <span style={{ fontSize: 11, color: T.muted, fontFamily: T.fontMono }}>
-            estado: {STATUS_META[subscription.status]?.label ?? subscription.status}
+          <span style={{ fontSize: 11, color: T.muted }}>
+            estado: <strong style={{ color: T.title, fontFamily: T.fontMono }}>{currentStatus.value}</strong>
           </span>
         </div>
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-          {actionDefs.length === 0 && <Empty text="Sin acciones disponibles para el estado actual." />}
+          {canChangeStatus ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "12px 14px",
+                border: `1px solid ${T.border}`,
+                borderRadius: 6,
+                background: T.cardBg,
+              }}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 6, background: src.color + "22", color: src.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon.chev size={14} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: T.title, letterSpacing: 0 }}>Cambiar estado</div>
+                <div style={{ fontSize: 12, color: T.muted, marginTop: 2, lineHeight: 1.4 }}>
+                  Estados permitidos por {src.name}.
+                </div>
+              </div>
+              <select
+                value={effectiveTarget}
+                onChange={(event) => setSelectedTarget(event.target.value)}
+                style={{
+                  minWidth: 170,
+                  border: `1px solid ${T.border}`,
+                  background: "#fff",
+                  color: T.text,
+                  borderRadius: 5,
+                  padding: "7px 9px",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  flexShrink: 0,
+                  fontFamily: T.fontMono,
+                }}
+              >
+                {targets.map((target) => (
+                  <option key={target} value={target}>{target}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={beginStatusChange}
+                disabled={!effectiveTarget}
+                style={{
+                  border: `1px solid ${T.border}`,
+                  background: "#fff",
+                  color: effectiveTarget ? T.text : T.muted,
+                  borderRadius: 5,
+                  padding: "7px 10px",
+                  cursor: effectiveTarget ? "pointer" : "not-allowed",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  flexShrink: 0,
+                  fontFamily: T.fontBody,
+                }}
+              >
+                Cambiar
+              </button>
+            </div>
+          ) : statusCapability?.status && statusCapability.status !== "supported" ? (
+            <div role="note" style={{ border: `1px solid ${T.warning}66`, background: "#FBEFD4", color: "#7A4E0B", borderRadius: 6, padding: "10px 12px", fontSize: 12.5, fontWeight: 700 }}>
+              Cambio de estado no disponible: {statusCapability.reason ?? statusCapability.status}.
+            </div>
+          ) : null}
+          {actionDefs.length === 0 && !canChangeStatus && <Empty text="Sin acciones disponibles para este proveedor." />}
           {actionDefs.map((a) => (
             <div
               key={a.key}
@@ -667,7 +796,7 @@ function ActionsTab({
               {pending.kind === "status" ? (
                 <>
                   <p style={{ margin: 0, color: T.text, fontSize: 14 }}>
-                    Enviar cambio a <strong>{STATUS_META[pending.target]?.label ?? pending.target}</strong>.
+                    Enviar cambio a <span style={{ fontFamily: T.fontMono, fontWeight: 800 }}>{pending.target}</span> en {src.name}.
                   </p>
                   {isMoabitsServiceTarget && (
                     <div style={{ display: "grid", gap: 8 }}>

@@ -266,7 +266,7 @@ export default function CompanyManager({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)]">
-      <section className="rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+      <section className="flex flex-col rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-title">Empresas en BD</h2>
@@ -354,16 +354,18 @@ export default function CompanyManager({
           </Command.List>
         </Command>
 
-        <PaginationControls
-          page={page}
-          pages={pages}
-          size={pageSize}
-          total={total}
-          isLoading={isSearching}
-          onSizeChange={updatePageSize}
-          onPrevious={() => goToPage(page - 1)}
-          onNext={() => goToPage(page + 1)}
-        />
+        <div className="mt-auto">
+          <PaginationControls
+            page={page}
+            pages={pages}
+            size={pageSize}
+            total={total}
+            isLoading={isSearching}
+            onSizeChange={updatePageSize}
+            onPrevious={() => goToPage(page - 1)}
+            onNext={() => goToPage(page + 1)}
+          />
+        </div>
       </section>
 
       <section className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">

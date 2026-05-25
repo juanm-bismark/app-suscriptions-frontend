@@ -1,6 +1,7 @@
 import { fetchApi } from "@/lib/api-client"
 import { TokenResponseSchema } from "@/lib/api-validation"
 import type { TokenResponse } from "@/lib/types/api"
+import type { z } from "zod"
 
 interface SignupIn {
   email: string
@@ -13,7 +14,7 @@ interface RefreshTokenIn {
   refresh_token: string
 }
 
-function requestAuth<T>(path: string, body: unknown, options: { skipAuth?: boolean; schema?: any } = {}): Promise<T> {
+function requestAuth<T>(path: string, body: unknown, options: { skipAuth?: boolean; schema?: z.ZodSchema<T> } = {}): Promise<T> {
   return fetchApi<T>(path, {
     method: "POST",
     body: JSON.stringify(body),

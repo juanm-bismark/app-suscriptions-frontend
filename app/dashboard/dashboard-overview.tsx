@@ -40,8 +40,9 @@ export function DashboardOverview() {
 
   useEffect(() => {
     if (!overview || isError) return
+    if (overview.activeProviders === null) return
 
-    for (const provider of PROVIDERS) {
+    for (const provider of overview.activeProviders) {
       queryClient.prefetchQuery({
         queryKey: ["subscriptions", provider, "", ""] as const,
         queryFn: async () => {
@@ -60,8 +61,15 @@ export function DashboardOverview() {
       .sort((a, b) => b.count - a.count)[0]
   }, [overview])
 
+  const credentialReadable = overview?.activeProviders !== null
+  const visibleProviders = overview?.activeProviders ?? PROVIDERS
+  const activeProviderCount = overview ? visibleProviders.length : PROVIDERS.length
+  const activeProviderNames = overview ? providerNames(visibleProviders) : "Kite, Tele2 y Moabits"
+
   const totalLabel = overview?.globalTotal !== null && overview?.globalTotal !== undefined
     ? String(overview.globalTotal)
+    : overview?.activeProviders !== null && overview?.activeProviders.length === 0
+      ? "Sin credenciales"
     : overview?.needsImport
       ? "Pendiente"
       : overview
@@ -70,6 +78,8 @@ export function DashboardOverview() {
 
   const totalHelp = overview?.globalTotal !== null && overview?.globalTotal !== undefined
     ? "Listado global del backend"
+    : overview?.activeProviders !== null && overview?.activeProviders.length === 0
+      ? "Configura credenciales activas"
     : overview?.needsImport
       ? "Importa SIMs para activar el global"
       : overview
@@ -98,8 +108,8 @@ export function DashboardOverview() {
             <Metric
               icon={<ServerCog className="h-4 w-4" />}
               label="Consultados"
-              value={overview ? `${overview.providerHints.filter((item) => item.status === "ok").length}/${PROVIDERS.length}` : "--"}
-              help={overview?.providerHints.some((item) => item.status !== "ok") ? "Hay fuentes con error o respuesta parcial" : "Kite, Tele2 y Moabits"}
+              value={overview ? `${overview.providerHints.filter((item) => item.status === "ok").length}/${activeProviderCount}` : "--"}
+              help={overview?.activeProviders !== null && overview?.activeProviders.length === 0 ? "Sin proveedores disponibles" : overview?.providerHints.some((item) => item.status !== "ok") ? "Hay fuentes con error o respuesta parcial" : activeProviderNames}
               loading={isLoading}
             />
           </div>
@@ -110,7 +120,7 @@ export function DashboardOverview() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#326472]">Acceso rápido</p>
               <h2 className="mt-2 text-xl font-semibold">
-                {overview?.needsImport ? "Activa el listado global" : "Gestiona tus suscripciones"}
+                {overview?.activeProviders !== null && overview?.activeProviders.length === 0 ? "Configura tus credenciales" : overview?.needsImport ? "Activa el listado global" : "Gestiona tus suscripciones"}
               </h2>
             </div>
             {isLoading && <Loader2 className="h-5 w-5 animate-spin text-[#326472]" />}
@@ -118,7 +128,9 @@ export function DashboardOverview() {
           <p className="mt-2 text-sm text-[#326472]">
             {overview?.needsImport
               ? "Carga el mapa ICCID-proveedor inicial o entra por proveedor mientras preparas la importacion."
-              : "Revisa el inventario sincronizado desde tus proveedores."}
+              : overview?.activeProviders !== null && overview?.activeProviders.length === 0
+                ? "No hay credenciales activas para consultar suscripciones."
+                : "Revisa el inventario sincronizado desde tus proveedores."}
           </p>
           {isError && (
             <p className="mt-2 rounded-md bg-[#FFF7E7] px-3 py-2 text-sm font-medium text-[#6D4D16] shadow-sm shadow-warn-bg/5">
@@ -127,7 +139,7 @@ export function DashboardOverview() {
           )}
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <PendingLinkButton
-              href="/dashboard/subscriptions"
+              href={overview?.activeProviders !== null && overview?.activeProviders.length === 1 ? `/dashboard/subscriptions?provider=${overview.activeProviders[0]}` : "/dashboard/subscriptions"}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#0F202A] px-4 text-sm font-semibold text-white shadow-sm shadow-header-top/20 transition-colors hover:bg-[#163C41] hover:text-white"
             >
               Ver suscripciones
@@ -161,9 +173,18 @@ export function DashboardOverview() {
             </div>
           </div>
         ))}
+        {credentialReadable && visibleProviders.length === 0 && (
+          <div className="rounded-lg bg-[#F5FAFA] px-4 py-3 text-sm font-medium text-muted shadow-sm shadow-header-top/5 sm:col-span-3">
+            Configura al menos una credencial activa para habilitar consultas por proveedor.
+          </div>
+        )}
       </div>
     </section>
   )
+}
+
+function providerNames(providers: Provider[]) {
+  return providers.map((provider) => PROVIDER_LABELS[provider]).join(", ") || "Sin proveedores"
 }
 
 function getProviderCardDescription(item: ProviderCardItem) {

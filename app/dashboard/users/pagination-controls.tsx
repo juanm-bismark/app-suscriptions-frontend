@@ -3,6 +3,7 @@
 import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Select, SelectItem } from "@/components/ui/select"
+import { buildHref } from "@/lib/url"
 import { PendingLinkButton } from "../_components/pending-link-button"
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
@@ -28,13 +29,11 @@ export default function PaginationControls({
   const hasNext = pages !== null ? page < pages : false
 
   function pageHref(nextPage: number, nextSize = size) {
-    const params = new URLSearchParams({
+    return buildHref("/dashboard/users", {
       page: String(Math.max(nextPage, 1)),
       size: String(nextSize),
+      q: query,
     })
-    if (query) params.set("q", query)
-
-    return `/dashboard/users?${params.toString()}`
   }
 
   return (

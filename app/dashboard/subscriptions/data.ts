@@ -14,11 +14,10 @@ export function fmtDate(s: string | null | undefined): string {
   return `${d.getDate().toString().padStart(2, "0")} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-export function antiquityFor(s: string | null | undefined): string {
+export function antiquityFor(s: string | null | undefined, now: Date = new Date()): string {
   if (!s) return "—";
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return "—";
-  const now = new Date(NOW_REFERENCE);
   const months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
   if (months < 1) return "Nueva";
   if (months < 12) return `${months} mes${months > 1 ? "es" : ""}`;
@@ -72,11 +71,11 @@ export function formatVal(v: unknown): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "Sí" : "No";
   if (typeof v === "number") return v.toLocaleString("es-CO");
+  if (Array.isArray(v)) return v.length ? v.map(formatVal).join(", ") : "—";
+  if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
 
 export function looksMono(k: string): boolean {
   return /serial|msisdn|iccid|imsi|imei|eid|euiccid|cost_center|dBm|mbps|ip_address|device_id|modem_id/i.test(k);
 }
-
-export const NOW_REFERENCE = "2026-04-29";

@@ -16,8 +16,8 @@ type ParseResult = {
   errors: string[]
 }
 
-function isProvider(value: string): value is Provider {
-  return PROVIDERS.includes(value as Provider)
+function isProvider(value: string, activeProviders: readonly Provider[]): value is Provider {
+  return activeProviders.includes(value as Provider)
 }
 
 function parseCsvLine(line: string): string[] {
@@ -53,7 +53,7 @@ function parseCsvLine(line: string): string[] {
   return cells
 }
 
-function parseSimsCsv(text: string): ParseResult {
+function parseSimsCsv(text: string, activeProviders: readonly Provider[]): ParseResult {
   const rows: ParsedRow[] = []
   const errors: string[] = []
   const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/)
@@ -84,8 +84,8 @@ function parseSimsCsv(text: string): ParseResult {
       return
     }
 
-    if (!provider || !isProvider(provider)) {
-      errors.push(`Linea ${lineNumber}: proveedor invalido (${providerRaw || "vacio"}).`)
+    if (!provider || !isProvider(provider, activeProviders)) {
+      errors.push(`Linea ${lineNumber}: proveedor invalido o sin credencial activa (${providerRaw || "vacio"}).`)
       return
     }
 
@@ -99,7 +99,7 @@ function parseSimsCsv(text: string): ParseResult {
   return { rows, errors }
 }
 
-export function SimImportForm() {
+export function SimImportForm({ activeProviders }: { activeProviders: Provider[] }) {
   const queryClient = useQueryClient()
   const [fileName, setFileName] = useState("")
   const [csv, setCsv] = useState("")
@@ -107,15 +107,17 @@ export function SimImportForm() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const parsed = useMemo(() => parseSimsCsv(csv), [csv])
+  const parsed = useMemo(() => parseSimsCsv(csv, activeProviders), [activeProviders, csv])
   const providerCounts = useMemo(
     () =>
-      PROVIDERS.map((provider) => ({
+      activeProviders.map((provider) => ({
         provider,
         count: parsed.rows.filter((row) => row.provider === provider).length,
       })),
-    [parsed.rows]
+    [activeProviders, parsed.rows]
   )
+  const exampleProviders = activeProviders.length > 0 ? activeProviders : PROVIDERS
+  const exampleCsv = ["iccid,provider", ...exampleProviders.map((provider, index) => `895730000000000000${index + 1},${provider}`)].join("\n")
 
   async function onFileSelected(file: File | undefined) {
     setError(null)
@@ -141,6 +143,11 @@ export function SimImportForm() {
     setError(null)
     setSuccess(null)
 
+    if (activeProviders.length === 0) {
+      setError("Configura al menos una credencial activa antes de importar SIMs.")
+      return
+    }
+
     if (parsed.errors.length > 0) {
       setError("Corrige los errores del CSV antes de importar.")
       return
@@ -159,7 +166,7 @@ export function SimImportForm() {
     setSuccess(`${result.data.imported} SIM${result.data.imported === 1 ? "" : "s"} importada${result.data.imported === 1 ? "" : "s"} correctamente.`)
   }
 
-  const ready = csv.length > 0 && parsed.rows.length > 0 && parsed.errors.length === 0
+  const ready = activeProviders.length > 0 && csv.length > 0 && parsed.rows.length > 0 && parsed.errors.length === 0
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -178,6 +185,19 @@ export function SimImportForm() {
 
       <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
         <Card className="p-5">
+          {activeProviders.length === 0 && (
+            <Alert className="mb-5" variant="destructive">
+              <AlertTitle>Sin credenciales activas</AlertTitle>
+              <AlertDescription>
+                Configura al menos una credencial activa antes de importar SIMs.
+                <div className="mt-2">
+                  <Link className="font-semibold underline" href="/dashboard/credentials">
+                    Ir a credenciales
+                  </Link>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
           <label className="block">
             <span className="text-sm font-semibold text-title">Archivo CSV</span>
             <input
@@ -190,10 +210,7 @@ export function SimImportForm() {
 
           <div className="mt-5 rounded border border-dashed border-border bg-page p-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted">Formato esperado</div>
-            <pre className="mt-3 overflow-x-auto rounded bg-card p-3 text-xs text-title">{`iccid,provider
-8957300000000000001,kite
-8957300000000000002,tele2
-8957300000000000003,moabits`}</pre>
+            <pre className="mt-3 overflow-x-auto rounded bg-card p-3 text-xs text-title">{exampleCsv}</pre>
           </div>
 
           {csv && (
@@ -247,7 +264,7 @@ export function SimImportForm() {
 
         <Card className="p-5">
           <h2 className="text-lg font-semibold text-title">Revision</h2>
-          <p className="mt-1 text-sm text-muted">Solo se aceptan proveedores soportados por el API.</p>
+          <p className="mt-1 text-sm text-muted">Solo se aceptan proveedores con credencial activa.</p>
 
           <div className="mt-5 space-y-3">
             {providerCounts.map(({ provider, count }) => (
@@ -260,7 +277,9 @@ export function SimImportForm() {
 
           <div className="mt-5 rounded-lg border border-border bg-page p-4 text-sm text-muted">
             <p className="font-semibold text-title">Reglas</p>
-            <p className="mt-2">Cada fila debe tener ICCID no vacio y proveedor en kite, tele2 o moabits.</p>
+            <p className="mt-2">
+              Cada fila debe tener ICCID no vacio y proveedor en {activeProviders.length > 0 ? activeProviders.join(", ") : "un proveedor activo"}.
+            </p>
           </div>
         </Card>
       </form>

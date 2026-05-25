@@ -1,9 +1,8 @@
 import { fetchApi, ApiError } from "@/lib/api-client"
-import { PageSchema, ProfileSchema } from "@/lib/api-validation"
+import { CompanySchema, PageSchema, ProfileSchema } from "@/lib/api-validation"
 import { requireManagerOrAdmin } from "@/lib/auth/current-user"
 import { ROLES, type Company, type Page, type User, type UserRole } from "@/lib/types/user"
 import { positiveInt } from "@/lib/utils"
-import { searchCompanies } from "@/app/actions/company"
 import { UsersRound } from "lucide-react"
 import { PageHeader } from "../_components/page-header"
 import { WarningAlert } from "../_components/alerts"
@@ -29,23 +28,39 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   let networkError = false
   let companies: Company[] = []
 
+  const COMPANIES_PAGE_SIZE = 100
+
   const [usersResult, companiesResult] = await Promise.allSettled([
     fetchApi(`/users?${usersParams.toString()}`, { schema: PageSchema(ProfileSchema), cache: "no-store" }),
-    profile.role === ROLES.ADMIN ? searchCompanies({ size: 200 }) : Promise.resolve(null),
+    profile.role === ROLES.ADMIN
+      ? fetchApi(`/companies?page=1&size=${COMPANIES_PAGE_SIZE}`, { schema: PageSchema(CompanySchema), cache: "no-store" })
+      : Promise.resolve(null),
   ])
 
   if (usersResult.status === "fulfilled") {
     pageData = usersResult.value
     users = visibleUsersForRole(pageData.items, profile.role, profile.company_id)
   } else {
-    console.error("Error loading users:", usersResult.reason)
+    console.error("[UsersPage] /users fetch failed:", usersResult.reason)
     if (usersResult.reason instanceof ApiError && usersResult.reason.status === 0) {
       networkError = true
     }
   }
 
-  if (companiesResult.status === "fulfilled" && companiesResult.value && "companies" in companiesResult.value) {
-    companies = companiesResult.value.companies ?? []
+  if (companiesResult.status === "rejected") {
+    console.error("[UsersPage] /companies fetch failed:", companiesResult.reason)
+  } else if (companiesResult.status === "fulfilled" && companiesResult.value) {
+    const first = companiesResult.value
+    companies = [...first.items]
+    for (let p = 2; p <= first.pages; p++) {
+      try {
+        const next = await fetchApi(`/companies?page=${p}&size=${COMPANIES_PAGE_SIZE}`, { schema: PageSchema(CompanySchema), cache: "no-store" })
+        companies.push(...next.items)
+      } catch (err) {
+        console.error(`[UsersPage] /companies page ${p} failed:`, err)
+        break
+      }
+    }
   }
 
   return (

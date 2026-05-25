@@ -128,7 +128,7 @@ export async function fetchApi<T>(
       if (Number.isFinite(retryAfter) && extra.retry_after == null) {
         extra.retry_after = retryAfter
       }
-      throw new ApiError(response.status, problem.title || problem.detail || "Error en la petición", {
+      throw new ApiError(response.status, problem.detail || problem.title || "Error en la petición", {
         code: problem.code,
         title: problem.title,
         detail: problem.detail ?? null,
@@ -141,9 +141,20 @@ export async function fetchApi<T>(
       const detail = body && typeof body === "object" && "detail" in body
         ? (body as { detail?: unknown }).detail
         : null
-      const message = typeof detail === "string" ? detail : "Error en la petición"
+      const providerMessage = body && typeof body === "object" && "errorMessage" in body
+        ? (body as { errorMessage?: unknown }).errorMessage
+        : null
+      const providerCode = body && typeof body === "object" && "errorCode" in body
+        ? (body as { errorCode?: unknown }).errorCode
+        : null
+      const message = typeof detail === "string"
+        ? detail
+        : typeof providerMessage === "string"
+          ? providerMessage
+          : "Error en la petición"
       throw new ApiError(response.status, message, {
-        detail: typeof detail === "string" ? detail : null,
+        code: typeof providerCode === "string" ? providerCode : undefined,
+        detail: typeof detail === "string" ? detail : typeof providerMessage === "string" ? providerMessage : null,
         instance: requestId ?? null,
         retryAfter: Number.isFinite(retryAfter) ? retryAfter : undefined,
         raw: body,

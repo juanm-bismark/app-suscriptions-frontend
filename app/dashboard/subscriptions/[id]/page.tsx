@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { SubscriptionPage } from "../subscription-page";
 
 export const metadata = {
-  title: "Detalle de suscripción · Bismark",
+  title: "Suscripción · Bismark",
 };
 
 export default async function SubscriptionDetailPage({
@@ -39,8 +39,8 @@ export default async function SubscriptionDetailPage({
   );
 }
 
-function isDetailTab(tab: string | undefined): tab is "detail" | "history" | "usage" | "presence" | "limits" | "actions" {
-  return tab === "detail" || tab === "history" || tab === "usage" || tab === "presence" || tab === "limits" || tab === "actions";
+function isDetailTab(tab: string | undefined): tab is "detail" | "usage" | "presence" | "limits" | "actions" {
+  return tab === "detail" || tab === "usage" || tab === "presence" || tab === "limits" || tab === "actions";
 }
 
 async function loadDetailData(

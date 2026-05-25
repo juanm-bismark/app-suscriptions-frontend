@@ -11,14 +11,7 @@ import {
   LocalCompanyMoabitsMappingOutSchema,
 } from "@/lib/api-validation"
 import { requireAdmin, requireManagerOrAdmin } from "@/lib/auth/current-user"
-import type {
-  CompanyProviderMappingIn,
-  CompanyProviderMappingOut,
-  LocalCompanyMoabitsMappingOut,
-  MoabitsProviderMappingDiscoveryOut,
-  MoabitsSourceCompanyOut,
-} from "@/lib/types/api"
-import type { Company, Page } from "@/lib/types/user"
+import type { CompanyProviderMappingIn } from "@/lib/types/api"
 import { z } from "zod"
 
 const companyNameSchema = z.string().trim().min(2, "El nombre de la empresa debe tener al menos 2 caracteres")

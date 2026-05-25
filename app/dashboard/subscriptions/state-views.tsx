@@ -2,20 +2,114 @@
 
 import { CSSProperties } from "react";
 import { Btn, Chip, Icon } from "./primitives";
-import { SOURCES, SourceId, T } from "./tokens";
+import { nativeStatusMeta, PROVIDER_NATIVE_STATUSES, SOURCES, SourceId, STATUS_TONES, T } from "./tokens";
 
-const GRID_COLS = "4px 170px 1.1fr 1fr 0.95fr 170px 120px 120px 100px";
+const GRID_COLS = "4px minmax(170px,1.15fr) minmax(120px,.75fr) minmax(130px,.8fr) minmax(150px,1fr) 120px 170px 120px 100px";
 const cellH: CSSProperties = { padding: "9px 12px" };
 
 const SHIMMER_BG = `linear-gradient(90deg, ${T.divider}, ${T.zebra}, ${T.divider})`;
+const PROVIDER_IDS = Object.keys(SOURCES) as SourceId[];
 
 const STATE_KEYFRAMES = `
 @keyframes bismark-spin { to { transform: rotate(360deg); } }
 @keyframes bismark-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 `;
 
-export function LoadingState({ query }: { query?: string }) {
-  const hasQuery = Boolean(query?.trim());
+type LoadingFilters = {
+  provider?: string;
+  status?: string;
+  statuses?: string;
+  cursor?: string;
+  size?: string;
+  q?: string;
+};
+
+type SourceFilter = SourceId | "all";
+type StatusSelections = Partial<Record<SourceId, Set<string>>>;
+
+function isSourceId(value: string | null | undefined): value is SourceId {
+  return !!value && value in SOURCES;
+}
+
+function statusKey(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isSelectedStatus(selected: string | undefined, candidate: string) {
+  return Boolean(selected?.trim()) && statusKey(selected) === statusKey(candidate);
+}
+
+function parseStatusSelections(value: string | null | undefined): StatusSelections {
+  const selections: StatusSelections = {};
+
+  for (const raw of (value ?? "").split(",")) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const separator = trimmed.indexOf(":");
+    if (separator <= 0) continue;
+
+    const provider = trimmed.slice(0, separator).trim();
+    const status = trimmed.slice(separator + 1).trim();
+    if (!isSourceId(provider) || !status) continue;
+
+    selections[provider] = selections[provider] ?? new Set<string>();
+    selections[provider]?.add(status);
+  }
+
+  return selections;
+}
+
+function hasStatusSelections(selections: StatusSelections) {
+  return PROVIDER_IDS.some((provider) => (selections[provider]?.size ?? 0) > 0);
+}
+
+function countStatusSelections(selections: StatusSelections) {
+  return PROVIDER_IDS.reduce((total, provider) => total + (selections[provider]?.size ?? 0), 0);
+}
+
+function providersForLoadingRows(activeSource: SourceFilter, selections: StatusSelections) {
+  if (activeSource !== "all") return [activeSource];
+  const selectedProviders = PROVIDER_IDS.filter((provider) => (selections[provider]?.size ?? 0) > 0);
+  return selectedProviders.length ? selectedProviders : PROVIDER_IDS;
+}
+
+function statusesForProvider(provider: SourceId, activeStatus: string | undefined) {
+  const statuses = [...PROVIDER_NATIVE_STATUSES[provider]];
+  if (activeStatus && !statuses.some((status) => isSelectedStatus(activeStatus, status.value))) {
+    statuses.unshift(nativeStatusMeta(provider, activeStatus));
+  }
+  return statuses;
+}
+
+function loadingLabel(activeSource: SourceFilter, activeStatus: string | undefined, selections: StatusSelections, query: string | undefined) {
+  const q = query?.trim();
+  if (activeSource !== "all") {
+    const statusLabel = activeStatus ? nativeStatusMeta(activeSource, activeStatus).label : null;
+    return `Cargando ${SOURCES[activeSource].name}${statusLabel ? ` · ${statusLabel}` : ""}`;
+  }
+
+  const selectedCount = countStatusSelections(selections);
+  if (selectedCount > 0) {
+    const selectedProviders = PROVIDER_IDS.filter((provider) => (selections[provider]?.size ?? 0) > 0).map((provider) => SOURCES[provider].name);
+    const providerText = selectedProviders.length === 1 ? selectedProviders[0] : `${selectedProviders.length} fuentes`;
+    return `Cargando ${selectedCount} estado${selectedCount !== 1 ? "s" : ""} · ${providerText}`;
+  }
+
+  if (q) return `Buscando ${q}`;
+  return "Cargando SIMs";
+}
+
+export function LoadingState({ query, filters }: { query?: string; filters?: LoadingFilters }) {
+  const effectiveQuery = query ?? filters?.q;
+  const hasQuery = Boolean(effectiveQuery?.trim());
+  const activeSource: SourceFilter = isSourceId(filters?.provider) ? filters.provider : "all";
+  const activeStatus = activeSource !== "all" ? filters?.status?.trim() || undefined : undefined;
+  const statusSelections = activeSource === "all" ? parseStatusSelections(filters?.statuses) : {};
+  const selectedCount = activeSource === "all" ? countStatusSelections(statusSelections) : activeStatus ? 1 : 0;
+  const anySelected = activeSource === "all" ? hasStatusSelections(statusSelections) : Boolean(activeStatus);
+  const activeColor = activeSource === "all" ? T.headerAccent : SOURCES[activeSource].color;
+  const rowsSourceCycle = providersForLoadingRows(activeSource, statusSelections);
+  const label = loadingLabel(activeSource, activeStatus, statusSelections, effectiveQuery);
 
   return (
     <div
@@ -58,19 +152,19 @@ export function LoadingState({ query }: { query?: string }) {
             alignItems: "center",
             gap: 10,
             background: T.pageBg,
-            border: `1px solid ${hasQuery ? T.headerAccent : T.border}`,
-            boxShadow: hasQuery ? `0 0 0 3px ${T.headerAccent}22` : undefined,
+            border: `1px solid ${hasQuery || anySelected || activeSource !== "all" ? activeColor : T.border}`,
+            boxShadow: hasQuery || anySelected || activeSource !== "all" ? `0 0 0 3px ${activeColor}22` : undefined,
             borderRadius: 6,
             padding: "9px 12px",
           }}
         >
-          {hasQuery && (
+          {(hasQuery || anySelected || activeSource !== "all") && (
             <div
               style={{
                 width: 15,
                 height: 15,
                 borderRadius: "50%",
-                border: `2px solid ${T.headerAccent}`,
+                border: `2px solid ${activeColor}`,
                 borderTopColor: "transparent",
                 animation: "bismark-spin 0.7s linear infinite",
               }}
@@ -80,9 +174,9 @@ export function LoadingState({ query }: { query?: string }) {
             <Icon.search size={15} />
           </span>
           <span style={{ flex: 1, fontSize: 13.5, color: hasQuery ? T.text : T.muted }}>
-            {hasQuery ? query : "Buscar por ICCID, MSISDN o IMSI..."}
+            {hasQuery ? effectiveQuery : "Buscar por ICCID, MSISDN o IMSI..."}
           </span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>cargando...</span>
+          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>{label}</span>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
@@ -92,10 +186,10 @@ export function LoadingState({ query }: { query?: string }) {
           <button
             style={{
               padding: "6px 11px 6px 9px",
-              background: T.headerBg,
-              border: `1px solid ${T.headerBg}`,
+              background: activeSource === "all" ? T.headerBg : "#fff",
+              border: `1px solid ${activeSource === "all" ? T.headerBg : T.border}`,
               borderRadius: 4,
-              color: "#fff",
+              color: activeSource === "all" ? "#fff" : T.title,
               fontSize: 12.5,
               fontWeight: 600,
               display: "inline-flex",
@@ -104,70 +198,145 @@ export function LoadingState({ query }: { query?: string }) {
               fontFamily: T.fontBody,
             }}
           >
-            Todas
-            <span style={{ fontFamily: T.fontMono, fontSize: 10.5, fontWeight: 700, padding: "1px 5px", borderRadius: 3, lineHeight: 1.4, background: "rgba(255,255,255,.18)", color: "#fff" }}>
-              ...
-            </span>
-          </button>
-          {Object.values(SOURCES).map((s) => (
-            <button
-              key={s.id}
+            <span
               style={{
-                padding: "6px 11px 6px 9px",
-                background: "#fff",
-                border: `1px solid ${T.border}`,
-                borderRadius: 4,
-                color: T.title,
-                fontSize: 12.5,
-                fontWeight: 600,
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: activeSource === "all" ? "rgba(255,255,255,.18)" : T.tableHeaderBg,
                 display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                fontFamily: T.fontBody,
               }}
-            >
-              <span style={{ width: 14, height: 14, borderRadius: 3, background: s.color }} />
-              {s.name}
-              <span style={{ fontFamily: T.fontMono, fontSize: 10.5, fontWeight: 700, padding: "1px 5px", borderRadius: 3, lineHeight: 1.4, background: T.tableHeaderBg, color: T.muted }}>
-                ...
-              </span>
-            </button>
-          ))}
+            />
+            Todas
+          </button>
+          {PROVIDER_IDS.map((provider) => {
+            const s = SOURCES[provider];
+            const active = activeSource === provider;
+            return (
+              <button
+                key={s.id}
+                style={{
+                  padding: "6px 11px 6px 9px",
+                  background: active ? s.color : "#fff",
+                  border: `1px solid ${active ? s.color : T.border}`,
+                  borderRadius: 4,
+                  color: active ? "#fff" : T.title,
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: T.fontBody,
+                }}
+              >
+                <span style={{ width: 14, height: 14, borderRadius: 3, background: active ? "rgba(255,255,255,.18)" : s.color }} />
+                {s.name}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ fontSize: 11, color: T.muted, alignSelf: "center", marginRight: 4, fontWeight: 600, letterSpacing: 0.3 }}>
-              ESTADO
+        <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+          <div style={{ display: "grid", gap: 8, minWidth: 0, width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 11, color: T.muted, marginRight: 4, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                {activeSource === "all" ? "Estado por fuente" : "Estado"}
+              </div>
+              {selectedCount > 0 && (
+                <span style={{ fontSize: 11, color: activeSource === "all" ? T.headerBg : SOURCES[activeSource].tintText, fontFamily: T.fontMono, fontWeight: 700 }}>
+                  {selectedCount}
+                </span>
+              )}
+              <Chip active={!anySelected}>Todos</Chip>
             </div>
-            <Chip active>Todos</Chip>
-            <Chip>Activas</Chip>
-            <Chip>En prueba</Chip>
-            <Chip>Suspendidas</Chip>
-            <Chip>Terminadas</Chip>
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                gridTemplateColumns: activeSource === "all" ? "repeat(auto-fit, minmax(min(100%, 260px), 1fr))" : "1fr",
+                alignItems: "start",
+              }}
+            >
+              {(activeSource === "all" ? PROVIDER_IDS : [activeSource]).map((provider) => {
+                const source = SOURCES[provider];
+                return (
+                  <div key={provider} style={{ display: "grid", gap: 7, minWidth: 0, alignContent: "start" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: source.color }} />
+                      <span style={{ fontSize: 11.5, color: T.title, fontWeight: 800 }}>{source.name}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", minWidth: 0 }}>
+                      {statusesForProvider(provider, activeSource === provider ? activeStatus : undefined).map((status) => {
+                        const palette = STATUS_TONES[status.tone];
+                        const active =
+                          activeSource === provider
+                            ? isSelectedStatus(activeStatus, status.value)
+                            : Boolean(statusSelections[provider]?.has(status.value));
+                        return (
+                          <span
+                            key={status.value}
+                            title={status.value}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              minHeight: 28,
+                              padding: "5px 8px",
+                              borderRadius: 4,
+                              border: `1px solid ${active ? palette.dot : T.border}`,
+                              background: active ? palette.bg : "#fff",
+                              color: active ? palette.color : T.text,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              fontFamily: T.fontBody,
+                              whiteSpace: "nowrap",
+                            }}
+                            >
+                              <span style={{ width: 6, height: 6, borderRadius: "50%", background: palette.dot, flexShrink: 0 }} />
+                              <span>{status.label}</span>
+                            <span
+                              style={{
+                                width: 14,
+                                height: 8,
+                                borderRadius: 2,
+                                background: SHIMMER_BG,
+                                backgroundSize: "200% 100%",
+                                animation: "bismark-shimmer 1.3s infinite",
+                              }}
+                            />
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div style={{ flex: 1 }} />
-          <button
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "6px 11px",
-              borderRadius: 4,
-              border: `1px solid ${T.border}`,
-              background: "#fff",
-              color: T.text,
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: T.fontBody,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <Icon.filter size={13} />
-            Filtros avanzados
-          </button>
-          <div style={{ fontSize: 12, color: T.muted, fontFamily: T.fontMono }}>
-            cargando...
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 12, color: T.muted, fontFamily: T.fontMono }}>
+              {label}
+            </div>
+            <button
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "6px 11px",
+                borderRadius: 4,
+                border: `1px solid ${T.border}`,
+                background: "#fff",
+                color: T.text,
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: T.fontBody,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Icon.filter size={13} />
+              Filtros avanzados
+            </button>
           </div>
         </div>
       </div>
@@ -190,13 +359,13 @@ export function LoadingState({ query }: { query?: string }) {
         >
           <div />
           <div style={cellH}>ICCID</div>
-          <div style={cellH}>Identidad</div>
+          <div style={cellH}>MSISDN</div>
+          <div style={cellH}>IMSI</div>
           <div style={cellH}>Plan</div>
-          <div style={cellH}>Cliente</div>
-          <div style={cellH}>Estado</div>
           <div style={cellH}>Operador</div>
+          <div style={cellH}>Estado</div>
           <div style={cellH}>Última actualización</div>
-          <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }}>Detalle</div>
+          <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }} />
         </div>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <div
@@ -209,23 +378,11 @@ export function LoadingState({ query }: { query?: string }) {
               minHeight: 54,
             }}
           >
-            <div style={{ alignSelf: "stretch", background: Object.values(SOURCES)[i % 3].color }} />
+            <div style={{ alignSelf: "stretch", background: SOURCES[rowsSourceCycle[i % rowsSourceCycle.length]].color }} />
             <SkeletonCell width={116} />
-            <SkeletonStack top={95} bottom={122} />
-            <SkeletonStack top={110} bottom={72} />
-            <SkeletonStack top={130} bottom={92} />
-            <div style={{ padding: "9px 12px" }}>
-              <div
-                style={{
-                  width: 86,
-                  height: 22,
-                  borderRadius: 999,
-                  background: SHIMMER_BG,
-                  backgroundSize: "200% 100%",
-                  animation: "bismark-shimmer 1.3s infinite",
-                }}
-              />
-            </div>
+            <SkeletonCell width={90} />
+            <SkeletonCell width={112} />
+            <SkeletonCell width={124} />
             <div style={{ padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
               <div
                 style={{
@@ -248,12 +405,24 @@ export function LoadingState({ query }: { query?: string }) {
                 }}
               />
             </div>
+            <div style={{ padding: "9px 12px" }}>
+              <div
+                style={{
+                  width: 86,
+                  height: 22,
+                  borderRadius: 999,
+                  background: SHIMMER_BG,
+                  backgroundSize: "200% 100%",
+                  animation: "bismark-shimmer 1.3s infinite",
+                }}
+              />
+            </div>
             <SkeletonCell width={84} />
             <div style={{ padding: "9px 16px 9px 12px", display: "flex", justifyContent: "flex-end" }}>
               <div
                 style={{
-                  width: 70,
-                  height: 18,
+                  width: 26,
+                  height: 26,
                   borderRadius: 4,
                   background: SHIMMER_BG,
                   backgroundSize: "200% 100%",
@@ -263,6 +432,30 @@ export function LoadingState({ query }: { query?: string }) {
             </div>
           </div>
         ))}
+      </div>
+      <div
+        style={{
+          padding: "10px 24px",
+          background: T.cardBg,
+          borderTop: `1px solid ${T.border}`,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", fontSize: 12, color: T.muted }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontFamily: T.fontMono }}>
+            <span>{filters?.cursor ? "Cargando página" : "Página 1"} · {label}</span>
+            <span>consulta en curso</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 600 }}>
+              Mostrar
+              <span style={{ height: 32, width: 62, border: `1px solid ${T.border}`, background: "#fff", borderRadius: 5 }} />
+            </span>
+            <span style={{ height: 32, width: 72, borderRadius: 5, background: "#E8EEF2", border: "1px solid #CBD5E1" }} />
+            <span style={{ height: 32, width: 78, borderRadius: 5, background: "#D8F0F2", border: "1px solid #B8DDE1" }} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -276,35 +469,6 @@ function SkeletonCell({ width }: { width: number }) {
           width,
           maxWidth: "100%",
           height: 10,
-          borderRadius: 2,
-          background: SHIMMER_BG,
-          backgroundSize: "200% 100%",
-          animation: "bismark-shimmer 1.3s infinite",
-        }}
-      />
-    </div>
-  );
-}
-
-function SkeletonStack({ top, bottom }: { top: number; bottom: number }) {
-  return (
-    <div style={{ padding: "9px 12px", display: "grid", gap: 7 }}>
-      <div
-        style={{
-          width: top,
-          maxWidth: "100%",
-          height: 10,
-          borderRadius: 2,
-          background: SHIMMER_BG,
-          backgroundSize: "200% 100%",
-          animation: "bismark-shimmer 1.3s infinite",
-        }}
-      />
-      <div
-        style={{
-          width: bottom,
-          maxWidth: "100%",
-          height: 9,
           borderRadius: 2,
           background: SHIMMER_BG,
           backgroundSize: "200% 100%",
@@ -598,13 +762,13 @@ export function ErrorState({ query, onRetry }: { query?: string; onRetry?: () =>
         >
           <div />
           <div style={cellH}>ICCID</div>
-          <div style={cellH}>Identidad</div>
+          <div style={cellH}>MSISDN</div>
+          <div style={cellH}>IMSI</div>
           <div style={cellH}>Plan</div>
-          <div style={cellH}>Cliente</div>
-          <div style={cellH}>Estado</div>
           <div style={cellH}>Operador</div>
+          <div style={cellH}>Estado</div>
           <div style={cellH}>Última actualización</div>
-          <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }}>Detalle</div>
+          <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }} />
         </div>
 
         <div

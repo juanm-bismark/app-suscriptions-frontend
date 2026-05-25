@@ -14,11 +14,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ROLES, type User, type UserRole } from "@/lib/types/user"
+import { ROLES, type Company, type User, type UserRole } from "@/lib/types/user"
 
 type UsersTableProps = {
   users: User[]
   currentRole: UserRole
+  companies?: Company[]
   editingUserId: string | null
   onEdit: (user: User) => void
   emptyMessage?: string
@@ -27,6 +28,7 @@ type UsersTableProps = {
 export default function UsersTable({
   users,
   currentRole,
+  companies = [],
   editingUserId,
   onEdit,
   emptyMessage = "No hay usuarios adicionales en la empresa.",
@@ -38,6 +40,9 @@ export default function UsersTable({
   if (users.length === 0) {
     return <p className="text-sm text-muted">{emptyMessage}</p>
   }
+
+  const isAdminView = currentRole === ROLES.ADMIN
+  const companyById = new Map(companies.map((company) => [company.id, company.name]))
 
   async function onDelete(userId: string) {
     setError(null)
@@ -68,6 +73,7 @@ export default function UsersTable({
             <tr>
               <th scope="col" className="px-6 py-3 rounded-tl-lg">Nombre</th>
               <th scope="col" className="px-6 py-3">Correo</th>
+              {isAdminView && <th scope="col" className="px-6 py-3">Empresa</th>}
               <th scope="col" className="px-6 py-3">Rol</th>
               <th scope="col" className="px-6 py-3 rounded-tr-lg text-right">Acciones</th>
             </tr>
@@ -88,6 +94,11 @@ export default function UsersTable({
                 >
                   <td className="px-6 py-4 font-medium text-title">{user.full_name || "Sin nombre"}</td>
                   <td className="px-6 py-4 text-muted">{user.email || "—"}</td>
+                  {isAdminView && (
+                    <td className="px-6 py-4 text-muted">
+                      {user.company_id ? companyById.get(user.company_id) ?? "Empresa no encontrada" : "Sin empresa"}
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <span className={roleBadgeClassName(user.role)}>{user.role}</span>
                   </td>

@@ -1,9 +1,9 @@
-import type { CapabilityStatus, AdministrativeStatus } from "./common";
+import type { CapabilityStatus, SimStatus } from "./common";
 
 export interface CapabilityOut {
   status: CapabilityStatus;
   reason: string | null;
-  targets: AdministrativeStatus[];
+  targets: SimStatus[];
 }
 export interface ProviderCapabilitiesOut {
   provider: string;

@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Eye, EyeOff } from "lucide-react"
+import { useRouter } from "next/navigation"
 import {
   Form,
   FormControl,
@@ -16,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { updateUser } from "@/app/actions/users"
-import { ROLES, type User, type UserRole } from "@/lib/types/user"
+import { ROLES, type Company, type User, type UserRole } from "@/lib/types/user"
+import { CompanyPicker } from "./company-picker"
 
 const editUserSchema = z.object({
   full_name: z.string().min(2, "Mínimo 2 caracteres").or(z.literal("")).optional(),
@@ -26,6 +28,7 @@ const editUserSchema = z.object({
     z.literal(""),
   ]).optional(),
   role: z.enum(["admin", "manager", "member", "public"], { error: "Rol inválido" }),
+  company_id: z.string().trim().min(1, "Empresa inválida").or(z.literal("")).optional(),
 })
 
 type EditUserFormData = z.infer<typeof editUserSchema>
@@ -33,12 +36,17 @@ type EditUserFormData = z.infer<typeof editUserSchema>
 export function EditUserForm({
   user,
   currentRole,
+  companies = [],
+  onUpdated,
   onCancel,
 }: {
   user: User
   currentRole: UserRole
+  companies?: Company[]
+  onUpdated?: (user: User) => void
   onCancel: () => void
 }) {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -50,25 +58,45 @@ export function EditUserForm({
       email: user.email ?? "",
       password: "",
       role: user.role as "admin" | "manager" | "member" | "public",
+      company_id: user.company_id ?? "",
     },
   })
+
+  const selectedCompanyId = useWatch({ control: form.control, name: "company_id" })
 
   async function onSubmit(data: EditUserFormData) {
     setError(null)
     setSuccess(null)
+
+    if (currentRole === ROLES.ADMIN && !data.company_id) {
+      form.setError("company_id", { message: "Selecciona una empresa" })
+      return
+    }
 
     const fd = new FormData()
     fd.append("id", user.id)
     if (data.full_name) fd.append("full_name", data.full_name)
     fd.append("email", data.email)
     if (data.password) fd.append("password", data.password)
-    if (currentRole === ROLES.ADMIN) fd.append("role", data.role)
+    if (currentRole === ROLES.ADMIN) {
+      fd.append("role", data.role)
+      if (data.company_id) fd.append("company_id", data.company_id)
+    }
 
     const res = await updateUser(fd)
     if (res.error) {
       setError(res.error)
     } else if (res.success) {
+      const updatedUser: User = {
+        ...user,
+        full_name: data.full_name?.trim() || null,
+        email: data.email,
+        role: currentRole === ROLES.ADMIN ? data.role : user.role,
+        company_id: currentRole === ROLES.ADMIN ? data.company_id || null : user.company_id,
+      }
+      onUpdated?.(updatedUser)
       setSuccess(res.message || "Usuario actualizado")
+      router.refresh()
     }
   }
 
@@ -152,6 +180,15 @@ export function EditUserForm({
               </FormItem>
             )}
           />
+
+          {currentRole === ROLES.ADMIN && (
+            <CompanyPicker
+              companies={companies}
+              value={selectedCompanyId ?? ""}
+              onChange={(id) => form.setValue("company_id", id, { shouldValidate: true })}
+              error={form.formState.errors.company_id?.message}
+            />
+          )}
 
           {currentRole === ROLES.ADMIN && (
             <FormField

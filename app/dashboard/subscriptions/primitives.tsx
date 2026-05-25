@@ -1,7 +1,7 @@
 "use client";
 
 import { CSSProperties, ReactNode, useState } from "react";
-import { SOURCES, STATUS_META, SourceId, StatusId, T } from "./tokens";
+import { SOURCES, STATUS_TONES, SourceId, T, nativeStatusMeta, statusToneForGroup } from "./tokens";
 
 type IconProps = { size?: number };
 
@@ -221,53 +221,76 @@ export function SourceBadge({
   );
 }
 
-export function StatusPill({ status, size = "md" }: { status: StatusId; size?: "sm" | "md" }) {
-  const m = STATUS_META[status];
-  if (!m) return null;
-  const pad = size === "sm" ? { h: 7, v: 3, fs: 10.5 } : { h: 9, v: 4, fs: 11.5 };
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: `${pad.v}px ${pad.h}px`,
-        borderRadius: 3,
-        background: m.bg,
-        color: m.color,
-        fontSize: pad.fs,
-        fontWeight: 700,
-        letterSpacing: 0.4,
-        textTransform: "uppercase",
-        fontFamily: T.fontBody,
-        whiteSpace: "nowrap",
-        border: `1px solid ${m.dot}33`,
-      }}
-    >
-      {m.label}
-    </span>
-  );
-}
-
 export function StatusPillWithNative({
+  provider,
   status,
   nativeStatus,
+  displayLabel,
+  statusGroup,
   sourceName,
+  showContext = true,
   size = "sm",
 }: {
-  status: StatusId;
+  provider: SourceId;
+  status?: string | null;
   nativeStatus?: string;
+  displayLabel?: string | null;
+  statusGroup?: string | null;
   sourceName?: string;
+  showContext?: boolean;
   size?: "sm" | "md";
 }) {
   const [hov, setHov] = useState(false);
+  const rawStatus = nativeStatus || status || "";
+  const meta = nativeStatusMeta(provider, rawStatus);
+  const tone = STATUS_TONES[statusGroup ? statusToneForGroup(statusGroup) : meta.tone];
+  const label = displayLabel?.trim() || meta.label;
+  const context = sourceName ?? "Estado";
+  const pad = size === "sm" ? { h: 7, v: 3, fs: 11.5, ctx: 10.5 } : { h: 9, v: 4, fs: 12.5, ctx: 11 };
   return (
     <span
-      style={{ position: "relative", display: "inline-flex" }}
+      style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
-      <StatusPill status={status} size={size} />
-      {hov && nativeStatus && (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: `${pad.v}px ${pad.h}px`,
+          borderRadius: 3,
+          background: tone.bg,
+          color: tone.color,
+          fontSize: pad.fs,
+          fontWeight: 700,
+          letterSpacing: 0,
+          fontFamily: T.fontBody,
+          whiteSpace: "nowrap",
+          border: `1px solid ${tone.dot}33`,
+          maxWidth: size === "sm" ? 118 : 160,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {label}
+      </span>
+      {showContext && (
+        <span
+          style={{
+            color: T.muted,
+            fontSize: pad.ctx,
+            fontWeight: 700,
+            fontFamily: T.fontBody,
+            whiteSpace: "nowrap",
+            maxWidth: size === "sm" ? 74 : 110,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {context}
+        </span>
+      )}
+      {hov && rawStatus && (
         <span
           style={{
             position: "absolute",
@@ -285,8 +308,8 @@ export function StatusPillWithNative({
             pointerEvents: "none",
           }}
         >
-          {sourceName ? `${sourceName}: ` : ""}
-          <span style={{ color: T.headerClientText }}>{nativeStatus}</span>
+          {context}:{" "}
+          <span style={{ color: T.headerClientText }}>{rawStatus}</span>
         </span>
       )}
     </span>

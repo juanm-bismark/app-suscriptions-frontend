@@ -6,24 +6,34 @@ import {
   SubscriptionOutSchema,
   UsageOutSchema,
   PresenceOutSchema,
+  SimDetailsOutSchema,
   SimImportOutSchema,
+  SyncStatusOutSchema,
+  SyncTriggerOutSchema,
+  AsyncJobOutSchema,
 } from "@/lib/api-validation";
 import type {
+  AsyncJobOut,
   PresenceOut,
+  SimDetailsIn,
+  SimDetailsOut,
   SimImportIn,
   SimImportOut,
   SimListOut,
+  SimSearchIn,
   StatusChangeIn,
+  SyncStatusOut,
+  SyncTriggerOut,
   SubscriptionOut,
   UsageOut,
 } from "@/lib/types/api";
-import type { AdministrativeStatus, Provider } from "@/lib/types/api/common";
+import type { Provider } from "@/lib/types/api/common";
 
 export interface ListSimsParams {
   cursor?: string | null;
   limit?: number;
   provider?: Provider;
-  status?: AdministrativeStatus;
+  status?: string;
   modified_since?: string;
   modified_till?: string;
   iccid?: string;
@@ -56,6 +66,15 @@ export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
 
   const q = qs.toString();
   return fetchApi(`/sims${q ? `?${q}` : ""}`, { schema: SimListOutSchema, cache: "no-store" });
+}
+
+export async function searchSims(body: SimSearchIn): Promise<SimListOut> {
+  return fetchApi("/sims/search", {
+    method: "POST",
+    body: JSON.stringify(body),
+    schema: SimListOutSchema,
+    cache: "no-store",
+  });
 }
 
 export async function getSim(iccid: string): Promise<SubscriptionOut> {
@@ -94,5 +113,36 @@ export async function importSims(body: SimImportIn): Promise<SimImportOut> {
     method: "POST",
     body: JSON.stringify(body),
     schema: SimImportOutSchema,
+  });
+}
+
+export async function getSimDetails(body: SimDetailsIn): Promise<SimDetailsOut> {
+  return fetchApi("/sims/details", {
+    method: "POST",
+    body: JSON.stringify(body),
+    schema: SimDetailsOutSchema,
+    cache: "no-store",
+  });
+}
+
+export async function getSyncStatus(): Promise<SyncStatusOut> {
+  return fetchApi("/sync/status", {
+    schema: SyncStatusOutSchema,
+    cache: "no-store",
+  });
+}
+
+export async function triggerSync(provider: Provider): Promise<SyncTriggerOut> {
+  return fetchApi(`/sync/trigger?provider=${encodeURIComponent(provider)}`, {
+    method: "POST",
+    schema: SyncTriggerOutSchema,
+    cache: "no-store",
+  });
+}
+
+export async function getJob(jobId: string): Promise<AsyncJobOut> {
+  return fetchApi(`/jobs/${encodeURIComponent(jobId)}`, {
+    schema: AsyncJobOutSchema,
+    cache: "no-store",
   });
 }

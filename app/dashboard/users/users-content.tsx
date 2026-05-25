@@ -25,12 +25,19 @@ export function UsersContent({
   pageSize: number
   companies?: Company[]
 }) {
+  const [updatedUsersById, setUpdatedUsersById] = useState<Record<string, User>>({})
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const clearSearchHref = `/dashboard/users?page=1&size=${pageSize}`
+  const visibleUsers = users.map((user) => updatedUsersById[user.id] ?? user)
+
+  function handleUserUpdated(updatedUser: User) {
+    setUpdatedUsersById((current) => ({ ...current, [updatedUser.id]: updatedUser }))
+    setEditingUser(updatedUser)
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 bg-[#F5FAFA] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
+      <div className="lg:col-span-2 flex flex-col bg-[#F5FAFA] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-title">Usuarios de la empresa</h2>
           <form className="flex w-full gap-2 sm:max-w-md" action="/dashboard/users" method="get">
@@ -59,8 +66,9 @@ export function UsersContent({
         </div>
 
         <UsersTable
-          users={users}
+          users={visibleUsers}
           currentRole={currentRole}
+          companies={companies}
           editingUserId={editingUser?.id ?? null}
           onEdit={setEditingUser}
           emptyMessage={
@@ -71,13 +79,15 @@ export function UsersContent({
         />
 
         {pageData && (
-          <PaginationControls
-            page={pageData.page}
-            pages={pageData.pages}
-            size={pageData.size}
-            total={pageData.total}
-            query={query}
-          />
+          <div className="mt-auto">
+            <PaginationControls
+              page={pageData.page}
+              pages={pageData.pages}
+              size={pageData.size}
+              total={pageData.total}
+              query={query}
+            />
+          </div>
         )}
       </div>
 
@@ -89,6 +99,8 @@ export function UsersContent({
             <EditUserForm
               user={editingUser}
               currentRole={currentRole}
+              companies={companies}
+              onUpdated={handleUserUpdated}
               onCancel={() => setEditingUser(null)}
             />
           </>

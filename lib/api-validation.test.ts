@@ -3,6 +3,7 @@ import {
   ProfileSchema,
   CompanySchema,
   SubscriptionOutSchema,
+  SimDetailsOutSchema,
   CredentialMetadataOutSchema,
   PageSchema,
   ProblemDetailsSchema,
@@ -157,9 +158,8 @@ describe("API Validation Schemas", () => {
         iccid: "8934076500006539419",
         msisdn: "+573012345678",
         imsi: "310026123456789",
-        status: "active" as const,
-        native_status: "Active",
-        provider: "kite" as const,
+        status: "ACTIVATED",
+        provider: "tele2" as const,
         company_id: "company-123",
         activated_at: "2024-05-21T10:30:00Z",
         updated_at: "2024-05-21T10:30:00Z",
@@ -167,9 +167,6 @@ describe("API Validation Schemas", () => {
         provider_fields: { customField: "value" },
         normalized: {
           identity: {
-            iccid: "8934076500006539419",
-            msisdn: "+573012345678",
-            imsi: "310026123456789",
             imei: null,
             alias: null,
             eid: null,
@@ -177,14 +174,16 @@ describe("API Validation Schemas", () => {
             sim_profile_id: null,
           },
           status: {
-            value: "active" as const,
-            native: "Active",
+            label: "Activated",
+            group: "active_like",
+            group_label: "Active-like",
+            source: "provider",
             last_changed_at: "2024-05-21T10:30:00Z",
           },
           plan: {
             name: "Premium Plan",
             code: "PREMIUM",
-            id: "plan-123",
+            id: 123,
             communication_plan: null,
             apn: "internet.kite",
             apns: ["internet.kite"],
@@ -203,6 +202,11 @@ describe("API Validation Schemas", () => {
             rat_type: "4G",
             last_network: null,
             ip_address: null,
+            ipv6_address: null,
+            fixed_ip_address: null,
+            fixed_ipv6_address: null,
+            static_ips: [],
+            additional_static_ips: [],
             sgsn_ip: null,
             ggsn_ip: null,
             last_traffic_at: null,
@@ -210,9 +214,9 @@ describe("API Validation Schemas", () => {
             last_lu_at: null,
             first_cdr_at: null,
             last_cdr_at: null,
-            gprs: null,
-            ip: null,
-            location: null,
+            gprs_status: { status: "ONLINE", detail: "attached" },
+            ip_status: { status: "REACHABLE" },
+            location: { lat: "4.7110", lng: "-74.0721" },
           },
           hardware: {
             sim_model: "SIM",
@@ -225,8 +229,8 @@ describe("API Validation Schemas", () => {
           },
           services: {
             active: ["voice", "sms", "data"],
-            basic: null,
-            supplementary: null,
+            basic: { voice: true, data: true, sms: true },
+            supplementary: ["CLIP", "Roaming"],
             data_service: true,
             sms_service: true,
           },
@@ -235,15 +239,13 @@ describe("API Validation Schemas", () => {
             data_unit: "mb" as const,
             sms: null,
             daily: {
-              data: { limit: 500, value: 250, threshold_reached: false, traffic_cut: false, enabled: true },
+              data: { limit: "500", value: true, threshold_reached: false, traffic_cut: false, enabled: true },
             },
             monthly: {
-              data: { limit: 5000, value: 2500, threshold_reached: false, traffic_cut: false, enabled: true },
+              data: { limit: "5000", value: true, threshold_reached: false, traffic_cut: false, enabled: true },
             },
           },
           dates: {
-            activated_at: "2024-05-21T10:30:00Z",
-            updated_at: "2024-05-21T10:30:00Z",
             added_at: null,
             provisioned_at: null,
           },
@@ -252,6 +254,32 @@ describe("API Validation Schemas", () => {
       }
 
       expect(() => SubscriptionOutSchema.parse(subscription)).not.toThrow()
+    })
+  })
+
+  describe("SimDetailsOutSchema", () => {
+    it("allows nullable data and error fields in detail results", () => {
+      const details = {
+        results: {
+          "8910300000001880253": {
+            provider: "moabits",
+            status: "error",
+            data: null,
+            error: { code: "provider.error", detail: "No se pudo consultar" },
+          },
+          "8934071100303041663": {
+            provider: "moabits",
+            status: "ok",
+            data: null,
+            error: null,
+          },
+        },
+        summary: { ok: 1, error: 1, total: 2 },
+        unresolved: [],
+        filtered_out: [],
+      }
+
+      expect(() => SimDetailsOutSchema.parse(details)).not.toThrow()
     })
   })
 
@@ -270,7 +298,7 @@ describe("API Validation Schemas", () => {
 
     it("rejects invalid provider", () => {
       const credential = {
-        provider: "invalid" as any,
+        provider: "invalid",
         active: true,
         expiry_status: "valid" as const,
         created_at: "2024-05-21T10:30:00Z",

@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+
+vi.mock("@/auth", () => ({
+  auth: vi.fn().mockResolvedValue(null),
+}))
+
 import { ApiError, ValidationError, fetchApi } from "./api-client"
-import { ProfileSchema, CompanySchema } from "./api-validation"
+import { ProfileSchema } from "./api-validation"
 import { z } from "zod"
 
 describe("ApiError", () => {
@@ -32,15 +37,9 @@ describe("ApiError", () => {
 
 describe("ValidationError", () => {
   it("extends ApiError with zodError", () => {
-    const zodError = new z.ZodError([
-      {
-        code: "invalid_type",
-        expected: "string",
-        received: "number",
-        path: ["email"],
-        message: "Expected string, received number",
-      },
-    ])
+    const result = z.object({ email: z.string() }).safeParse({ email: 123 })
+    if (result.success) throw new Error("Expected validation to fail")
+    const zodError = result.error
 
     const error = new ValidationError(zodError, "Validation failed")
     expect(error.status).toBe(400)
@@ -51,24 +50,12 @@ describe("ValidationError", () => {
   })
 
   it("formats multiple validation errors", () => {
-    const zodError = new z.ZodError([
-      {
-        code: "invalid_type",
-        expected: "string",
-        received: "number",
-        path: ["email"],
-        message: "Expected string",
-      },
-      {
-        code: "too_small",
-        type: "string",
-        minimum: 1,
-        inclusive: true,
-        exact: false,
-        path: ["password"],
-        message: "Password too short",
-      },
-    ])
+    const result = z.object({
+      email: z.string(),
+      password: z.string().min(1),
+    }).safeParse({ email: 123, password: "" })
+    if (result.success) throw new Error("Expected validation to fail")
+    const zodError = result.error
 
     const error = new ValidationError(zodError)
     expect(error.detail).toContain("email")
@@ -173,6 +160,51 @@ describe("fetchApi", () => {
     await expect(fetchApi("/user/invalid")).rejects.toMatchObject({ status: 404 })
   })
 
+  it("uses problem detail as the thrown message when present", async () => {
+    const mockResponse = {
+      ok: false,
+      status: 422,
+      headers: new Headers({ "content-type": "application/problem+json" }),
+      json: vi.fn().mockResolvedValue({
+        title: "Provider validation error",
+        status: 422,
+        code: "provider.validation_error",
+        detail: "Tele2 rejected target TEST_READY for this SIM",
+      }),
+    }
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse)
+
+    await expect(fetchApi("/sims/123/status")).rejects.toMatchObject({
+      status: 422,
+      message: "Tele2 rejected target TEST_READY for this SIM",
+      title: "Provider validation error",
+      detail: "Tele2 rejected target TEST_READY for this SIM",
+      code: "provider.validation_error",
+    })
+  })
+
+  it("extracts Tele2 provider-style error bodies", async () => {
+    const mockResponse = {
+      ok: false,
+      status: 400,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: vi.fn().mockResolvedValue({
+        errorMessage: "ModifiedSince is required.",
+        errorCode: "10000003",
+      }),
+    }
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse)
+
+    await expect(fetchApi("/sims?provider=tele2")).rejects.toMatchObject({
+      status: 400,
+      message: "ModifiedSince is required.",
+      detail: "ModifiedSince is required.",
+      code: "10000003",
+    })
+  })
+
   it("handles network errors", async () => {
     global.fetch = vi
       .fn()
@@ -227,7 +259,8 @@ describe("fetchApi", () => {
     await fetchApi("/test", { cache: "no-store" })
 
     // Verify the cache option was passed to fetch
-    const callArgs = (global.fetch as any).mock.calls[0][1]
+    const fetchMock = vi.mocked(global.fetch)
+    const callArgs = fetchMock.mock.calls[0][1] as RequestInit
     expect(callArgs.cache).toBe("no-store")
   })
 })

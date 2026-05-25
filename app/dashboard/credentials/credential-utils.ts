@@ -1,5 +1,5 @@
 import type { Provider } from "@/lib/types/api"
-import { SOURCES, STATUS_META } from "@/app/dashboard/subscriptions/tokens"
+import { SOURCES, STATUS_TONES } from "@/app/dashboard/subscriptions/tokens"
 
 export const PROVIDERS: Provider[] = ["kite", "tele2", "moabits"]
 
@@ -12,10 +12,10 @@ export function providerName(provider: Provider) {
 }
 
 export const EXPIRY_META = {
-  valid: { label: "Valida", meta: STATUS_META.active },
-  expiring: { label: "Por vencer", meta: STATUS_META.suspended },
-  expired: { label: "Vencida", meta: STATUS_META.purged },
-  invalid: { label: "Invalida", meta: STATUS_META.unknown },
+  valid: { label: "Valida", meta: STATUS_TONES.success },
+  expiring: { label: "Por vencer", meta: STATUS_TONES.warn },
+  expired: { label: "Vencida", meta: STATUS_TONES.danger },
+  invalid: { label: "Invalida", meta: STATUS_TONES.neutral },
 } as const
 
 export function formatDate(value: string | null | undefined) {

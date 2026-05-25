@@ -1,8 +1,8 @@
 import { z } from "zod"
-import type { Profile, Company, User } from "@/lib/types/user"
-import type { SimListOut, UsageOut, PresenceOut, SimImportOut } from "@/lib/types/api/sims"
-import type { SubscriptionOut, NormalizedSubscription } from "@/lib/types/api/sims"
-import type { CredentialMetadataOut, Provider, CredentialProbeOut, CompanyProviderMappingOut, MoabitsSourceCompanyOut, LocalCompanyMoabitsMappingOut, MoabitsProviderMappingDiscoveryOut, CredentialTestOut } from "@/lib/types/api"
+import type { Profile, Company } from "@/lib/types/user"
+import type { AsyncJobOut, SimDetailsOut, SimListOut, SyncStatusOut, SyncTriggerOut, UsageOut, PresenceOut, SimImportOut } from "@/lib/types/api/sims"
+import type { SubscriptionOut } from "@/lib/types/api/sims"
+import type { CredentialMetadataOut, CredentialProbeOut, CompanyProviderMappingOut, MoabitsSourceCompanyOut, LocalCompanyMoabitsMappingOut, MoabitsProviderMappingDiscoveryOut, CredentialTestOut } from "@/lib/types/api"
 import type { ProviderCapabilitiesOut, CapabilityOut } from "@/lib/types/api/providers"
 import type { CapabilityStatus } from "@/lib/types/api/common"
 import type { TokenResponse } from "@/lib/types/api/auth"
@@ -18,13 +18,13 @@ export const ProfileSchema: z.ZodSchema<Profile> = z.object({
   full_name: z.string().nullable(),
   email: z.string().email().nullable(),
   created_at: DateString,
-}).passthrough()
+}).loose()
 
 export const CompanySchema: z.ZodSchema<Company> = z.object({
   id: z.string(),
   name: z.string(),
   created_at: DateString,
-}).passthrough()
+}).loose()
 
 export const PageSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.object({
@@ -33,61 +33,45 @@ export const PageSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
     page: z.number().int().positive(),
     size: z.number().int().positive(),
     pages: z.number().int().nonnegative(),
-  }).passthrough()
+  }).loose()
 
-const AdministrativeStatusSchema = z.enum([
-  "active",
-  "in_test",
-  "suspended",
-  "inactive_new",
-  "activation_pendant",
-  "activation_ready",
-  "terminated",
-  "purged",
-  "inventory",
-  "replaced",
-  "retired",
-  "restore",
-  "pending",
-  "unknown",
-])
+const StatusValueSchema = z.string()
 
 const ProviderSchema = z.enum(["kite", "tele2", "moabits"])
 
 const IdentitySchema = z.object({
-  iccid: z.string().nullable(),
-  msisdn: z.string().nullable(),
-  imsi: z.string().nullable(),
   imei: z.string().nullable(),
   alias: z.string().nullable(),
   eid: z.string().nullable(),
   euiccid: z.string().nullable(),
   sim_profile_id: z.string().nullable(),
-}).passthrough()
+}).loose()
 
 const StatusSchema = z.object({
-  value: AdministrativeStatusSchema.nullable(),
-  native: z.string().nullable(),
+  label: z.string().nullish(),
+  group: z.string().nullish(),
+  group_label: z.string().nullish(),
+  source: z.string().nullish(),
   last_changed_at: DateString.nullable(),
-}).passthrough()
+}).loose()
 
 const PlanSchema = z.object({
   name: z.string().nullable(),
   code: z.string().nullable(),
-  id: z.string().nullable(),
+  id: z.union([z.string(), z.number()]).nullish(),
   communication_plan: z.string().nullable(),
   apn: z.string().nullable(),
   apns: z.array(z.string()).nullable(),
   started_at: DateString.nullable(),
   expires_at: DateString.nullable(),
-}).passthrough()
+}).loose()
 
 const CustomerSchema = z.object({
   name: z.string().nullable(),
   id: z.string().nullable(),
   company_code: z.string().nullable(),
   account_id: z.string().nullable(),
-}).passthrough()
+}).loose()
 
 const NetworkSchema = z.object({
   operator: z.string().nullable(),
@@ -95,6 +79,11 @@ const NetworkSchema = z.object({
   rat_type: z.string().nullable(),
   last_network: z.string().nullable(),
   ip_address: z.string().nullable(),
+  ipv6_address: z.string().nullable(),
+  fixed_ip_address: z.string().nullable(),
+  fixed_ipv6_address: z.string().nullable(),
+  static_ips: z.array(z.string()).nullable(),
+  additional_static_ips: z.array(z.string()).nullable(),
   sgsn_ip: z.string().nullable(),
   ggsn_ip: z.string().nullable(),
   last_traffic_at: DateString.nullable(),
@@ -102,10 +91,10 @@ const NetworkSchema = z.object({
   last_lu_at: DateString.nullable(),
   first_cdr_at: DateString.nullable(),
   last_cdr_at: DateString.nullable(),
-  gprs: z.string().nullable(),
-  ip: z.string().nullable(),
-  location: z.string().nullable(),
-}).passthrough()
+  gprs_status: z.unknown().nullish(),
+  ip_status: z.unknown().nullish(),
+  location: z.unknown().nullish(),
+}).loose()
 
 const HardwareSchema = z.object({
   sim_model: z.string().nullable(),
@@ -115,23 +104,23 @@ const HardwareSchema = z.object({
   modem_id: z.string().nullable(),
   imei_last_changed_at: DateString.nullable(),
   shipped_at: DateString.nullable(),
-}).passthrough()
+}).loose()
 
 const ServicesSchema = z.object({
   active: z.array(z.string()).nullable(),
-  basic: z.string().nullable(),
-  supplementary: z.string().nullable(),
+  basic: z.unknown().nullish(),
+  supplementary: z.unknown().nullish(),
   data_service: z.boolean().nullable(),
   sms_service: z.boolean().nullable(),
-}).passthrough()
+}).loose()
 
 const UsageControlSchema = z.object({
-  limit: z.number().nullable(),
-  value: z.number().nullable(),
+  limit: z.unknown().nullish(),
+  value: z.unknown().nullish(),
   threshold_reached: z.boolean().nullable(),
   traffic_cut: z.boolean().nullable(),
   enabled: z.boolean().nullable(),
-}).passthrough()
+}).loose()
 
 const LimitsSchema = z.object({
   data: z.number().nullable(),
@@ -139,16 +128,14 @@ const LimitsSchema = z.object({
   sms: z.number().nullable(),
   daily: z.record(z.string(), UsageControlSchema).nullable(),
   monthly: z.record(z.string(), UsageControlSchema).nullable(),
-}).passthrough()
+}).loose()
 
 const DatesSchema = z.object({
-  activated_at: DateString.nullable(),
-  updated_at: DateString.nullable(),
   added_at: DateString.nullable(),
   provisioned_at: DateString.nullable(),
-}).passthrough()
+}).loose()
 
-const NormalizedSubscriptionSchema: z.ZodSchema<NormalizedSubscription> = z.object({
+const NormalizedSubscriptionSchema = z.object({
   identity: IdentitySchema,
   status: StatusSchema,
   plan: PlanSchema,
@@ -159,14 +146,13 @@ const NormalizedSubscriptionSchema: z.ZodSchema<NormalizedSubscription> = z.obje
   limits: LimitsSchema,
   dates: DatesSchema,
   custom_fields: z.record(z.string(), z.unknown()),
-}).passthrough()
+}).loose()
 
-export const SubscriptionOutSchema: z.ZodSchema<SubscriptionOut> = z.object({
+export const SubscriptionOutSchema = z.object({
   iccid: z.string(),
   msisdn: z.string().nullable(),
   imsi: z.string().nullable(),
-  status: AdministrativeStatusSchema,
-  native_status: z.string(),
+  status: z.string(),
   provider: ProviderSchema,
   company_id: z.string(),
   activated_at: DateString.nullable(),
@@ -174,7 +160,7 @@ export const SubscriptionOutSchema: z.ZodSchema<SubscriptionOut> = z.object({
   detail_level: z.enum(["summary", "detail"]),
   provider_fields: z.record(z.string(), z.unknown()),
   normalized: NormalizedSubscriptionSchema,
-}).passthrough()
+}).loose() as unknown as z.ZodSchema<SubscriptionOut>
 
 const CredentialExpiryStatusSchema = z.enum(["valid", "expiring", "expired", "invalid"])
 
@@ -185,7 +171,7 @@ export const CredentialMetadataOutSchema: z.ZodSchema<CredentialMetadataOut> = z
   created_at: DateString,
   rotated_at: DateString.nullable(),
   account_scope: z.record(z.string(), z.unknown()),
-}).passthrough()
+}).loose()
 
 export const ProblemDetailsSchema = z.object({
   type: z.string().optional(),
@@ -200,7 +186,7 @@ const FailedProviderSchema = z.object({
   provider: z.string(),
   code: z.string(),
   title: z.string(),
-}).passthrough()
+}).loose()
 
 const ProviderStatusSchema = z.object({
   provider: z.string(),
@@ -208,16 +194,16 @@ const ProviderStatusSchema = z.object({
   count: z.number().int().nonnegative(),
   code: z.string().nullable(),
   title: z.string().nullable(),
-}).passthrough()
+}).loose()
 
-export const SimListOutSchema: z.ZodSchema<SimListOut> = z.object({
+export const SimListOutSchema: z.ZodSchema<SimListOut> = (z.object({
   items: z.array(SubscriptionOutSchema),
   next_cursor: z.string().nullable(),
   total: z.number().int().nonnegative().nullable(),
   partial: z.boolean(),
   failed_providers: z.array(FailedProviderSchema),
   provider_statuses: z.array(ProviderStatusSchema),
-}).passthrough()
+}).loose() as unknown) as z.ZodSchema<SimListOut>
 
 export const UsageOutSchema: z.ZodSchema<UsageOut> = z.object({
   iccid: z.string(),
@@ -231,8 +217,8 @@ export const UsageOutSchema: z.ZodSchema<UsageOut> = z.object({
     metric_type: z.string(),
     usage: z.string(),
     unit: z.string().nullable(),
-  }).passthrough()),
-}).passthrough()
+  }).loose()),
+}).loose()
 
 export const PresenceOutSchema: z.ZodSchema<PresenceOut> = z.object({
   iccid: z.string(),
@@ -242,50 +228,129 @@ export const PresenceOutSchema: z.ZodSchema<PresenceOut> = z.object({
   rat_type: z.string().nullable(),
   network_name: z.string().nullable(),
   last_seen_at: DateString.nullable(),
-}).passthrough()
+}).loose()
 
 export const SimImportOutSchema: z.ZodSchema<SimImportOut> = z.object({
   imported: z.number().int().nonnegative(),
-}).passthrough()
+}).loose()
+
+const SimDetailsErrorSchema = z.object({
+  code: z.string(),
+  detail: z.string().nullable().optional(),
+  retry_after: z.number().nullable().optional(),
+}).loose()
+
+const SimDetailsResultSchema = z.object({
+  provider: ProviderSchema,
+  status: z.enum(["ok", "not_found", "timeout", "error", "rate_limited"]),
+  data: SubscriptionOutSchema.nullish(),
+  error: SimDetailsErrorSchema.nullish(),
+}).loose()
+
+export const SimDetailsOutSchema: z.ZodSchema<SimDetailsOut> = z.object({
+  results: z.record(z.string(), SimDetailsResultSchema),
+  summary: z.object({
+    ok: z.number().int().nonnegative().optional(),
+    not_found: z.number().int().nonnegative().optional(),
+    timeout: z.number().int().nonnegative().optional(),
+    rate_limited: z.number().int().nonnegative().optional(),
+    error: z.number().int().nonnegative().optional(),
+    total: z.number().int().nonnegative(),
+  }).loose(),
+  unresolved: z.array(z.string()),
+  filtered_out: z.array(z.string()),
+}).loose() as unknown as z.ZodSchema<SimDetailsOut>
+
+const AsyncJobStatusSchema = z.enum(["pending", "running", "done", "failed"])
+
+const JobProgressSchema = z.object({
+  done: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative().nullable(),
+}).loose()
+
+export const AsyncJobOutSchema: z.ZodSchema<AsyncJobOut> = z.object({
+  job_id: z.string(),
+  kind: z.enum(["export", "routing_sync"]),
+  provider: ProviderSchema.nullable(),
+  status: AsyncJobStatusSchema,
+  progress: JobProgressSchema.nullable(),
+  created_at: DateString,
+  started_at: DateString.nullable(),
+  finished_at: DateString.nullable(),
+  result_url: z.string().nullable(),
+  result_expires_at: DateString.nullable(),
+  error: z.object({
+    code: z.string(),
+    detail: z.string().nullable().optional(),
+  }).loose().nullable(),
+}).loose()
+
+const SyncProviderFreshnessSchema = z.object({
+  last_sync_at: DateString.nullish(),
+  last_finished_at: DateString.nullish(),
+  status: AsyncJobStatusSchema.nullish(),
+  last_status: AsyncJobStatusSchema.nullish(),
+  last_job_id: z.string().nullish(),
+  iccids_seen: z.number().int().nonnegative().nullish(),
+  error: z.object({
+    code: z.string(),
+    detail: z.string().nullable().optional(),
+  }).loose().nullish(),
+}).loose()
+
+export const SyncStatusOutSchema: z.ZodSchema<SyncStatusOut> = z.object({
+  providers: z.record(z.string(), SyncProviderFreshnessSchema),
+  in_flight: z.array(z.object({
+    job_id: z.string(),
+    provider: ProviderSchema,
+    started_at: DateString.nullable(),
+    progress: JobProgressSchema.nullish(),
+  }).loose()),
+}).loose() as unknown as z.ZodSchema<SyncStatusOut>
+
+export const SyncTriggerOutSchema: z.ZodSchema<SyncTriggerOut> = z.object({
+  job_id: z.string(),
+  status_url: z.string(),
+}).loose()
 
 export const TokenResponseSchema: z.ZodSchema<TokenResponse> = z.object({
   access_token: z.string(),
   token_type: z.literal("bearer"),
   expires_in: z.number().int().positive(),
   refresh_token: z.string(),
-}).passthrough()
+}).loose()
 
 const CapabilityStatusSchema: z.ZodSchema<CapabilityStatus> = z.enum(["supported", "not_supported", "requires_feature_flag", "requires_confirmation"])
 
 const CapabilityOutSchema: z.ZodSchema<CapabilityOut> = z.object({
   status: CapabilityStatusSchema,
   reason: z.string().nullable(),
-  targets: z.array(AdministrativeStatusSchema),
-}).passthrough()
+  targets: z.array(StatusValueSchema),
+}).loose()
 
 export const ProviderCapabilitiesOutSchema: z.ZodSchema<ProviderCapabilitiesOut> = z.object({
   provider: z.string(),
   capabilities: z.record(z.string(), CapabilityOutSchema),
-}).passthrough() as any
+}).loose() as unknown as z.ZodSchema<ProviderCapabilitiesOut>
 
 export const CredentialProbeOutSchema: z.ZodSchema<CredentialProbeOut> = z.object({
   provider: z.string(),
   ok: z.boolean(),
   detail: z.string(),
   sample_count: z.number().int().nonnegative(),
-}).passthrough()
+}).loose()
 
 export const CredentialTestOutSchema: z.ZodSchema<CredentialTestOut> = z.object({
   provider: z.string(),
   ok: z.boolean(),
   detail: z.string().nullable(),
-}).passthrough()
+}).loose()
 
 const MoabitsCompanyOutSchema = z.object({
   companyCode: z.string(),
   companyName: z.string(),
   clie_id: z.number().int().nullable(),
-}).passthrough()
+}).loose()
 
 export const MoabitsSourceCompanyOutSchema: z.ZodSchema<MoabitsSourceCompanyOut> = MoabitsCompanyOutSchema.extend({
   source_company_id: z.string(),
@@ -293,7 +358,7 @@ export const MoabitsSourceCompanyOutSchema: z.ZodSchema<MoabitsSourceCompanyOut>
   last_seen_at: DateString,
   updated_at: DateString,
   created_at: DateString,
-}).passthrough()
+}).loose()
 
 export const CompanyProviderMappingOutSchema: z.ZodSchema<CompanyProviderMappingOut> = z.object({
   company_id: z.string(),
@@ -305,13 +370,13 @@ export const CompanyProviderMappingOutSchema: z.ZodSchema<CompanyProviderMapping
   active: z.boolean(),
   updated_at: DateString,
   created_at: DateString,
-}).passthrough()
+}).loose()
 
 export const LocalCompanyMoabitsMappingOutSchema: z.ZodSchema<LocalCompanyMoabitsMappingOut> = z.object({
   company_id: z.string(),
   company_name: z.string(),
   mapping: CompanyProviderMappingOutSchema.nullable(),
-}).passthrough()
+}).loose()
 
 export const MoabitsProviderMappingDiscoveryOutSchema: z.ZodSchema<MoabitsProviderMappingDiscoveryOut> = z.object({
   cache_message: z.string(),
@@ -323,7 +388,7 @@ export const MoabitsProviderMappingDiscoveryOutSchema: z.ZodSchema<MoabitsProvid
       linked_companies: z.array(z.object({
         company_id: z.string(),
         company_name: z.string(),
-      }).passthrough()),
+      }).loose()),
     })
   ),
-}).passthrough()
+}).loose()

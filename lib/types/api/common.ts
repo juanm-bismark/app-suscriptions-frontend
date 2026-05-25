@@ -1,11 +1,6 @@
 export type Provider = "kite" | "tele2" | "moabits";
 
-export type AdministrativeStatus =
-  | "active" | "in_test" | "suspended"
-  | "inactive_new" | "activation_pendant" | "activation_ready"
-  | "terminated" | "purged" | "inventory"
-  | "replaced" | "retired" | "restore"
-  | "pending" | "unknown";
+export type SimStatus = string;
 
 export type CapabilityStatus =
   | "supported" | "not_supported"
