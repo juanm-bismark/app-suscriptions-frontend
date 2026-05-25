@@ -32,7 +32,7 @@ function IdentifierRow({
   isMissing?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3.5 px-[18px] py-[13px] border-b border-divider">
+    <div className="flex flex-wrap items-center gap-3.5 px-[18px] py-[13px] border-b border-divider sm:flex-nowrap">
       <div className="w-[3px] self-stretch rounded-sm shrink-0" style={{ background: color }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-1 flex-wrap">
@@ -40,7 +40,7 @@ function IdentifierRow({
           <span className="text-[11.5px] text-muted font-medium">{description}</span>
         </div>
         <div
-          className={`font-mono text-[14.5px] font-semibold truncate ${
+          className={`break-all font-mono text-[14.5px] font-semibold ${
             isMissing ? "text-muted italic" : "text-title"
           }`}
         >
@@ -132,7 +132,7 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[640px] max-h-[90vh] bg-card rounded-lg border border-border flex flex-col overflow-hidden font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
+        className="w-full max-w-[680px] max-h-[90vh] bg-card rounded-lg border border-border flex flex-col overflow-hidden font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
       >
         {/* Header */}
         <div className="relative bg-card px-[22px] pt-[18px] pb-4 border-b border-divider">
@@ -150,16 +150,16 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
             <SourceBadge source={record.provider} size="sm" withName />
           </div>
 
-          <div className="flex items-end gap-3 pl-1">
+          <div className="flex flex-col gap-3 pl-1 sm:flex-row sm:items-end">
             <div className="flex-1 min-w-0">
-              <div className="text-[22px] font-bold text-title -tracking-[0.4px]">
+              <div className="break-words text-[20px] font-bold text-title sm:text-[22px]">
                 {record.customerName?.trim() || `SIM · ${src.name}`}
               </div>
               {record.customerScope?.trim() && (
-                <div className="text-xs text-muted mt-0.5 font-mono">{record.customerScope}</div>
+                <div className="mt-0.5 break-all font-mono text-xs text-muted">{record.customerScope}</div>
               )}
             </div>
-            <div className="text-right">
+            <div className="shrink-0 text-left sm:text-right">
               <StatusPillWithNative
                 provider={record.provider}
                 status={record.status}
@@ -230,10 +230,11 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border bg-table-header-bg px-[22px] py-3 flex items-center gap-2.5">
+        <div className="border-t border-border bg-table-header-bg px-[22px] py-3 flex flex-col gap-2.5 sm:flex-row sm:items-center">
           <Btn
             variant="outline"
             size="md"
+            full
             onClick={() => {
               onClose();
               router.push(detailHref(record, selectedProvider, "actions"));
@@ -241,13 +242,14 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
           >
             Acciones
           </Btn>
-          <div className="flex-1" />
-          <Btn variant="outline" size="md" onClick={() => setPurgeMockOpen(true)}>
+          <div className="hidden flex-1 sm:block" />
+          <Btn variant="outline" size="md" full onClick={() => setPurgeMockOpen(true)}>
             Purgar
           </Btn>
           <Btn
             variant="primary"
             size="md"
+            full
             onClick={() => {
               onClose();
               router.push(detailHref(record, selectedProvider));

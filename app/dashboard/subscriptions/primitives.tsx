@@ -437,6 +437,7 @@ export function Btn({
     fontFamily: T.fontBody,
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1,
+    flex: full ? "1 1 0" : undefined,
     width: full ? "100%" : undefined,
     whiteSpace: "nowrap",
     letterSpacing: 0.1,

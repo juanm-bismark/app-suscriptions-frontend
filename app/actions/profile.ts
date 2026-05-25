@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { fetchApi } from "@/lib/api-client"
+import { actionErrorMessage, firstZodIssue } from "@/lib/action-error"
 import { z } from "zod"
 
 const updateProfileSchema = z.object({
@@ -19,7 +20,7 @@ export async function updateProfile(formData: FormData) {
 
     const parsed = updateProfileSchema.safeParse(rawData)
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
 
     await fetchApi("/me", {
@@ -31,7 +32,6 @@ export async function updateProfile(formData: FormData) {
     revalidatePath("/dashboard/profile")
     return { success: true, message: "Perfil actualizado exitosamente" }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo actualizar el perfil" }
+    return { error: actionErrorMessage(error, "No se pudo actualizar el perfil") }
   }
 }

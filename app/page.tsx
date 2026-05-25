@@ -12,7 +12,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-header-top via-header-bg to-header-bg">
+    <div className="min-h-screen bg-gradient-to-b from-[#CFE8E6] via-[#E7F4F2] to-[#D9EEF0]">
       <LandingNav />
       <HeroSection />
       <LandingFooter />

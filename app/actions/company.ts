@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { ApiError, fetchApi } from "@/lib/api-client"
+import { actionErrorMessage, firstZodIssue } from "@/lib/action-error"
 import {
   CompanySchema,
   PageSchema,
@@ -53,8 +54,7 @@ export async function searchCompanies(input?: { q?: string; page?: number; size?
       pages: page.pages,
     }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudieron cargar las empresas" }
+    return { error: actionErrorMessage(error, "No se pudieron cargar las empresas") }
   }
 }
 
@@ -68,8 +68,7 @@ export async function getCompanyById(id: string) {
     })
     return { success: true, company }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo cargar la empresa" }
+    return { error: actionErrorMessage(error, "No se pudo cargar la empresa") }
   }
 }
 
@@ -81,7 +80,7 @@ export async function createCompany(formData: FormData) {
       name: formData.get("name"),
     })
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
 
     const company = await fetchApi("/companies", {
@@ -96,8 +95,7 @@ export async function createCompany(formData: FormData) {
     revalidatePath("/dashboard/credentials")
     return { success: true, message: "Empresa creada exitosamente", company }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo crear la empresa. ¿Eres Administrador?" }
+    return { error: actionErrorMessage(error, "No se pudo crear la empresa. ¿Eres Administrador?") }
   }
 }
 
@@ -112,7 +110,7 @@ export async function updateCompany(formData: FormData) {
 
     const parsed = updateCompanySchema.safeParse(rawData)
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
 
     const { id, ...body } = parsed.data
@@ -128,8 +126,7 @@ export async function updateCompany(formData: FormData) {
     revalidatePath("/dashboard/credentials")
     return { success: true, message: "Empresa actualizada exitosamente", company }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo actualizar la empresa. ¿Eres Administrador?" }
+    return { error: actionErrorMessage(error, "No se pudo actualizar la empresa. ¿Eres Administrador?") }
   }
 }
 
@@ -142,7 +139,7 @@ export async function deleteCompany(formData: FormData) {
     })
 
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
 
     await fetchApi(`/companies/${parsed.data.id}`, {
@@ -155,8 +152,7 @@ export async function deleteCompany(formData: FormData) {
     revalidatePath("/dashboard/credentials")
     return { success: true, message: "Empresa eliminada" }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo eliminar la empresa. ¿Eres Administrador?" }
+    return { error: actionErrorMessage(error, "No se pudo eliminar la empresa. ¿Eres Administrador?") }
   }
 }
 
@@ -174,8 +170,7 @@ export async function getMyMoabitsProviderMapping() {
       return { ok: true as const, data: null }
     }
 
-    const message = error instanceof Error ? error.message : null
-    return { ok: false as const, error: message || "No se pudo cargar la vinculacion Moabits de tu empresa" }
+    return { ok: false as const, error: actionErrorMessage(error, "No se pudo cargar la vinculacion Moabits de tu empresa") }
   }
 }
 
@@ -192,8 +187,7 @@ export async function discoverMoabitsProviderMappings() {
     )
     return { success: true, data }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo cargar el descubrimiento de vinculaciones Moabits" }
+    return { error: actionErrorMessage(error, "No se pudo cargar el descubrimiento de vinculaciones Moabits") }
   }
 }
 
@@ -222,8 +216,7 @@ export async function listMoabitsSourceCompanies(input?: {
     )
     return { success: true as const, data }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudieron cargar las companias Moabits en cache" }
+    return { error: actionErrorMessage(error, "No se pudieron cargar las companias Moabits en cache") }
   }
 }
 
@@ -252,8 +245,7 @@ export async function listMoabitsProviderMappings(input?: {
     )
     return { success: true as const, data }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudieron cargar las vinculaciones Moabits" }
+    return { error: actionErrorMessage(error, "No se pudieron cargar las vinculaciones Moabits") }
   }
 }
 
@@ -279,8 +271,7 @@ export async function upsertMoabitsProviderMapping(companyId: string, body: Comp
       }
     }
 
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo guardar la vinculacion Moabits" }
+    return { error: actionErrorMessage(error, "No se pudo guardar la vinculacion Moabits") }
   }
 }
 
@@ -296,7 +287,6 @@ export async function deleteMoabitsProviderMapping(companyId: string) {
     revalidatePath("/dashboard/company/moabits")
     return { success: true }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo quitar la vinculacion Moabits" }
+    return { error: actionErrorMessage(error, "No se pudo quitar la vinculacion Moabits") }
   }
 }

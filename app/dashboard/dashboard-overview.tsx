@@ -27,7 +27,7 @@ type ProviderCardItem = {
   provider: Provider
   count: number | null
   partial: boolean
-  status: "ok" | "partial" | "error" | "loading"
+  status: "ok" | "partial" | "error" | "not_queried" | "loading"
   error: string | null
 }
 
@@ -108,8 +108,8 @@ export function DashboardOverview() {
             <Metric
               icon={<ServerCog className="h-4 w-4" />}
               label="Consultados"
-              value={overview ? `${overview.providerHints.filter((item) => item.status === "ok").length}/${activeProviderCount}` : "--"}
-              help={overview?.activeProviders !== null && overview?.activeProviders.length === 0 ? "Sin proveedores disponibles" : overview?.providerHints.some((item) => item.status !== "ok") ? "Hay fuentes con error o respuesta parcial" : activeProviderNames}
+              value={overview ? `${overview.providerHints.filter((item) => item.status !== "not_queried").length}/${activeProviderCount}` : "--"}
+              help={overview?.activeProviders !== null && overview?.activeProviders.length === 0 ? "Sin proveedores disponibles" : overview?.providerHints.some((item) => item.status === "error" || item.status === "partial") ? "Hay fuentes con error o respuesta parcial" : overview?.providerHints.some((item) => item.status === "not_queried") ? "Hay fuentes fuera de este resumen" : activeProviderNames}
               loading={isLoading}
             />
           </div>
@@ -168,7 +168,7 @@ export function DashboardOverview() {
                 </p>
               </div>
               <span className={getProviderStatusClassName(item)}>
-                {item.status === "loading" ? "Cargando" : item.status === "error" ? "Error" : item.status === "partial" ? "Parcial" : "OK"}
+                {item.status === "loading" ? "Cargando" : item.status === "error" ? "Error" : item.status === "partial" ? "Parcial" : item.status === "not_queried" ? "No consultado" : "OK"}
               </span>
             </div>
           </div>
@@ -190,6 +190,7 @@ function providerNames(providers: Provider[]) {
 function getProviderCardDescription(item: ProviderCardItem) {
   if (item.status === "loading") return "Consultando conexion"
   if (item.error) return item.error
+  if (item.status === "not_queried") return "Con credencial activa"
   if (item.status === "partial") return "Conexion parcial"
   if (item.status === "ok") return "Conectado"
   return "Sin respuesta"
@@ -204,6 +205,10 @@ function getProviderStatusClassName(item: Pick<ProviderCardItem, "status">) {
 
   if (item.status === "partial") {
     return `${base} bg-[#FFF7E7] text-[#765315]`
+  }
+
+  if (item.status === "not_queried") {
+    return `${base} bg-white/70 text-[#475569]`
   }
 
   if (item.status === "error") {

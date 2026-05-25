@@ -1,6 +1,7 @@
 "use server"
 
 import { ApiError } from "@/lib/api-client"
+import { actionErrorMessage } from "@/lib/action-error"
 import { importSims as importSimsApi } from "@/lib/api/sims"
 import { requireCompanyUser } from "@/lib/auth/current-user"
 import type { SimImportIn, SimImportOut } from "@/lib/types/api"
@@ -14,7 +15,7 @@ function toActionError(error: unknown): ActionErr {
     const reason = typeof error.extra?.reason === "string" ? error.extra.reason : undefined
     return {
       ok: false,
-      error: error.detail || error.message || "No se pudo completar la operación",
+      error: actionErrorMessage(error, "No se pudo completar la operación"),
       status: error.status,
       code: error.code,
       reason,
@@ -23,7 +24,7 @@ function toActionError(error: unknown): ActionErr {
 
   return {
     ok: false,
-    error: error instanceof Error ? error.message : "No se pudo completar la operación",
+    error: actionErrorMessage(error, "No se pudo completar la operación"),
   }
 }
 

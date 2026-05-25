@@ -237,7 +237,7 @@ export const SimImportOutSchema: z.ZodSchema<SimImportOut> = z.object({
 const SimDetailsErrorSchema = z.object({
   code: z.string(),
   detail: z.string().nullable().optional(),
-  retry_after: z.number().nullable().optional(),
+  retry_after: z.coerce.number().nullable().optional(),
 }).loose()
 
 const SimDetailsResultSchema = z.object({
@@ -298,15 +298,63 @@ const SyncProviderFreshnessSchema = z.object({
   }).loose().nullish(),
 }).loose()
 
-export const SyncStatusOutSchema: z.ZodSchema<SyncStatusOut> = z.object({
+const SyncInFlightJobSchema = z.object({
+  job_id: z.string(),
+  provider: ProviderSchema,
+  started_at: DateString.nullable(),
+  progress: JobProgressSchema.nullish(),
+}).loose()
+
+const SyncStatusCanonicalSchema = z.object({
   providers: z.record(z.string(), SyncProviderFreshnessSchema),
-  in_flight: z.array(z.object({
-    job_id: z.string(),
-    provider: ProviderSchema,
-    started_at: DateString.nullable(),
-    progress: JobProgressSchema.nullish(),
-  }).loose()),
-}).loose() as unknown as z.ZodSchema<SyncStatusOut>
+  in_flight: z.array(SyncInFlightJobSchema),
+}).loose()
+
+const BackendSyncFreshnessSchema = z.object({
+  provider: ProviderSchema,
+  last_finished_at: DateString.nullish(),
+  last_status: AsyncJobStatusSchema.nullish(),
+}).loose()
+
+const BackendSyncInFlightJobSchema = z.object({
+  job_id: z.string(),
+  provider: ProviderSchema.nullable(),
+  created_at: DateString,
+  progress_done: z.number().int().nonnegative(),
+  progress_total: z.number().int().nonnegative().nullable(),
+}).loose()
+
+const SyncStatusBackendSchema = z.object({
+  freshness: z.array(BackendSyncFreshnessSchema),
+  in_flight: z.array(BackendSyncInFlightJobSchema),
+}).loose().transform((value) => ({
+  providers: Object.fromEntries(
+    value.freshness.map((item) => [
+      item.provider,
+      {
+        last_finished_at: item.last_finished_at ?? null,
+        last_status: item.last_status ?? null,
+      },
+    ])
+  ),
+  in_flight: value.in_flight.flatMap((job) => {
+    if (!job.provider) return []
+    return [{
+      job_id: job.job_id,
+      provider: job.provider,
+      started_at: job.created_at,
+      progress: {
+        done: job.progress_done,
+        total: job.progress_total,
+      },
+    }]
+  }),
+}))
+
+export const SyncStatusOutSchema: z.ZodSchema<SyncStatusOut> = z.union([
+  SyncStatusCanonicalSchema,
+  SyncStatusBackendSchema,
+]) as unknown as z.ZodSchema<SyncStatusOut>
 
 export const SyncTriggerOutSchema: z.ZodSchema<SyncTriggerOut> = z.object({
   job_id: z.string(),

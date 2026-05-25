@@ -8,7 +8,7 @@ import { ROLES, type UserRole } from "@/lib/types/user";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { fmtDate, formatVal, looksMono, prettyKey } from "./data";
 import { Btn, Icon, SourceBadge, StatusPillWithNative } from "./primitives";
 import { SOURCES, T } from "./tokens";
@@ -136,9 +136,14 @@ export function SubscriptionPage({
   const router = useRouter();
   const [tab, setTab] = useState<TabId>(initialTab);
   const [copiedIccid, setCopiedIccid] = useState(false);
+  const [isRefreshing, startRefreshTransition] = useTransition();
   const src = SOURCES[subscription.provider];
   const n = subscription.normalized;
   const statusInfo = subscriptionStatusInfo(subscription);
+
+  function refreshPage() {
+    startRefreshTransition(() => router.refresh());
+  }
 
   async function copyIccid() {
     try {
@@ -195,8 +200,14 @@ export function SubscriptionPage({
             </h1>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Btn variant="outline" size="md" icon={<Icon.refresh size={13} />} onClick={() => router.refresh()}>
-              Sincronizar
+            <Btn
+              variant="outline"
+              size="md"
+              icon={isRefreshing ? <Loader2 size={13} className="animate-spin" /> : <Icon.refresh size={13} />}
+              onClick={refreshPage}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? "Sincronizando..." : "Sincronizar"}
             </Btn>
             <Btn variant="primary" size="md" color={src.color} onClick={() => setTab("actions")}>
               Acciones
@@ -547,6 +558,7 @@ function ActionsTab({
   currentUserRole?: UserRole;
 }) {
   const router = useRouter();
+  const [isRefreshing, startRefreshTransition] = useTransition();
   const src = SOURCES[subscription.provider];
   const isAdmin = currentUserRole === ROLES.ADMIN;
   const statusCapability = capabilities.capabilities.set_administrative_status;
@@ -608,7 +620,7 @@ function ActionsTab({
     if (key === "purge") {
       setPending({ kind: "purge", confirmText: "", idempotencyKey: newIdempotencyKey() });
     } else {
-      router.refresh();
+      startRefreshTransition(() => router.refresh());
     }
   }
 
@@ -760,20 +772,27 @@ function ActionsTab({
               <button
                 type="button"
                 onClick={() => handleClick(a.key)}
+                disabled={a.key === "sync" && isRefreshing}
+                aria-busy={a.key === "sync" && isRefreshing || undefined}
                 style={{
                   border: `1px solid ${a.danger ? T.danger + "66" : T.border}`,
                   background: "#fff",
                   color: a.danger ? T.danger : T.text,
                   borderRadius: 5,
                   padding: "5px 10px",
-                  cursor: "pointer",
+                  cursor: a.key === "sync" && isRefreshing ? "wait" : "pointer",
                   fontSize: 12,
                   fontWeight: 800,
                   flexShrink: 0,
                   fontFamily: T.fontBody,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  opacity: a.key === "sync" && isRefreshing ? 0.72 : 1,
                 }}
               >
-                {a.danger ? "Confirmar…" : "Ejecutar"}
+                {a.key === "sync" && isRefreshing && <Loader2 size={12} className="animate-spin" aria-hidden="true" />}
+                {a.danger ? "Confirmar…" : isRefreshing ? "Ejecutando..." : "Ejecutar"}
               </button>
             </div>
           ))}

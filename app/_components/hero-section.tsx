@@ -36,41 +36,43 @@ export function HeroSection() {
     <div className="relative overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
         <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <Logo size="md" />
+          <div className="mb-6 flex justify-center">
+            <div className="inline-flex items-center justify-center rounded-lg bg-white/75 px-5 py-3 shadow-sm shadow-[#6A9AA0]/10 ring-1 ring-white/80 backdrop-blur-sm">
+              <Logo size="md" />
+            </div>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-header-text mb-4 tracking-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#12343B] mb-4 tracking-tight">
             Gestiona tus <br className="hidden sm:block" />
-            <span className="text-header-accent">suscripciones</span>
+            <span className="text-[#247F89]">suscripciones</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-header-sub mb-8 max-w-2xl mx-auto px-4">
+          <p className="text-lg sm:text-xl text-[#4F6870] mb-8 max-w-2xl mx-auto px-4">
             Controla costos, fechas de renovación y nunca olvides una suscripción importante
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center px-4 mb-14">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full border-0 bg-[#1A4A52] text-white shadow-sm shadow-black/15 hover:bg-[#235D66] hover:text-white">
+              <Button size="lg" variant="outline" className="w-full border-0 bg-[#247F89] text-white shadow-sm shadow-[#4F8C92]/20 hover:bg-[#1D6D76] hover:text-white">
                 Inicia sesión
               </Button>
             </Link>
             <Link href="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full bg-white text-[#12343B] shadow-md shadow-black/15 hover:bg-[#DFF4F2] hover:text-[#12343B]">
+              <Button size="lg" className="w-full border border-white/75 bg-white/75 text-[#226F78] shadow-md shadow-[#6A9AA0]/10 hover:bg-[#F6FCFC] hover:text-[#184F56]">
                 Comenzar Ahora
               </Button>
             </Link>
           </div>
 
-          <div className="bg-white/[0.07] backdrop-blur rounded-lg p-6 shadow-sm shadow-black/10 ring-1 ring-white/10 sm:p-8 max-w-2xl mx-auto">
-            <h3 className="text-header-text font-semibold mb-6 text-lg">Por qué App Suscripciones</h3>
+          <div className="bg-white/45 backdrop-blur rounded-lg p-6 shadow-sm shadow-[#6A9AA0]/10 ring-1 ring-white/70 sm:p-8 max-w-2xl mx-auto">
+            <h3 className="text-[#12343B] font-semibold mb-6 text-lg">Por qué App Suscripciones</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
               {FEATURES.map((feature) => (
                 <div key={feature.title} className="flex gap-3">
-                  <span className="text-header-client text-xl flex-shrink-0">{feature.icon}</span>
+                  <span className="text-[#247F89] text-xl flex-shrink-0">{feature.icon}</span>
                   <div>
-                    <p className="text-header-text font-medium text-sm">{feature.title}</p>
-                    <p className="text-header-sub text-xs mt-1">{feature.description}</p>
+                    <p className="text-[#12343B] font-medium text-sm">{feature.title}</p>
+                    <p className="text-[#4F6870] text-xs mt-1">{feature.description}</p>
                   </div>
                 </div>
               ))}

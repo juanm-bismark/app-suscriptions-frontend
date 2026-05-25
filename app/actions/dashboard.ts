@@ -10,7 +10,7 @@ export interface DashboardProviderHint {
   provider: Provider
   count: number | null
   partial: boolean
-  status: "ok" | "partial" | "error"
+  status: "ok" | "partial" | "error" | "not_queried"
   error: string | null
 }
 
@@ -34,6 +34,7 @@ function isRoutingMapEmpty(error: unknown) {
 export async function getDashboardSubscriptionOverview(): Promise<DashboardSubscriptionOverview> {
   await requireCompanyUser()
   const activeProviders = await listActiveCredentialProviders()
+  const overviewLimit = Math.max(activeProviders?.length ?? 3, 1)
 
   if (activeProviders !== null && activeProviders.length === 0) {
     return {
@@ -46,7 +47,7 @@ export async function getDashboardSubscriptionOverview(): Promise<DashboardSubsc
   }
 
   if (activeProviders === null) {
-    const globalResult = await listSims({ limit: 1 })
+    const globalResult = await listSims({ limit: overviewLimit })
       .then((result) => ({ ok: true as const, result }))
       .catch((error: unknown) => ({ ok: false as const, error }))
 
@@ -70,31 +71,44 @@ export async function getDashboardSubscriptionOverview(): Promise<DashboardSubsc
     }
   }
 
-  const [globalResult, providerResults] = await Promise.all([
-    listSims({ limit: 1 })
-      .then((result) => ({ ok: true as const, result }))
-      .catch((error: unknown) => ({ ok: false as const, error })),
-    Promise.all(
-      activeProviders.map(async (provider) => {
-        return listSims({ provider, limit: 1 })
-          .then((result) => ({ provider, result, error: null }))
-          .catch((error: unknown) => ({ provider, result: null, error }))
-      })
-    ),
-  ])
+  const globalResult = await listSims({ limit: overviewLimit })
+    .then((result) => ({ ok: true as const, result }))
+    .catch((error: unknown) => ({ ok: false as const, error }))
 
   const globalTotal = globalResult.ok ? globalResult.result.total : null
   const needsImport = !globalResult.ok && isRoutingMapEmpty(globalResult.error)
-  const globalFailedProviders = new Map(
-    globalResult.ok
-      ? globalResult.result.failed_providers.map((failed) => [failed.provider, failed.title || failed.code])
-      : []
+  const providerStatusHints = globalResult.ok ? hintsFromProviderStatuses(globalResult.result) : []
+
+  if (providerStatusHints.length > 0) {
+    const hintsByProvider = new Map(providerStatusHints.map((hint) => [hint.provider, hint]))
+    const providerHints = activeProviders.map((provider) => hintsByProvider.get(provider) ?? {
+      provider,
+      count: null,
+      partial: false,
+      status: "not_queried" as const,
+      error: "No consultado en este resumen",
+    })
+
+    return {
+      globalTotal,
+      needsImport,
+      providerHints,
+      providerTotalHint: providerHints.reduce((sum, item) => sum + (item.count ?? 0), 0),
+      activeProviders,
+    }
+  }
+
+  const providerResults = await Promise.all(
+    activeProviders.map(async (provider) => {
+      return listSims({ provider, limit: 1 })
+        .then((result) => ({ provider, result, error: null }))
+        .catch((error: unknown) => ({ provider, result: null, error }))
+    })
   )
 
   const providerHints = providerResults.map(({ provider, result, error }) => {
-    const globalFailure = globalFailedProviders.get(provider)
-    const partial = Boolean(result?.partial || globalFailure)
-    const errorTitle = globalFailure ?? errorTitleFor(error)
+    const partial = Boolean(result?.partial)
+    const errorTitle = errorTitleFor(error)
 
     return {
       provider,
@@ -120,12 +134,12 @@ function totalOrFirstPageHint(result: SimListOut) {
 
 function hintsFromProviderStatuses(result: SimListOut): DashboardProviderHint[] {
   return (result.provider_statuses ?? [])
-    .filter((item) => item.status !== "not_queried" && isProvider(item.provider))
+    .filter((item) => isProvider(item.provider))
     .map((item) => ({
       provider: item.provider as Provider,
       count: item.count,
       partial: item.status === "partial",
-      status: item.status === "ok" ? "ok" as const : item.status === "partial" ? "partial" as const : "error" as const,
+      status: item.status === "ok" ? "ok" as const : item.status === "partial" ? "partial" as const : item.status === "not_queried" ? "not_queried" as const : "error" as const,
       error: item.title || item.code,
     }))
 }

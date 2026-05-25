@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { fetchApi } from "@/lib/api-client"
+import { actionErrorMessage, firstZodIssue } from "@/lib/action-error"
 import { requireAdmin, requireManagerOrAdmin } from "@/lib/auth/current-user"
 import { ROLES } from "@/lib/types/user"
 import { z } from "zod"
@@ -55,7 +56,7 @@ export async function createUser(formData: FormData) {
 
     const parsed = createUserSchema.safeParse(rawData)
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
     if (profile.role === ROLES.MANAGER && parsed.data.role !== ROLES.MEMBER) {
       return { error: "Managers solo pueden crear miembros" }
@@ -72,8 +73,7 @@ export async function createUser(formData: FormData) {
     revalidatePath("/dashboard/users")
     return { success: true, message: "Usuario creado exitosamente" }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo crear el usuario. ¿Tienes permisos?" }
+    return { error: actionErrorMessage(error, "No se pudo crear el usuario. ¿Tienes permisos?") }
   }
 }
 
@@ -97,7 +97,7 @@ export async function updateUser(formData: FormData) {
 
     const parsed = updateUserSchema.safeParse(rawData)
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
     if (profile.role === ROLES.MANAGER && parsed.data.role && parsed.data.role !== ROLES.MEMBER) {
       return { error: "Managers solo pueden asignar el rol miembro" }
@@ -118,8 +118,7 @@ export async function updateUser(formData: FormData) {
     revalidatePath("/dashboard/users")
     return { success: true, message: "Usuario actualizado" }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo actualizar el usuario. ¿Tienes permisos?" }
+    return { error: actionErrorMessage(error, "No se pudo actualizar el usuario. ¿Tienes permisos?") }
   }
 }
 
@@ -132,7 +131,7 @@ export async function deleteUser(formData: FormData) {
     })
 
     if (!parsed.success) {
-      return { error: parsed.error.issues[0].message }
+      return { error: firstZodIssue(parsed.error) }
     }
 
     await fetchApi(`/users/${parsed.data.id}`, {
@@ -142,7 +141,6 @@ export async function deleteUser(formData: FormData) {
     revalidatePath("/dashboard/users")
     return { success: true, message: "Usuario eliminado" }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : null
-    return { error: message || "No se pudo eliminar el usuario. ¿Tienes permisos?" }
+    return { error: actionErrorMessage(error, "No se pudo eliminar el usuario. ¿Tienes permisos?") }
   }
 }

@@ -3,6 +3,7 @@
 import { toRow, type SubscriptionRow } from "@/lib/api/sim-mapper"
 import { ApiError } from "@/lib/api-client"
 import { getJob, getSimDetails, getSyncStatus, listSims, searchSims, triggerSync, type ListSimsParams } from "@/lib/api/sims"
+import { actionErrorMessage } from "@/lib/action-error"
 import { requireAdmin, requireCompanyUser } from "@/lib/auth/current-user"
 import { isIccid, MAX_ICCID_BATCH, parseIccidList } from "@/lib/iccid"
 import type { AsyncJobOut, Provider, SimDetailsOut, SimListOut, SimSearchIn, SyncStatusOut, SyncTriggerOut } from "@/lib/types/api"
@@ -250,7 +251,7 @@ export async function loadSubscriptions(input: LoadSubscriptionsInput): Promise<
     return {
       ok: false,
       kind: "error",
-      error: actionErrorText(error, "No se pudo cargar la lista"),
+      error: actionErrorMessage(error, "No se pudo cargar la lista"),
     }
   }
 }
@@ -416,13 +417,6 @@ function readFailedProviders(value: unknown): FailedProvider[] {
     const title = "title" in item && typeof item.title === "string" ? item.title : "No se pudo consultar"
     return provider ? [{ provider, code, title }] : []
   })
-}
-
-function actionErrorText(error: unknown, fallback: string) {
-  if (error instanceof ApiError) {
-    return error.detail || error.title || error.message || fallback
-  }
-  return error instanceof Error ? error.message : fallback
 }
 
 function actionProblem(error: unknown, fallback: string): ActionProblem {

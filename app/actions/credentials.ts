@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { ApiError, fetchApi } from "@/lib/api-client"
+import { actionErrorMessage } from "@/lib/action-error"
 import {
   CredentialMetadataOutSchema,
   CredentialProbeOutSchema,
@@ -35,7 +36,7 @@ function toActionError(error: unknown): ActionErr {
   if (error instanceof ApiError) {
     return {
       ok: false,
-      error: error.detail || error.message || "No se pudo completar la operación",
+      error: actionErrorMessage(error, "No se pudo completar la operación"),
       status: error.status,
       code: error.code,
     }
@@ -43,7 +44,7 @@ function toActionError(error: unknown): ActionErr {
 
   return {
     ok: false,
-    error: error instanceof Error ? error.message : "No se pudo completar la operación",
+    error: actionErrorMessage(error, "No se pudo completar la operación"),
   }
 }
 

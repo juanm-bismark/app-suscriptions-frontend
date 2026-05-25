@@ -432,6 +432,7 @@ function ListEmptyShell({ query }: { query?: string }) {
         minHeight: "calc(100vh - 64px)",
       }}
     >
+      <style>{`@keyframes bismark-inline-spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ padding: "22px 24px 16px", borderBottom: `1px solid ${T.border}`, background: T.cardBg }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title }}>Suscripciones</h1>
       </div>
@@ -568,6 +569,7 @@ function SubscriptionsList({
   const [advPlan, setAdvPlan] = useState("")
   const [advClient, setAdvClient] = useState("")
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [isDataRefreshing, setIsDataRefreshing] = useState(false)
 
   const detailProviders = useMemo(() => {
     if (activeSrc !== "all") return [activeSrc]
@@ -750,13 +752,15 @@ function SubscriptionsList({
     return normalizeSet(next, options)
   }
 
-  function handleSincronizar() {
-    if (activeSrc === "all") {
-      queryClient.invalidateQueries({ queryKey: ["subscriptions"] })
-      queryClient.invalidateQueries({ queryKey: ["sim-details"] })
-    } else {
-      queryClient.invalidateQueries({ queryKey: ["subscriptions", activeSrc] })
-      queryClient.invalidateQueries({ queryKey: ["sim-details"] })
+  async function handleSincronizar() {
+    setIsDataRefreshing(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: activeSrc === "all" ? ["subscriptions"] : ["subscriptions", activeSrc] }),
+        queryClient.invalidateQueries({ queryKey: ["sim-details"] }),
+      ])
+    } finally {
+      setIsDataRefreshing(false)
     }
   }
 
@@ -764,6 +768,8 @@ function SubscriptionsList({
     if (!isAdmin) return
     triggerSyncMutation.mutate(provider)
   }
+
+  if (isDataRefreshing) return <LoadingState filters={filters} />
 
   return (
     <div
@@ -1008,6 +1014,11 @@ function SubscriptionsList({
             activeProvider={activeSrc === "all" ? undefined : activeSrc}
             isAdmin={isAdmin}
             onRefreshRouting={activeSrc !== "all" && isAdmin ? () => triggerProviderSync(activeSrc) : undefined}
+            isRefreshingRouting={
+              activeSrc !== "all" &&
+              ((triggerSyncMutation.variables === activeSrc && triggerSyncMutation.isPending) ||
+                (activeJobQuery.data?.provider === activeSrc && activeJobQuery.data.status !== "done" && activeJobQuery.data.status !== "failed"))
+            }
           />
         )}
         {detailsQuery.isError && (
@@ -1087,7 +1098,7 @@ function SubscriptionsList({
                 {isDetailPending ? <DetailCellSkeleton /> : secondary(r.imsi)}
               </div>
               <div style={{ ...cell, display: "flex", alignItems: "center", color: T.title, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {rowIssue ? <RowDetailState detail={rowIssue} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton wide /> : r.planDisplay}
+                {rowIssue ? <RowDetailState detail={rowIssue} fallbackValue={r.planDisplay} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton wide /> : r.planDisplay}
               </div>
               <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
                 <SourceBadge source={r.provider} size="sm" />
@@ -1297,6 +1308,7 @@ function SyncStatusStrip({
         const lastFinished = freshness?.last_finished_at ?? freshness?.last_sync_at ?? null
         const lastStatus = freshness?.last_status ?? freshness?.status ?? null
         const isBusy = Boolean(inFlightJob) || (activeJob?.provider === provider && activeJob.status !== "done" && activeJob.status !== "failed")
+        const isTriggeringProvider = isTriggering && triggeringProvider === provider
         const progress = activeJob?.provider === provider ? activeJob.progress : inFlightJob?.progress
         return (
           <div
@@ -1324,20 +1336,21 @@ function SyncStatusStrip({
             {isAdmin && (
               <button
                 type="button"
-                disabled={isTriggering && triggeringProvider === provider}
+                disabled={isTriggeringProvider || isBusy}
+                aria-busy={isTriggeringProvider || isBusy || undefined}
                 onClick={() => onTrigger(provider)}
                 title="Refrescar enrutamiento"
                 style={{
                   border: "none",
                   background: "transparent",
                   color: source.tintText,
-                  cursor: isTriggering && triggeringProvider === provider ? "wait" : "pointer",
+                  cursor: isTriggeringProvider || isBusy ? "wait" : "pointer",
                   display: "inline-flex",
                   padding: 3,
                   lineHeight: 0,
                 }}
               >
-                <Icon.refresh size={12} />
+                {isTriggeringProvider || isBusy ? <InlineSpinner color={source.tintText} size={12} /> : <Icon.refresh size={12} />}
               </button>
             )}
           </div>
@@ -1355,6 +1368,23 @@ function SyncStatusStrip({
         </span>
       )}
     </div>
+  )
+}
+
+function InlineSpinner({ color = "currentColor", size = 12 }: { color?: string; size?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        border: `2px solid ${color}55`,
+        borderTopColor: color,
+        display: "inline-block",
+        animation: "bismark-inline-spin .7s linear infinite",
+      }}
+    />
   )
 }
 
@@ -1382,12 +1412,14 @@ function DetailsResolutionNotice({
   activeProvider,
   isAdmin,
   onRefreshRouting,
+  isRefreshingRouting = false,
 }: {
   unresolved: string[]
   filteredOut: string[]
   activeProvider?: SourceId
   isAdmin: boolean
   onRefreshRouting?: () => void
+  isRefreshingRouting?: boolean
 }) {
   return (
     <div style={{ marginTop: 14, border: `1px solid ${T.warning}55`, background: "#FDF4E1", color: "#6B4A0E", borderRadius: 6, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.45, display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -1406,9 +1438,15 @@ function DetailsResolutionNotice({
         )}
       </div>
       {onRefreshRouting && (
-        <button type="button" onClick={onRefreshRouting} style={{ border: `1px solid ${T.warning}55`, background: "#fff", color: "#6B4A0E", borderRadius: 4, padding: "5px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <Icon.refresh size={12} />
-          Refrescar
+        <button
+          type="button"
+          onClick={onRefreshRouting}
+          disabled={isRefreshingRouting}
+          aria-busy={isRefreshingRouting || undefined}
+          style={{ border: `1px solid ${T.warning}55`, background: "#fff", color: "#6B4A0E", borderRadius: 4, padding: "5px 8px", fontSize: 12, fontWeight: 800, cursor: isRefreshingRouting ? "wait" : "pointer", display: "inline-flex", alignItems: "center", gap: 6, opacity: isRefreshingRouting ? 0.72 : 1 }}
+        >
+          {isRefreshingRouting ? <InlineSpinner color="#6B4A0E" size={12} /> : <Icon.refresh size={12} />}
+          {isRefreshingRouting ? "Refrescando..." : "Refrescar"}
         </button>
       )}
     </div>
@@ -1431,16 +1469,42 @@ function DetailCellSkeleton({ wide = false }: { wide?: boolean }) {
   return <span style={{ width: wide ? 92 : 58, height: 10, borderRadius: 3, background: "#E2EAEC", display: "inline-block" }} />
 }
 
-function RowDetailState({ detail, onRetry }: { detail: SimDetailsResult; onRetry: () => void }) {
+function RowDetailState({ detail, fallbackValue, onRetry }: { detail: SimDetailsResult; fallbackValue?: string | null; onRetry: () => void }) {
   const retryAfter = detail.error?.retry_after
+  const fallback = stringOrNull(fallbackValue === "—" ? null : fallbackValue)
   const label =
     detail.status === "timeout" ? "Timeout" :
     detail.status === "rate_limited" ? `Límite${retryAfter ? ` · ${retryAfter}s` : ""}` :
     detail.status === "not_found" ? "No encontrada" :
     "Error"
   const canRetry = detail.status === "timeout" || detail.status === "error" || (detail.status === "rate_limited" && !retryAfter)
+  const title = [detail.error?.code, detail.error?.detail].filter(Boolean).join(" · ") || label
+
+  if (fallback) {
+    return (
+      <span title={title} style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fallback}</span>
+        <span style={{ color: T.warning, display: "inline-flex", flexShrink: 0 }}>
+          <Icon.warn size={13} />
+        </span>
+        {canRetry && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              onRetry()
+            }}
+            style={{ border: `1px solid ${T.border}`, background: "#fff", color: T.headerBg, borderRadius: 4, padding: "2px 5px", fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}
+          >
+            Reintentar
+          </button>
+        )}
+      </span>
+    )
+  }
+
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0, color: detail.status === "not_found" ? T.muted : T.danger }}>
+    <span title={title} style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0, color: detail.status === "not_found" ? T.muted : T.danger }}>
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
       {canRetry && (
         <button

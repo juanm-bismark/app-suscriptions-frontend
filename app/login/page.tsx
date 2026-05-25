@@ -81,9 +81,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-header-top via-header-bg to-header-bg">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#D9EEF0] via-[#E7F4F2] to-[#CFE8E6]">
       {/* Header */}
-      <div className="bg-header-bg/95 shadow-sm shadow-black/10 ring-1 ring-white/5 backdrop-blur">
+      <div className="bg-[#E7F4F2]/55 shadow-sm shadow-[#6A9AA0]/5 ring-1 ring-white/35 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
             <Logo size="md" />
@@ -94,7 +94,7 @@ export default function LoginPage() {
       {/* Main */}
       <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
-          <div className="rounded-lg bg-card p-6 shadow-lg shadow-header-top/15 ring-1 ring-white/30 sm:p-8">
+          <div className="rounded-lg bg-[#FAFEFE]/92 p-6 shadow-lg shadow-[#6A9AA0]/10 ring-1 ring-white/70 backdrop-blur-sm sm:p-8">
             <div className="mx-auto mb-6 h-1 w-14 rounded-full bg-header-accent" />
             <h1 className="text-center text-3xl font-bold text-title">Inicia sesión</h1>
             <p className="mb-8 mt-2 text-center text-sm text-muted">
@@ -172,7 +172,7 @@ export default function LoginPage() {
                   type="submit"
                   loading={form.formState.isSubmitting}
                   loadingText="Iniciando..."
-                  className="mt-6 h-12 w-full bg-[#12343B] text-base font-bold text-white shadow-md shadow-header-top/15 transition-all duration-200 hover:bg-[#1A4A52] hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
+                  className="mt-6 h-12 w-full bg-[#2B8790] text-base font-bold text-white shadow-md shadow-[#6A9AA0]/20 transition-all duration-200 hover:bg-[#226F78] hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
                 >
                   Iniciar sesión
                 </Button>
@@ -181,7 +181,7 @@ export default function LoginPage() {
 
             <div className="mt-8 text-center">
               <p className="mb-3 text-sm text-muted">¿No tienes cuenta?</p>
-              <Button asChild variant="secondary" className="h-10 w-full bg-[#1A4A52] font-semibold text-white shadow-sm shadow-header-top/10 hover:bg-[#235D66] hover:text-white">
+              <Button asChild variant="secondary" className="h-10 w-full border border-white/70 bg-[#E3F3F3]/75 font-semibold text-[#226F78] shadow-sm shadow-[#6A9AA0]/10 hover:bg-[#D6ECEE] hover:text-[#184F56]">
                 <Link href="/register">
                   Crear cuenta
                 </Link>

@@ -4,6 +4,7 @@ import {
   CompanySchema,
   SubscriptionOutSchema,
   SimDetailsOutSchema,
+  SyncStatusOutSchema,
   CredentialMetadataOutSchema,
   PageSchema,
   ProblemDetailsSchema,
@@ -280,6 +281,36 @@ describe("API Validation Schemas", () => {
       }
 
       expect(() => SimDetailsOutSchema.parse(details)).not.toThrow()
+    })
+  })
+
+  describe("SyncStatusOutSchema", () => {
+    it("normalizes the backend freshness response to providers", () => {
+      const status = SyncStatusOutSchema.parse({
+        freshness: [
+          {
+            provider: "kite",
+            last_finished_at: "2026-05-25T02:00:00Z",
+            last_status: "done",
+          },
+        ],
+        in_flight: [
+          {
+            job_id: "job-1",
+            provider: "kite",
+            created_at: "2026-05-25T02:01:00Z",
+            progress_done: 10,
+            progress_total: 20,
+          },
+        ],
+      })
+
+      expect(status.providers.kite?.last_finished_at).toBe("2026-05-25T02:00:00Z")
+      expect(status.in_flight[0]).toMatchObject({
+        job_id: "job-1",
+        provider: "kite",
+        progress: { done: 10, total: 20 },
+      })
     })
   })
 
