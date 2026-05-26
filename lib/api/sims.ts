@@ -6,8 +6,12 @@ import {
   SubscriptionOutSchema,
   UsageOutSchema,
   PresenceOutSchema,
+  LocationOutSchema,
   SimDetailsOutSchema,
   SimImportOutSchema,
+  SimStatsOutSchema,
+  SmsHistoryOutSchema,
+  StatusHistoryOutSchema,
   SyncStatusOutSchema,
   SyncTriggerOutSchema,
   AsyncJobOutSchema,
@@ -15,12 +19,16 @@ import {
 import type {
   AsyncJobOut,
   PresenceOut,
+  LocationOut,
   SimDetailsIn,
   SimDetailsOut,
   SimImportIn,
   SimImportOut,
   SimListOut,
   SimSearchIn,
+  SimStatsOut,
+  SmsHistoryOut,
+  StatusHistoryOut,
   StatusChangeIn,
   SyncStatusOut,
   SyncTriggerOut,
@@ -49,6 +57,14 @@ function tele2DefaultModifiedSince() {
 }
 
 export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
+  return listSimsAt("/sims", p);
+}
+
+export async function listAdminSims(p: ListSimsParams = {}): Promise<SimListOut> {
+  return listSimsAt("/admin/sims", p);
+}
+
+async function listSimsAt(path: string, p: ListSimsParams = {}): Promise<SimListOut> {
   const modifiedSince = p.provider === "tele2" && !p.modified_since
     ? tele2DefaultModifiedSince()
     : p.modified_since;
@@ -65,11 +81,20 @@ export async function listSims(p: ListSimsParams = {}): Promise<SimListOut> {
   for (const c of p.custom ?? []) qs.append("custom", c);
 
   const q = qs.toString();
-  return fetchApi(`/sims${q ? `?${q}` : ""}`, { schema: SimListOutSchema, cache: "no-store" });
+  return fetchApi(`${path}${q ? `?${q}` : ""}`, { schema: SimListOutSchema, cache: "no-store" });
 }
 
 export async function searchSims(body: SimSearchIn): Promise<SimListOut> {
   return fetchApi("/sims/search", {
+    method: "POST",
+    body: JSON.stringify(body),
+    schema: SimListOutSchema,
+    cache: "no-store",
+  });
+}
+
+export async function searchAdminSims(body: SimSearchIn): Promise<SimListOut> {
+  return fetchApi("/admin/sims/search", {
     method: "POST",
     body: JSON.stringify(body),
     schema: SimListOutSchema,
@@ -87,6 +112,90 @@ export async function getUsage(iccid: string, qs?: string): Promise<UsageOut> {
 
 export async function getPresence(iccid: string): Promise<PresenceOut> {
   return fetchApi(`/sims/${encodeURIComponent(iccid)}/presence`, { schema: PresenceOutSchema, cache: "no-store" });
+}
+
+export async function getLocation(iccid: string): Promise<LocationOut> {
+  return fetchApi(`/sims/${encodeURIComponent(iccid)}/location`, { schema: LocationOutSchema, cache: "no-store" });
+}
+
+export async function getStatusHistory(
+  iccid: string,
+  params: { start_date?: string; end_date?: string } = {}
+): Promise<StatusHistoryOut> {
+  const qs = new URLSearchParams();
+  if (params.start_date) qs.set("start_date", params.start_date);
+  if (params.end_date) qs.set("end_date", params.end_date);
+  const q = qs.toString();
+  return fetchApi(`/sims/${encodeURIComponent(iccid)}/status-history${q ? `?${q}` : ""}`, {
+    schema: StatusHistoryOutSchema,
+    cache: "no-store",
+  });
+}
+
+export async function getSmsHistory(
+  iccid: string,
+  params: { start_date?: string; end_date?: string } = {}
+): Promise<SmsHistoryOut> {
+  const qs = new URLSearchParams();
+  if (params.start_date) qs.set("start_date", params.start_date);
+  if (params.end_date) qs.set("end_date", params.end_date);
+  const q = qs.toString();
+  return fetchApi(`/sims/${encodeURIComponent(iccid)}/sms-history${q ? `?${q}` : ""}`, {
+    schema: SmsHistoryOutSchema,
+    cache: "no-store",
+  });
+}
+
+export async function getSimStats(params: {
+  provider?: Provider;
+  status?: string;
+  imei?: string;
+  operator?: string;
+  data_service?: boolean | null;
+  sms_service?: boolean | null;
+  last_lu_till?: string;
+  custom?: string[];
+} = {}): Promise<SimStatsOut> {
+  return getSimStatsAt("/sims/stats", params);
+}
+
+export async function getAdminSimStats(params: {
+  provider?: Provider;
+  status?: string;
+  imei?: string;
+  operator?: string;
+  data_service?: boolean | null;
+  sms_service?: boolean | null;
+  last_lu_till?: string;
+  custom?: string[];
+} = {}): Promise<SimStatsOut> {
+  return getSimStatsAt("/admin/sims/stats", params);
+}
+
+async function getSimStatsAt(path: string, params: {
+  provider?: Provider;
+  status?: string;
+  imei?: string;
+  operator?: string;
+  data_service?: boolean | null;
+  sms_service?: boolean | null;
+  last_lu_till?: string;
+  custom?: string[];
+} = {}): Promise<SimStatsOut> {
+  const qs = new URLSearchParams();
+  if (params.provider) qs.set("provider", params.provider);
+  if (params.status) qs.set("status", params.status);
+  if (params.imei) qs.set("imei", params.imei);
+  if (params.operator) qs.set("operator", params.operator);
+  if (params.data_service !== undefined && params.data_service !== null) qs.set("data_service", String(params.data_service));
+  if (params.sms_service !== undefined && params.sms_service !== null) qs.set("sms_service", String(params.sms_service));
+  if (params.last_lu_till) qs.set("last_lu_till", params.last_lu_till);
+  for (const c of params.custom ?? []) qs.append("custom", c);
+  const q = qs.toString();
+  return fetchApi(`${path}${q ? `?${q}` : ""}`, {
+    schema: SimStatsOutSchema,
+    cache: "no-store",
+  });
 }
 
 export async function setSimStatus(

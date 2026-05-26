@@ -1,14 +1,14 @@
 "use client";
 
 import { newIdempotencyKey } from "@/lib/api/idempotency";
-import { getPresence, getUsage, setSimStatus } from "@/lib/api/sims";
+import { getLocation, getPresence, getSmsHistory, getStatusHistory, getUsage, setSimStatus } from "@/lib/api/sims";
 import { toast } from "@/components/ui";
-import type { PresenceOut, ProviderCapabilitiesOut, SubscriptionOut, UsageControl, UsageOut } from "@/lib/types/api";
+import type { LocationOut, PresenceOut, ProviderCapabilitiesOut, SmsHistoryOut, SmsHistoryRecord, StatusHistoryOut, StatusHistoryRecord, SubscriptionOut, UsageControl, UsageOut } from "@/lib/types/api";
 import { ROLES, type UserRole } from "@/lib/types/user";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { fmtDate, formatVal, looksMono, prettyKey } from "./data";
 import { Btn, Icon, SourceBadge, StatusPillWithNative } from "./primitives";
 import { SOURCES, T } from "./tokens";
@@ -47,6 +47,13 @@ function value(v: string | null | undefined) {
 function clean(v: string | number | null | undefined) {
   const trimmed = v == null ? undefined : String(v).trim();
   return trimmed || undefined;
+}
+
+function providerString(subscription: SubscriptionOut, key: string): string | null {
+  const raw = subscription.provider_fields?.[key];
+  if (raw == null) return null;
+  const text = String(raw).trim();
+  return text || null;
 }
 
 function planDisplay(plan: SubscriptionOut["normalized"]["plan"]) {
@@ -200,6 +207,16 @@ export function SubscriptionPage({
             </h1>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            {subscription.provider === "moabits" && (
+              <Btn
+                variant="ghost"
+                size="md"
+                icon={<Icon.download size={13} />}
+                onClick={() => downloadProviderFields(subscription)}
+              >
+                Exportar data v2
+              </Btn>
+            )}
             <Btn
               variant="outline"
               size="md"
@@ -266,9 +283,9 @@ export function SubscriptionPage({
 
       {/* Tab content */}
       <div style={{ flex: 1, padding: 24 }}>
-        {tab === "detail" && <DetailTab subscription={subscription} />}
+        {tab === "detail" && <DetailTab subscription={subscription} capabilities={capabilities} />}
         {tab === "usage" && <UsageTab subscription={subscription} />}
-        {tab === "presence" && <PresenceTab iccid={subscription.iccid} />}
+        {tab === "presence" && <PresenceTab subscription={subscription} capabilities={capabilities} />}
         {tab === "limits" && <LimitsTab subscription={subscription} />}
         {tab === "actions" && (
           <ActionsTab
@@ -321,10 +338,17 @@ function SummaryField({
 
 type DetailRow = { label: string; value: string; mono?: boolean; sub?: string; dot?: string };
 
-function DetailTab({ subscription }: { subscription: SubscriptionOut }) {
+function DetailTab({
+  subscription,
+  capabilities,
+}: {
+  subscription: SubscriptionOut;
+  capabilities: ProviderCapabilitiesOut;
+}) {
   const providerName = SOURCES[subscription.provider].name;
   const n = subscription.normalized;
   const attrs = mergedAttributes(subscription);
+  const canStatusHistory = capabilities.capabilities.status_history?.status === "supported";
   const secondaryIdentityRows = [
     { label: "IMEI", value: value(n.identity.imei), mono: true },
     { label: "Alias", value: value(n.identity.alias) },
@@ -374,6 +398,7 @@ function DetailTab({ subscription }: { subscription: SubscriptionOut }) {
           { label: "País", value: value(n.network.country), mono: true },
           { label: "RAT", value: value(n.network.rat_type), mono: true },
           { label: "Última red", value: value(n.network.last_network) },
+          { label: "IMSI conectividad", value: value(providerString(subscription, "connectivity_imsi_raw")), mono: true },
           { label: "IP actual/sesión", value: value(n.network.ip_address), mono: true },
           { label: "IPv6 actual/sesión", value: value(n.network.ipv6_address), mono: true },
           { label: "IP fija", value: value(n.network.fixed_ip_address), mono: true },
@@ -390,6 +415,7 @@ function DetailTab({ subscription }: { subscription: SubscriptionOut }) {
           { label: "Último LU", value: fmtDate(n.network.last_lu_at) },
           { label: "Primer CDR", value: fmtDate(n.network.first_cdr_at) },
           { label: "Último CDR", value: fmtDate(n.network.last_cdr_at) },
+          { label: "CDR mes", value: fmtDate(providerString(subscription, "firstcdrmonth")) },
         ]} />
       </Card>
 
@@ -430,6 +456,8 @@ function DetailTab({ subscription }: { subscription: SubscriptionOut }) {
         </Card>
       )}
 
+      {canStatusHistory && <StatusHistoryCard subscription={subscription} />}
+
       <Card title={`Campos avanzados · ${providerName}`}>
         {attrs.length ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
@@ -454,7 +482,10 @@ function FieldGrid({ rows }: { rows: DetailRow[] }) {
 }
 
 function UsageTab({ subscription }: { subscription: SubscriptionOut }) {
-  const state = useUsage(subscription.iccid, "metrics=data");
+  // Moabits rechaza explícitamente cualquier filtro `metrics` (UnsupportedOperation).
+  // Kite y Tele2 sí lo soportan.
+  const metricsQs = subscription.provider === "moabits" ? undefined : "metrics=data";
+  const state = useUsage(subscription.iccid, metricsQs);
   if (state.status === "error") return <Card title="Consumo"><Empty text={state.message} /></Card>;
   if (state.status !== "success") return <Card title="Consumo"><Empty text="Cargando consumo desde el proveedor..." /></Card>;
 
@@ -491,8 +522,18 @@ function UsageTab({ subscription }: { subscription: SubscriptionOut }) {
   );
 }
 
-function PresenceTab({ iccid }: { iccid: string }) {
-  const state = usePresence(iccid);
+function PresenceTab({
+  subscription,
+  capabilities,
+}: {
+  subscription: SubscriptionOut;
+  capabilities: ProviderCapabilitiesOut;
+}) {
+  const state = usePresence(subscription.iccid);
+  const isMoabits = subscription.provider === "moabits";
+  const canSmsHistory = capabilities.capabilities.sms_history?.status === "supported";
+  const canLocation = capabilities.capabilities.location?.status === "supported";
+
   if (state.status === "error") {
     const unsupported = state.code === "provider.unsupported_operation";
     return <Card title="Presencia y red"><Empty text={unsupported ? "Este proveedor no expone presencia para la SIM." : state.message} /></Card>;
@@ -500,14 +541,349 @@ function PresenceTab({ iccid }: { iccid: string }) {
   if (state.status !== "success") return <Card title="Presencia y red"><Empty text="Consultando presencia..." /></Card>;
   const p = state.data;
   return (
-    <Card title="Presencia y red">
+    <div style={{ display: "grid", gap: 14 }}>
+      <Card title="Presencia y red">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+          <KV label="Estado" value={p.state} dot={presenceColor(p.state)} />
+          <KV label="Última vez vista" value={fmtDate(p.last_seen_at)} />
+          <KV label="País" value={value(p.country_code)} mono />
+          <KV label="Red" value={value(p.network_name)} />
+          <KV label="RAT" value={value(p.rat_type)} mono />
+          <KV label="IP" value={value(p.ip_address)} mono />
+        </div>
+      </Card>
+      {canLocation && <LocationCard subscription={subscription} />}
+      {isMoabits && <MoabitsConnectivityCard subscription={subscription} />}
+      {canSmsHistory && <SmsHistoryCard subscription={subscription} />}
+    </div>
+  );
+}
+
+function LocationCard({ subscription }: { subscription: SubscriptionOut }) {
+  const state = useSimLocation(subscription.iccid);
+  if (state.status === "error") return <Card title="Ubicación"><Empty text={state.message} /></Card>;
+  if (state.status !== "success") return <Card title="Ubicación"><Empty text="Consultando ubicación..." /></Card>;
+  const loc = state.data;
+  const hasCoords = loc.latitude != null && loc.longitude != null;
+  const mapsUrl = hasCoords ? `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}` : null;
+  return (
+    <Card title="Ubicación">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
-        <KV label="Estado" value={p.state} dot={presenceColor(p.state)} />
-        <KV label="Última vez vista" value={fmtDate(p.last_seen_at)} />
-        <KV label="País" value={value(p.country_code)} mono />
-        <KV label="Red" value={value(p.network_name)} />
-        <KV label="RAT" value={value(p.rat_type)} mono />
-        <KV label="IP" value={value(p.ip_address)} mono />
+        <KV label="Latitud" value={formatVal(loc.latitude)} mono />
+        <KV label="Longitud" value={formatVal(loc.longitude)} mono />
+        <KV label="Fuente" value={value(loc.source)} />
+        <KV label="Actualizada" value={fmtDate(loc.timestamp)} />
+      </div>
+      {mapsUrl && (
+        <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.divider}` }}>
+          <Link href={mapsUrl} target="_blank" rel="noreferrer" style={{ color: T.headerBg, fontWeight: 700, fontSize: 13 }}>
+            Ver en mapa
+          </Link>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function SmsHistoryCard({ subscription }: { subscription: SubscriptionOut }) {
+  const [state, setState] = useState<AsyncState<SmsHistoryOut>>({ status: "loading" });
+  const [showModal, setShowModal] = useState(false);
+
+  const load = useCallback(() => {
+    setState({ status: "loading" });
+    getSmsHistory(subscription.iccid).then(
+      (data) => setState({ status: "success", data }),
+      (err) => {
+        const e = errorMessage(err);
+        setState({ status: "error", ...e });
+      }
+    );
+  }, [subscription.iccid]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const lastMo = state.status === "success"
+    ? state.data.records.find((r) => r.sms_type === "MO")
+    : undefined;
+  const lastMt = state.status === "success"
+    ? state.data.records.find((r) => r.sms_type === "MT")
+    : undefined;
+
+  const moLabel = lastMo ? fmtDate(lastMo.date) : "Sin MO en el periodo";
+  const mtLabel = lastMt ? fmtDate(lastMt.date) : "Sin MT en el periodo";
+  const deliveryLabel = lastMt
+    ? `GW ${lastMt.gateway_delivered === true ? "✓" : lastMt.gateway_delivered === false ? "✗" : "—"} · SC ${lastMt.sms_center_delivered === true ? "✓" : lastMt.sms_center_delivered === false ? "✗" : "—"}`
+    : "Sin MT en el periodo";
+
+  return (
+    <>
+      <Card title="Mensajería">
+        {state.status === "error" ? (
+          <Empty text={state.message} />
+        ) : state.status !== "success" ? (
+          <Empty text="Cargando historial SMS..." />
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+              <KV label="Último SMS recibido (MO)" value={moLabel} sub={lastMo ? truncate(lastMo.message, 60) : undefined} />
+              <KV label="Último SMS enviado (MT)" value={mtLabel} sub={lastMt ? truncate(lastMt.message, 60) : undefined} />
+              <KV label="Delivery último MT" value={deliveryLabel} mono />
+              <KV label="Total registros" value={state.data.records.length.toLocaleString("es-CO")} sub={`Periodo: ${fmtDate(state.data.period_start)} a ${fmtDate(state.data.period_end)}`} />
+            </div>
+            <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.divider}`, display: "flex", gap: 8 }}>
+              <Btn variant="primary" size="sm" icon={<Icon.refresh size={12} />} onClick={() => setShowModal(true)}>
+                Ver historial SMS
+              </Btn>
+              <Btn variant="ghost" size="sm" onClick={load}>
+                Refrescar
+              </Btn>
+            </div>
+          </>
+        )}
+      </Card>
+      {showModal && state.status === "success" && (
+        <SmsHistoryModal data={state.data} onClose={() => setShowModal(false)} />
+      )}
+    </>
+  );
+}
+
+function StatusHistoryCard({ subscription }: { subscription: SubscriptionOut }) {
+  const [state, setState] = useState<AsyncState<StatusHistoryOut>>({ status: "loading" });
+  const [showModal, setShowModal] = useState(false);
+
+  const load = useCallback(() => {
+    setState({ status: "loading" });
+    getStatusHistory(subscription.iccid).then(
+      (data) => setState({ status: "success", data }),
+      (err) => {
+        const e = errorMessage(err);
+        setState({ status: "error", ...e });
+      }
+    );
+  }, [subscription.iccid]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <Card title="Historial de estados">
+      {state.status === "error" ? (
+        <Empty text={state.message} />
+      ) : state.status !== "success" ? (
+        <Empty text="Cargando historial de estados..." />
+      ) : state.data.records.length === 0 ? (
+        <Empty text="Sin cambios de estado en el periodo." />
+      ) : (
+        <>
+          <div style={{ display: "grid" }}>
+            {state.data.records.slice(0, 8).map((record, index) => (
+              <StatusHistoryRow key={`${record.time}-${index}`} record={record} />
+            ))}
+          </div>
+          <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.divider}`, display: "flex", gap: 8 }}>
+            <Btn variant="primary" size="sm" icon={<Icon.refresh size={12} />} onClick={() => setShowModal(true)}>
+              Ver historial completo
+            </Btn>
+            <Btn variant="ghost" size="sm" onClick={load}>
+              Refrescar
+            </Btn>
+          </div>
+        </>
+      )}
+      {showModal && state.status === "success" && (
+        <StatusHistoryModal data={state.data} onClose={() => setShowModal(false)} />
+      )}
+    </Card>
+  );
+}
+
+function StatusHistoryRow({ record }: { record: StatusHistoryRecord }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 14, padding: "10px 16px", borderTop: `1px solid ${T.divider}` }}>
+      <div style={{ fontFamily: T.fontMono, color: T.muted, fontSize: 12 }}>{fmtDate(record.time)}</div>
+      <div>
+        <div style={{ color: T.title, fontWeight: 750, fontSize: 13 }}>{record.state}</div>
+        <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+          {record.automatic ? "Automático" : "Manual"}{record.reason ? ` · ${record.reason}` : ""}{record.user ? ` · ${record.user}` : ""}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusHistoryModal({ data, onClose }: { data: StatusHistoryOut; onClose: () => void }) {
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,0.42)", display: "grid", placeItems: "center", padding: 18 }}>
+      <div style={{ width: "min(860px, 100%)", maxHeight: "min(86vh, 720px)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15,23,42,0.22)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 12 }}>
+          <h3 style={{ margin: 0, color: T.title, fontSize: 16, flex: 1 }}>Historial de estados</h3>
+          <span style={{ fontSize: 12, color: T.muted }}>
+            ICCID <span style={{ fontFamily: T.fontMono }}>{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} cambios
+          </span>
+          <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: "0 6px" }}>×</button>
+        </div>
+        <div style={{ overflow: "auto", flex: 1 }}>
+          {data.records.length === 0 ? (
+            <Empty text="Sin cambios de estado en el periodo." />
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead style={{ position: "sticky", top: 0, background: T.cardBg, zIndex: 1 }}>
+                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <th style={smsTh}>Fecha</th>
+                  <th style={smsTh}>Estado</th>
+                  <th style={smsTh}>Origen</th>
+                  <th style={smsTh}>Motivo</th>
+                  <th style={smsTh}>Usuario</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.records.map((record, index) => (
+                  <tr key={`${record.time}-${index}`}>
+                    <td style={{ ...smsTd, fontFamily: T.fontMono, whiteSpace: "nowrap" }}>{fmtDate(record.time)}</td>
+                    <td style={{ ...smsTd, fontWeight: 700 }}>{record.state}</td>
+                    <td style={smsTd}>{record.automatic ? "Automático" : "Manual"}</td>
+                    <td style={smsTd}>{record.reason || "—"}</td>
+                    <td style={smsTd}>{record.user || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SmsHistoryModal({ data, onClose }: { data: SmsHistoryOut; onClose: () => void }) {
+  return (
+    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,0.42)", display: "grid", placeItems: "center", padding: 18 }}>
+      <div style={{ width: "min(860px, 100%)", maxHeight: "min(86vh, 720px)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15,23,42,0.22)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 12 }}>
+          <h3 style={{ margin: 0, color: T.title, fontSize: 16, flex: 1 }}>Historial SMS</h3>
+          <span style={{ fontSize: 12, color: T.muted }}>
+            ICCID <span style={{ fontFamily: T.fontMono }}>{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} registros
+          </span>
+          <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: "0 6px" }}>×</button>
+        </div>
+        <div style={{ overflow: "auto", flex: 1 }}>
+          {data.records.length === 0 ? (
+            <Empty text={`Sin SMS entre ${fmtDate(data.period_start)} y ${fmtDate(data.period_end)}.`} />
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead style={{ position: "sticky", top: 0, background: T.cardBg, zIndex: 1 }}>
+                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <th style={smsTh}>Fecha</th>
+                  <th style={smsTh}>Tipo</th>
+                  <th style={smsTh}>Mensaje</th>
+                  <th style={smsTh}>GW</th>
+                  <th style={smsTh}>SC</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.records.map((r, i) => <SmsRow key={`${r.date}-${i}`} record={r} />)}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const smsTh: React.CSSProperties = { textAlign: "left", padding: "8px 12px", color: T.muted, fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 };
+const smsTd: React.CSSProperties = { padding: "8px 12px", color: T.text, borderBottom: `1px solid ${T.divider}`, verticalAlign: "top" };
+
+function SmsRow({ record }: { record: SmsHistoryRecord }) {
+  const typeColor = record.sms_type === "MO" ? T.success : T.headerBg;
+  return (
+    <tr>
+      <td style={{ ...smsTd, fontFamily: T.fontMono, whiteSpace: "nowrap" }}>{fmtDate(record.date)}</td>
+      <td style={{ ...smsTd, fontWeight: 700, color: typeColor }}>{record.sms_type}</td>
+      <td style={{ ...smsTd, maxWidth: 380, wordBreak: "break-word" }}>{record.message || "—"}</td>
+      <td style={{ ...smsTd, fontFamily: T.fontMono }}>{deliveryGlyph(record.gateway_delivered)}</td>
+      <td style={{ ...smsTd, fontFamily: T.fontMono }}>{deliveryGlyph(record.sms_center_delivered)}</td>
+    </tr>
+  );
+}
+
+function deliveryGlyph(v: boolean | null): string {
+  if (v === true) return "✓";
+  if (v === false) return "✗";
+  return "—";
+}
+
+function truncate(text: string, max: number): string {
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function downloadProviderFields(subscription: SubscriptionOut) {
+  try {
+    const payload = {
+      iccid: subscription.iccid,
+      provider: subscription.provider,
+      updated_at: subscription.updated_at,
+      detail_level: subscription.detail_level,
+      provider_fields: subscription.provider_fields,
+      normalized: subscription.normalized,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${subscription.provider}-${subscription.iccid}-v2.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Data v2 descargada.");
+  } catch {
+    toast.error("No pudimos exportar la data.");
+  }
+}
+
+function MoabitsConnectivityCard({ subscription }: { subscription: SubscriptionOut }) {
+  const n = subscription.normalized;
+  const operator = clean(n.network.operator);
+  const country = clean(n.network.country);
+  const rat = clean(n.network.rat_type);
+  const ip = clean(n.network.ip_address);
+  const imsiConn = providerString(subscription, "connectivity_imsi_raw");
+  const mcc = providerString(subscription, "mcc");
+  const mnc = providerString(subscription, "mnc");
+  const sessionStarted = providerString(subscription, "session_started_at");
+  const usageKb = providerString(subscription, "usage_kb");
+  const chargeTowards = providerString(subscription, "charge_towards");
+  const dataSessionId = providerString(subscription, "data_session_id");
+  const enrichmentStatus = providerString(subscription, "enrichment_status");
+
+  const hasAny = operator || country || rat || ip || imsiConn || mcc || mnc ||
+                 sessionStarted || usageKb || chargeTowards || dataSessionId;
+
+  if (!hasAny) {
+    return (
+      <Card title="Connectivity status (Moabits v2)">
+        <Empty text="Enrichment v2 sin datos para esta SIM. Puede estar en `v1_only`." />
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="Connectivity status (Moabits v2)">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+        <KV label="Operador" value={value(operator)} />
+        <KV label="País" value={value(country)} mono />
+        <KV label="RAT" value={value(rat)} mono />
+        <KV label="IP privada" value={value(ip)} mono />
+        <KV label="IMSI conectividad" value={value(imsiConn)} mono />
+        <KV label="MCC / MNC" value={mcc || mnc ? `${value(mcc)} / ${value(mnc)}` : "—"} mono />
+        <KV label="Inicio sesión datos" value={fmtDate(sessionStarted)} />
+        <KV label="Tráfico sesión (KB)" value={value(usageKb)} mono />
+        <KV label="Charge towards" value={value(chargeTowards)} mono />
+        <KV label="Data session ID" value={value(dataSessionId)} mono />
+        <KV label="Actualizado" value={fmtDate(subscription.updated_at)} />
+        <KV label="Enrichment" value={value(enrichmentStatus)} sub="full · detail_only · connectivity_only · v1_only" />
       </div>
     </Card>
   );
@@ -571,6 +947,16 @@ function ActionsTab({
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [selectedTarget, setSelectedTarget] = useState(targets[0] ?? "");
   const [busy, setBusy] = useState(false);
+  const [awaitingSync, setAwaitingSync] = useState(false);
+
+  // Disparo el toast cuando la transición de refresh termina, no antes — así el
+  // usuario sabe que la consulta al provider concluyó y los datos en pantalla son frescos.
+  useEffect(() => {
+    if (awaitingSync && !isRefreshing) {
+      setAwaitingSync(false);
+      toast.success(`Datos refrescados desde ${src.name}.`);
+    }
+  }, [awaitingSync, isRefreshing, src.name]);
   const effectiveTarget = targets.includes(selectedTarget) ? selectedTarget : targets[0] ?? "";
 
   const isMoabitsServiceTarget =
@@ -620,6 +1006,7 @@ function ActionsTab({
     if (key === "purge") {
       setPending({ kind: "purge", confirmText: "", idempotencyKey: newIdempotencyKey() });
     } else {
+      setAwaitingSync(true);
       startRefreshTransition(() => router.refresh());
     }
   }
@@ -918,6 +1305,27 @@ function usePresence(iccid: string): AsyncState<PresenceOut> {
   useEffect(() => {
     let alive = true;
     getPresence(iccid).then(
+      (data) => alive && setState({ key: iccid, value: { status: "success", data } }),
+      (err) => {
+        const e = errorMessage(err);
+        if (alive) setState({ key: iccid, value: { status: "error", ...e } });
+      }
+    );
+    return () => {
+      alive = false;
+    };
+  }, [iccid]);
+  return state.key === iccid ? state.value : { status: "loading" };
+}
+
+function useSimLocation(iccid: string): AsyncState<LocationOut> {
+  const [state, setState] = useState<{ key: string; value: AsyncState<LocationOut> }>({
+    key: iccid,
+    value: { status: "loading" },
+  });
+  useEffect(() => {
+    let alive = true;
+    getLocation(iccid).then(
       (data) => alive && setState({ key: iccid, value: { status: "success", data } }),
       (err) => {
         const e = errorMessage(err);

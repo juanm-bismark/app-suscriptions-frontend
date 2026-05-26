@@ -85,6 +85,12 @@ export const Icon = {
       <path d="M8 5v3l2 1.5" />
     </svg>
   ),
+  download: ({ size = 14 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v9M4 7l4 4 4-4" />
+      <path d="M2 13h12" />
+    </svg>
+  ),
 };
 
 export function Avatar({

@@ -2,7 +2,7 @@
 
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
 import type { FailedProvider, LoadSubscriptionsData, LoadSubscriptionsInput, LoadSubscriptionsResult, SyncTriggerActionResult } from "@/app/actions/subscriptions"
-import { loadJob, loadSimDetails, loadSubscriptions, loadSyncStatus, triggerRoutingSync } from "@/app/actions/subscriptions"
+import { loadJob, loadSimDetails, loadSimStats, loadSubscriptions, loadSyncStatus, triggerRoutingSync } from "@/app/actions/subscriptions"
 import type { AsyncJobOut, SimDetailsResult, SyncStatusOut } from "@/lib/types/api"
 import { isIccid, MAX_ICCID_BATCH, parseIccidList } from "@/lib/iccid"
 import { positiveInt } from "@/lib/utils"
@@ -23,13 +23,15 @@ const DETAIL_STALE_TIME_MS = 30 * 1000
 const JOB_POLL_MS = 5000
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 const DEFAULT_PAGE_SIZE = 25
-const GRID_COLS = "4px minmax(170px,1.15fr) minmax(120px,.75fr) minmax(130px,.8fr) minmax(150px,1fr) 120px 170px 120px 100px"
+const GRID_COLS_DEFAULT = "4px minmax(170px,1.15fr) minmax(120px,.75fr) minmax(130px,.8fr) minmax(150px,1fr) 120px 170px 120px 100px"
+const GRID_COLS_MOABITS = "4px minmax(170px,1.15fr) 120px minmax(110px,.7fr) minmax(110px,.7fr) minmax(120px,.8fr) minmax(120px,.8fr) minmax(110px,.7fr) minmax(120px,.8fr) 100px"
 const cellH: CSSProperties = { padding: "9px 12px" }
 const cell: CSSProperties = { padding: "9px 12px", minWidth: 0 }
 
 type SourceFilter = SourceId | "all"
 type StatusFilter = string | "all"
 type QueryScope = SourceId | "global"
+type ViewScope = "company" | "global"
 type NativeStatusSelections = Partial<Record<SourceId, Set<string>>>
 
 interface QueryRequest {
@@ -245,10 +247,12 @@ export function SubscriptionsClient({
   filters,
   isAdmin = false,
   activeProviders,
+  hasCompanyScope = true,
 }: {
   filters?: LoadSubscriptionsInput
   isAdmin?: boolean
   activeProviders?: SourceId[] | null
+  hasCompanyScope?: boolean
 }) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -257,20 +261,23 @@ export function SubscriptionsClient({
   if (stateOverride === "loading") return <LoadingState filters={filters} />
   if (stateOverride === "error") return <ErrorState query={filters?.q || undefined} onRetry={retry} />
   if (stateOverride === "empty") return <ListEmptyShell query={filters?.q || undefined} />
-  return <SubscriptionsLoader filters={filters} isAdmin={isAdmin} activeProviders={activeProviders} />
+  return <SubscriptionsLoader filters={filters} isAdmin={isAdmin} activeProviders={activeProviders} hasCompanyScope={hasCompanyScope} />
 }
 
 function SubscriptionsLoader({
   filters,
   isAdmin,
   activeProviders,
+  hasCompanyScope,
 }: {
   filters?: LoadSubscriptionsInput
   isAdmin?: boolean
   activeProviders?: SourceId[] | null
+  hasCompanyScope?: boolean
 }) {
   const queryClient = useQueryClient()
-  const activeProviderIds = useMemo(() => sanitizeProviderIds(activeProviders), [activeProviders])
+  const viewScope: ViewScope = isAdmin && filters?.scope === "global" ? "global" : "company"
+  const activeProviderIds = useMemo(() => viewScope === "global" ? PROVIDER_IDS : sanitizeProviderIds(activeProviders), [activeProviders, viewScope])
   const q = filters?.q ?? ""
   const cursor = filters?.cursor ?? ""
   const pageSize = pageSizeFrom(filters?.size)
@@ -288,6 +295,7 @@ function SubscriptionsLoader({
     [activeProviderIds, q, selectedProvider, selectedStatus, statusSelections],
   )
   const listFilters: LoadSubscriptionsData["filters"] = {
+    scope: viewScope,
     provider: selectedProvider,
     status: selectedStatus,
     statuses: selectedProvider ? undefined : serializeStatusSelections(statusSelections, activeProviderIds) ?? undefined,
@@ -297,9 +305,9 @@ function SubscriptionsLoader({
 
   const results = useQueries({
     queries: queryRequests.map((request) => ({
-      queryKey: ["subscriptions", request.provider ?? "global", request.status ?? "", request.statuses ?? "", request.iccid ?? q, request.iccid ? "" : cursor, pageSize] as const,
+      queryKey: ["subscriptions", viewScope, request.provider ?? "global", request.status ?? "", request.statuses ?? "", request.iccid ?? q, request.iccid ? "" : cursor, pageSize] as const,
       queryFn: async () => {
-        const result = await loadSubscriptions({ provider: request.provider, status: request.status, statuses: request.statuses, q: request.iccid ?? filters?.q, cursor: request.iccid ? undefined : filters?.cursor, limit: pageSize })
+        const result = await loadSubscriptions({ scope: viewScope, provider: request.provider, status: request.status, statuses: request.statuses, q: request.iccid ?? filters?.q, cursor: request.iccid ? undefined : filters?.cursor, limit: pageSize })
         if (!result.ok && result.kind === "error") throw new Error(result.error)
         return result
       },
@@ -371,7 +379,7 @@ function SubscriptionsLoader({
       const providerRows = allRows.filter((row) => row.provider === provider)
       if (providerRows.length === 0) continue
 
-      queryClient.setQueryData<LoadSubscriptionsResult>(["subscriptions", provider, "", "", ""], (cached) => {
+      queryClient.setQueryData<LoadSubscriptionsResult>(["subscriptions", viewScope, provider, "", "", ""], (cached) => {
         if (!cached?.ok) return cached
         return {
           ...cached,
@@ -379,9 +387,25 @@ function SubscriptionsLoader({
         }
       })
     }
-  }, [activeProviderIds, allRows, q, queryClient])
+  }, [activeProviderIds, allRows, q, queryClient, viewScope])
 
-  if (activeProviderIds.length === 0) return <NoActiveProvidersState />
+  if (activeProviderIds.length === 0) {
+    if (!isAdmin) return <NoActiveProvidersState />
+    return (
+      <SubscriptionsList
+        key={`${viewScope}:empty`}
+        rows={[]}
+        pagination={{ nextCursor: null, total: 0, partial: false, failedProviders: [], providerStatuses: [] }}
+        filters={listFilters}
+        initialSource="all"
+        isAdmin={isAdmin}
+        activeProviders={activeProviderIds}
+        viewScope={viewScope}
+        hasCompanyScope={hasCompanyScope}
+        initialDetailLookup={undefined}
+      />
+    )
+  }
 
   if (isLoading) return <LoadingState filters={filters} />
 
@@ -392,13 +416,15 @@ function SubscriptionsLoader({
     }
     return (
       <SubscriptionsList
-        key={`${selectedProvider ?? "all"}:${filters?.status ?? ""}:${filters?.statuses ?? ""}:${q}:${cursor}:${pageSize}`}
+        key={`${viewScope}:${selectedProvider ?? "all"}:${filters?.status ?? ""}:${filters?.statuses ?? ""}:${q}:${cursor}:${pageSize}`}
         rows={[]}
         pagination={{ nextCursor: null, total: 0, partial: true, failedProviders, providerStatuses: [] }}
         filters={listFilters}
         initialSource={selectedProvider ?? "all"}
         isAdmin={isAdmin}
         activeProviders={activeProviderIds}
+        viewScope={viewScope}
+        hasCompanyScope={hasCompanyScope}
         initialDetailLookup={undefined}
       />
     )
@@ -408,13 +434,15 @@ function SubscriptionsLoader({
 
   return (
     <SubscriptionsList
-      key={`${initialSource}:${filters?.status ?? ""}:${filters?.statuses ?? ""}:${q}:${cursor}:${pageSize}`}
+      key={`${viewScope}:${initialSource}:${filters?.status ?? ""}:${filters?.statuses ?? ""}:${q}:${cursor}:${pageSize}`}
       rows={allRows}
       pagination={{ nextCursor, total: resultTotal, partial: hasPartial || failedProviders.length > 0, failedProviders, providerStatuses }}
       filters={listFilters}
       initialSource={initialSource}
       isAdmin={isAdmin}
       activeProviders={activeProviderIds}
+      viewScope={viewScope}
+      hasCompanyScope={hasCompanyScope}
       initialDetailLookup={initialDetailLookup}
     />
   )
@@ -487,6 +515,13 @@ function toDetailRow(data: NonNullable<SimDetailsResult["data"]>): SubscriptionR
   const planName = stringOrNull(n.plan.name)
   const planCode = stringOrNull(n.plan.code)
   const planId = stringOrNull(n.plan.id == null ? null : String(n.plan.id))
+  const pf = data.provider_fields ?? {}
+  const pfString = (key: string): string | null => {
+    const raw = pf[key]
+    if (raw == null) return null
+    const text = String(raw).trim()
+    return text || null
+  }
   return {
     iccid: data.iccid,
     provider: data.provider,
@@ -505,12 +540,57 @@ function toDetailRow(data: NonNullable<SimDetailsResult["data"]>): SubscriptionR
     planDisplay: planName ?? planCode ?? planId ?? "—",
     activatedAt: data.activated_at,
     updatedAt: data.updated_at,
+    imei: n.identity.imei,
+    operator: n.network.operator,
+    country: n.network.country,
+    ratType: n.network.rat_type,
+    ipAddress: n.network.ip_address,
+    dataService: n.services.data_service,
+    smsService: n.services.sms_service,
+    lastLuAt: n.network.last_lu_at,
+    lastCdrAt: n.network.last_cdr_at,
+    firstCdrMonth: pfString("firstcdrmonth"),
+    connectivityImsi: pfString("connectivity_imsi_raw"),
+    communicationPlan: stringOrNull(n.plan.communication_plan) ?? pfString("communication_plan"),
+    autorenewal: pfString("autorenewal"),
+    alias: stringOrNull(n.identity.alias) ?? pfString("alias"),
+    commercialGroup: pfString("commercial_group"),
+    supervisionGroup: pfString("supervision_group"),
+    servicePack: pfString("service_pack") ?? pfString("service_pack_id"),
+    accountId: stringOrNull(n.customer.account_id) ?? pfString("account_id"),
+    endConsumerId: pfString("end_consumer_id") ?? stringOrNull(n.customer.id) ?? null,
+    deviceId: stringOrNull(n.hardware.device_id) ?? pfString("device_id"),
+    modemId: stringOrNull(n.hardware.modem_id) ?? pfString("modem_id"),
+    eid: stringOrNull(n.identity.eid) ?? pfString("eid"),
+    euiccid: stringOrNull(n.identity.euiccid) ?? pfString("euiccid"),
+    simProfileId: stringOrNull(n.identity.sim_profile_id) ?? pfString("sim_profile_id"),
+    fixedIpAddress: stringOrNull(n.network.fixed_ip_address) ?? pfString("fixed_ip_address"),
+    productCode: planCode ?? pfString("product_code"),
+    companyCode: stringOrNull(n.customer.company_code) ?? pfString("company_code"),
+    dataLimitMb: pfString("data_limit_mb"),
+    smsLimit: pfString("sms_limit"),
+    accountCustoms: Array.from({ length: 10 }, (_, index) => pfString(`account_custom_${index + 1}`)),
+    operatorCustoms: Array.from({ length: 5 }, (_, index) => pfString(`operator_custom_${index + 1}`)),
+    customerCustoms: Array.from({ length: 5 }, (_, index) => pfString(`customer_custom_${index + 1}`)),
+    customField1: stringOrNull(n.custom_fields.custom_field_1 == null ? null : String(n.custom_fields.custom_field_1)) ?? pfString("custom_field_1"),
+    customField2: stringOrNull(n.custom_fields.custom_field_2 == null ? null : String(n.custom_fields.custom_field_2)) ?? pfString("custom_field_2"),
+    customField3: stringOrNull(n.custom_fields.custom_field_3 == null ? null : String(n.custom_fields.custom_field_3)) ?? pfString("custom_field_3"),
+    customField4: stringOrNull(n.custom_fields.custom_field_4 == null ? null : String(n.custom_fields.custom_field_4)) ?? pfString("custom_field_4"),
   }
 }
 
 function stringOrNull(value: string | null | undefined) {
   const trimmed = value?.trim()
   return trimmed || null
+}
+
+function tristateTextMatches(value: string | null, expected: "on" | "off") {
+  const normalized = (value ?? "").trim().toLowerCase()
+  if (!normalized) return false
+  const truthy = new Set(["true", "1", "yes", "enabled", "active", "on", "si", "sí"])
+  const falsy = new Set(["false", "0", "no", "disabled", "inactive", "off"])
+  if (expected === "on") return truthy.has(normalized)
+  return falsy.has(normalized)
 }
 
 function SubscriptionsList({
@@ -520,6 +600,8 @@ function SubscriptionsList({
   initialSource = "all",
   isAdmin = false,
   activeProviders = PROVIDER_IDS,
+  viewScope = "company",
+  hasCompanyScope = true,
   initialDetailLookup,
 }: {
   rows: SubscriptionRow[]
@@ -528,6 +610,8 @@ function SubscriptionsList({
   initialSource?: SourceFilter
   isAdmin?: boolean
   activeProviders?: SourceId[] | null
+  viewScope?: ViewScope
+  hasCompanyScope?: boolean
   initialDetailLookup?: LoadSubscriptionsData["detailLookup"]
 }) {
   const activeProviderIds = useMemo(() => sanitizeProviderIds(activeProviders), [activeProviders])
@@ -568,14 +652,141 @@ function SubscriptionsList({
   const [advSrcs, setAdvSrcs] = useState<Set<SourceId> | null>(null)
   const [advPlan, setAdvPlan] = useState("")
   const [advClient, setAdvClient] = useState("")
+  const [advImei, setAdvImei] = useState("")
+  const [advOperator, setAdvOperator] = useState("")
+  const [advServiceData, setAdvServiceData] = useState<"any" | "on" | "off">("any")
+  const [advServiceSms, setAdvServiceSms] = useState<"any" | "on" | "off">("any")
+  const [advStaleLuOnly, setAdvStaleLuOnly] = useState(false)
+  const [kiteAlias, setKiteAlias] = useState("")
+  const [kiteCommercialGroup, setKiteCommercialGroup] = useState("")
+  const [kiteSupervisionGroup, setKiteSupervisionGroup] = useState("")
+  const [kiteServicePack, setKiteServicePack] = useState("")
+  const [kiteCustomFields, setKiteCustomFields] = useState(["", "", "", ""])
+  const [tele2RatePlan, setTele2RatePlan] = useState("")
+  const [tele2CommunicationPlan, setTele2CommunicationPlan] = useState("")
+  const [tele2AccountId, setTele2AccountId] = useState("")
+  const [tele2AccountCustoms, setTele2AccountCustoms] = useState(Array.from({ length: 10 }, () => ""))
+  const [tele2OperatorCustoms, setTele2OperatorCustoms] = useState(Array.from({ length: 5 }, () => ""))
+  const [tele2CustomerCustoms, setTele2CustomerCustoms] = useState(Array.from({ length: 5 }, () => ""))
+  const [moabitsProductName, setMoabitsProductName] = useState("")
+  const [moabitsProductCode, setMoabitsProductCode] = useState("")
+  const [moabitsCompanyCode, setMoabitsCompanyCode] = useState("")
+  const [moabitsAutorenewal, setMoabitsAutorenewal] = useState<"any" | "on" | "off">("any")
+  const [moabitsDataLimitMb, setMoabitsDataLimitMb] = useState("")
+  const [moabitsSmsLimit, setMoabitsSmsLimit] = useState("")
+  const [moabitsCountry, setMoabitsCountry] = useState("")
+  const [moabitsRatType, setMoabitsRatType] = useState("")
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
   const [isDataRefreshing, setIsDataRefreshing] = useState(false)
+  const currentPageSize = pageSizeFrom(searchParams.get("size"))
+  const hasServerAdvancedFilters = Boolean(
+    advImei.trim() ||
+    advOperator.trim() ||
+    advServiceData !== "any" ||
+    advServiceSms !== "any" ||
+    advStaleLuOnly ||
+    kiteAlias.trim() ||
+    kiteCommercialGroup.trim() ||
+    kiteSupervisionGroup.trim() ||
+    kiteServicePack.trim() ||
+    kiteCustomFields.some((value) => value.trim()) ||
+    tele2RatePlan.trim() ||
+    tele2CommunicationPlan.trim() ||
+    tele2AccountId.trim() ||
+    tele2AccountCustoms.some((value) => value.trim()) ||
+    tele2OperatorCustoms.some((value) => value.trim()) ||
+    tele2CustomerCustoms.some((value) => value.trim()) ||
+    moabitsProductName.trim() ||
+    moabitsProductCode.trim() ||
+    moabitsCompanyCode.trim() ||
+    moabitsAutorenewal !== "any" ||
+    moabitsDataLimitMb.trim() ||
+    moabitsSmsLimit.trim() ||
+    moabitsCountry.trim() ||
+    moabitsRatType.trim()
+  )
+
+  const serverFilteredQuery = useQuery({
+    queryKey: [
+      "subscriptions-advanced",
+      viewScope,
+      activeSrc,
+      activeStatus,
+      serializeStatusSelections(statusSelections, activeProviderIds),
+      q,
+      currentPageSize,
+      advImei.trim(),
+      advOperator.trim(),
+      advServiceData,
+      advServiceSms,
+      advStaleLuOnly,
+      kiteAlias.trim(),
+      kiteCommercialGroup.trim(),
+      kiteSupervisionGroup.trim(),
+      kiteServicePack.trim(),
+      kiteCustomFields,
+      tele2RatePlan.trim(),
+      tele2CommunicationPlan.trim(),
+      tele2AccountId.trim(),
+      tele2AccountCustoms,
+      tele2OperatorCustoms,
+      tele2CustomerCustoms,
+      moabitsProductName.trim(),
+      moabitsProductCode.trim(),
+      moabitsCompanyCode.trim(),
+      moabitsAutorenewal,
+      moabitsDataLimitMb.trim(),
+      moabitsSmsLimit.trim(),
+      moabitsCountry.trim(),
+      moabitsRatType.trim(),
+    ] as const,
+    queryFn: async () => {
+      const result = await loadSubscriptions({
+        scope: viewScope,
+        provider: activeSrc === "all" ? undefined : activeSrc,
+        status: activeSrc !== "all" && activeStatus !== "all" ? activeStatus : undefined,
+        statuses: activeSrc === "all" ? serializeStatusSelections(statusSelections, activeProviderIds) ?? undefined : undefined,
+        q,
+        limit: currentPageSize,
+        imei: advImei,
+        operator: advOperator,
+        dataService: advServiceData,
+        smsService: advServiceSms,
+        staleLuOnly: advStaleLuOnly,
+        kiteAlias,
+        kiteCommercialGroup,
+        kiteSupervisionGroup,
+        kiteServicePack,
+        kiteCustomFields,
+        tele2RatePlan,
+        tele2CommunicationPlan,
+        tele2AccountId,
+        tele2AccountCustoms,
+        tele2OperatorCustoms,
+        tele2CustomerCustoms,
+        moabitsProductName,
+        moabitsProductCode,
+        moabitsCompanyCode,
+        moabitsAutorenewal,
+        moabitsDataLimitMb,
+        moabitsSmsLimit,
+        moabitsCountry,
+        moabitsRatType,
+      })
+      if (!result.ok) throw new Error(result.kind === "error" ? result.error : "No se pudo cargar la lista filtrada")
+      return result.data
+    },
+    enabled: hasServerAdvancedFilters,
+    retry: false,
+    staleTime: STALE_TIME_MS,
+  })
+  const listedRows = hasServerAdvancedFilters && serverFilteredQuery.data ? serverFilteredQuery.data.rows : initialRows
 
   const detailProviders = useMemo(() => {
     if (activeSrc !== "all") return [activeSrc]
     return undefined
   }, [activeSrc])
-  const detailIccids = useMemo(() => sortedUnique(initialRows.map((row) => row.iccid)).slice(0, MAX_ICCID_BATCH), [initialRows])
+  const detailIccids = useMemo(() => sortedUnique(listedRows.map((row) => row.iccid)).slice(0, MAX_ICCID_BATCH), [listedRows])
   const detailProviderKey = useMemo(() => sortedUnique(detailProviders ?? []), [detailProviders])
   const detailsQuery = useQuery({
     queryKey: ["sim-details", detailIccids, detailProviderKey] as const,
@@ -587,7 +798,7 @@ function SubscriptionsList({
       if (!result.ok) throw new Error(result.error.detail || result.error.title || "No se pudieron cargar los detalles")
       return result.data
     },
-    enabled: detailIccids.length > 0,
+    enabled: viewScope === "company" && detailIccids.length > 0,
     initialData: initialDetailLookup,
     retry: false,
     staleTime: DETAIL_STALE_TIME_MS,
@@ -602,6 +813,7 @@ function SubscriptionsList({
     refetchInterval: JOB_POLL_MS,
     staleTime: 0,
     retry: false,
+    enabled: viewScope === "company",
   })
   const triggerSyncMutation = useMutation({
     mutationFn: async (provider: SourceId) => triggerRoutingSync(provider),
@@ -645,6 +857,7 @@ function SubscriptionsList({
     setParam(params, "status", activeSrc !== "all" && activeStatus !== "all" ? activeStatus : null)
     setParam(params, "statuses", activeSrc === "all" ? serializeStatusSelections(statusSelections, activeProviderIds) : null)
     setParam(params, "q", q.trim() || null)
+    setParam(params, "scope", viewScope === "global" ? "global" : null)
 
     const nextFilters = new URLSearchParams(params)
     dropPaginationParams(nextFilters)
@@ -653,11 +866,11 @@ function SubscriptionsList({
     const next = params.toString()
     const current = searchParams.toString()
     if (next !== current) router.replace(`${pathname}${next ? `?${next}` : ""}`, { scroll: false })
-  }, [activeProviderIds, activeSrc, activeStatus, pathname, q, router, searchParams, statusSelections])
+  }, [activeProviderIds, activeSrc, activeStatus, pathname, q, router, searchParams, statusSelections, viewScope])
 
   const enrichedInitialRows = useMemo(
-    () => mergeDetailRows(initialRows, detailsQuery.data?.results),
-    [detailsQuery.data?.results, initialRows],
+    () => mergeDetailRows(listedRows, detailsQuery.data?.results),
+    [detailsQuery.data?.results, listedRows],
   )
 
   useEffect(() => {
@@ -684,6 +897,37 @@ function SubscriptionsList({
         if (planQ && !`${r.planName ?? ""} ${r.planCode ?? ""} ${r.planId ?? ""}`.toLowerCase().includes(planQ)) return false
         const clientQ = advClient.trim().toLowerCase()
         if (clientQ && !`${r.customerName ?? ""} ${r.customerScope ?? ""}`.toLowerCase().includes(clientQ)) return false
+        const imeiQ = advImei.trim().toLowerCase()
+        if (imeiQ && !(r.imei ?? "").toLowerCase().includes(imeiQ)) return false
+        if (activeSrc === "kite") {
+          const customValues = [r.customField1, r.customField2, r.customField3, r.customField4]
+          if (kiteCustomFields.some((value, index) => value.trim() && !(customValues[index] ?? "").toLowerCase().includes(value.trim().toLowerCase()))) return false
+          if (kiteAlias.trim() && !(r.alias ?? "").toLowerCase().includes(kiteAlias.trim().toLowerCase())) return false
+          if (kiteCommercialGroup.trim() && !(r.commercialGroup ?? "").toLowerCase().includes(kiteCommercialGroup.trim().toLowerCase())) return false
+          if (kiteSupervisionGroup.trim() && !(r.supervisionGroup ?? "").toLowerCase().includes(kiteSupervisionGroup.trim().toLowerCase())) return false
+          if (kiteServicePack.trim() && !(r.servicePack ?? "").toLowerCase().includes(kiteServicePack.trim().toLowerCase())) return false
+        }
+        if (activeSrc === "tele2") {
+          const rateQ = tele2RatePlan.trim().toLowerCase()
+          if (rateQ && !(r.planName ?? "").toLowerCase().includes(rateQ)) return false
+          const communicationQ = tele2CommunicationPlan.trim().toLowerCase()
+          if (communicationQ && !(r.communicationPlan ?? "").toLowerCase().includes(communicationQ)) return false
+          if (tele2AccountId.trim() && !(r.accountId ?? "").toLowerCase().includes(tele2AccountId.trim().toLowerCase())) return false
+          if (tele2AccountCustoms.some((value, index) => value.trim() && !(r.accountCustoms[index] ?? "").toLowerCase().includes(value.trim().toLowerCase()))) return false
+          if (tele2OperatorCustoms.some((value, index) => value.trim() && !(r.operatorCustoms[index] ?? "").toLowerCase().includes(value.trim().toLowerCase()))) return false
+          if (tele2CustomerCustoms.some((value, index) => value.trim() && !(r.customerCustoms[index] ?? "").toLowerCase().includes(value.trim().toLowerCase()))) return false
+        }
+        if (activeSrc === "moabits") {
+          const productQ = moabitsProductName.trim().toLowerCase()
+          if (productQ && !(r.planName ?? "").toLowerCase().includes(productQ)) return false
+          if (moabitsProductCode.trim() && !(r.productCode ?? "").toLowerCase().includes(moabitsProductCode.trim().toLowerCase())) return false
+          if (moabitsCompanyCode.trim() && !(r.companyCode ?? "").toLowerCase().includes(moabitsCompanyCode.trim().toLowerCase())) return false
+          if (moabitsAutorenewal !== "any" && !tristateTextMatches(r.autorenewal, moabitsAutorenewal)) return false
+          if (moabitsDataLimitMb.trim() && !(r.dataLimitMb ?? "").toLowerCase().includes(moabitsDataLimitMb.trim().toLowerCase())) return false
+          if (moabitsSmsLimit.trim() && !(r.smsLimit ?? "").toLowerCase().includes(moabitsSmsLimit.trim().toLowerCase())) return false
+          if (moabitsCountry.trim() && !(r.country ?? "").toLowerCase().includes(moabitsCountry.trim().toLowerCase())) return false
+          if (moabitsRatType.trim() && !(r.ratType ?? "").toLowerCase().includes(moabitsRatType.trim().toLowerCase())) return false
+        }
         if (isMultiIccid) return iccidList.includes(r.iccid)
         if (!draftQ.trim()) return true
         const haystack = [r.iccid, r.msisdn, r.imsi, r.status, r.statusLabel, r.provider]
@@ -692,11 +936,38 @@ function SubscriptionsList({
           .toLowerCase()
         return haystack.includes(draftQ.trim().toLowerCase())
       }),
-    [activeProviderIds, activeSrc, activeStatus, advClient, advPlan, advSrcs, draftQ, enrichedInitialRows, iccidList, isMultiIccid, statusSelections],
+    [activeProviderIds, activeSrc, activeStatus, advClient, advImei, advPlan, advSrcs, draftQ, enrichedInitialRows, iccidList, isMultiIccid, kiteAlias, kiteCommercialGroup, kiteCustomFields, kiteServicePack, kiteSupervisionGroup, moabitsAutorenewal, moabitsCompanyCode, moabitsCountry, moabitsDataLimitMb, moabitsProductCode, moabitsProductName, moabitsRatType, moabitsSmsLimit, statusSelections, tele2AccountCustoms, tele2AccountId, tele2CommunicationPlan, tele2CustomerCustoms, tele2OperatorCustoms, tele2RatePlan],
   )
 
   const statusFilterCount = activeSrc === "all" ? countStatusSelections(statusSelections, activeProviderIds) : activeStatus === "all" ? 0 : 1
-  const advCount = (advSrcs && advSrcs.size > 0 ? 1 : 0) + (advPlan.trim() ? 1 : 0) + (advClient.trim() ? 1 : 0)
+  const advCount =
+    (advSrcs && advSrcs.size > 0 ? 1 : 0) +
+    (advPlan.trim() ? 1 : 0) +
+    (advClient.trim() ? 1 : 0) +
+    (advImei.trim() ? 1 : 0) +
+    (advOperator.trim() ? 1 : 0) +
+    (advServiceData !== "any" ? 1 : 0) +
+    (advServiceSms !== "any" ? 1 : 0) +
+    (advStaleLuOnly ? 1 : 0) +
+    (activeSrc === "kite" && kiteAlias.trim() ? 1 : 0) +
+    (activeSrc === "kite" && kiteCommercialGroup.trim() ? 1 : 0) +
+    (activeSrc === "kite" && kiteSupervisionGroup.trim() ? 1 : 0) +
+    (activeSrc === "kite" && kiteServicePack.trim() ? 1 : 0) +
+    (activeSrc === "kite" ? kiteCustomFields.filter((value) => value.trim()).length : 0) +
+    (activeSrc === "tele2" && tele2RatePlan.trim() ? 1 : 0) +
+    (activeSrc === "tele2" && tele2CommunicationPlan.trim() ? 1 : 0) +
+    (activeSrc === "tele2" && tele2AccountId.trim() ? 1 : 0) +
+    (activeSrc === "tele2" ? tele2AccountCustoms.filter((value) => value.trim()).length : 0) +
+    (activeSrc === "tele2" ? tele2OperatorCustoms.filter((value) => value.trim()).length : 0) +
+    (activeSrc === "tele2" ? tele2CustomerCustoms.filter((value) => value.trim()).length : 0) +
+    (activeSrc === "moabits" && moabitsProductName.trim() ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsProductCode.trim() ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsCompanyCode.trim() ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsAutorenewal !== "any" ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsDataLimitMb.trim() ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsSmsLimit.trim() ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsCountry.trim() ? 1 : 0) +
+    (activeSrc === "moabits" && moabitsRatType.trim() ? 1 : 0)
   // When the user clicks a source tab, activeSrc changes before the URL updates.
   // During that transition, pagination metadata (cursor, total) is still from the
   // previous query scope — using it would navigate with the wrong cursor. Suppress
@@ -705,7 +976,7 @@ function SubscriptionsList({
   const isTransitioning = activeSrc !== initialSource
   const total = isTransitioning ? null : (pagination?.total ?? null)
   const effectiveNextCursor = isTransitioning ? null : (pagination?.nextCursor ?? null)
-  const pageSize = pageSizeFrom(searchParams.get("size"))
+  const pageSize = currentPageSize
   const cursorStack = useMemo(() => parseCursorStack(searchParams.get("cursor_stack")), [searchParams])
   const page = positiveInt(searchParams.get("page"), filters.cursor ? cursorStack.length + 1 : 1)
   const failedProviders = pagination?.failedProviders ?? []
@@ -740,6 +1011,30 @@ function SubscriptionsList({
     setAdvSrcs(null)
     setAdvPlan("")
     setAdvClient("")
+    setAdvImei("")
+    setAdvOperator("")
+    setAdvServiceData("any")
+    setAdvServiceSms("any")
+    setAdvStaleLuOnly(false)
+    setKiteAlias("")
+    setKiteCommercialGroup("")
+    setKiteSupervisionGroup("")
+    setKiteServicePack("")
+    setKiteCustomFields(["", "", "", ""])
+    setTele2RatePlan("")
+    setTele2CommunicationPlan("")
+    setTele2AccountId("")
+    setTele2AccountCustoms(Array.from({ length: 10 }, () => ""))
+    setTele2OperatorCustoms(Array.from({ length: 5 }, () => ""))
+    setTele2CustomerCustoms(Array.from({ length: 5 }, () => ""))
+    setMoabitsProductName("")
+    setMoabitsProductCode("")
+    setMoabitsCompanyCode("")
+    setMoabitsAutorenewal("any")
+    setMoabitsDataLimitMb("")
+    setMoabitsSmsLimit("")
+    setMoabitsCountry("")
+    setMoabitsRatType("")
   }
 
   const allSelected = <V,>(set: Set<V> | null, options: readonly V[]) => !set || set.size === options.length
@@ -756,7 +1051,7 @@ function SubscriptionsList({
     setIsDataRefreshing(true)
     try {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: activeSrc === "all" ? ["subscriptions"] : ["subscriptions", activeSrc] }),
+        queryClient.invalidateQueries({ queryKey: ["subscriptions"] }),
         queryClient.invalidateQueries({ queryKey: ["sim-details"] }),
       ])
     } finally {
@@ -767,6 +1062,14 @@ function SubscriptionsList({
   function triggerProviderSync(provider: SourceId) {
     if (!isAdmin) return
     triggerSyncMutation.mutate(provider)
+  }
+
+  function switchViewScope(nextScope: ViewScope) {
+    if (!isAdmin || (nextScope === "company" && !hasCompanyScope)) return
+    const params = new URLSearchParams(searchParams)
+    setParam(params, "scope", nextScope === "global" ? "global" : null)
+    dropPaginationParams(params)
+    router.replace(`${pathname}${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false })
   }
 
   if (isDataRefreshing) return <LoadingState filters={filters} />
@@ -803,7 +1106,48 @@ function SubscriptionsList({
               Suscripciones
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {isAdmin && (
+              <div style={{ display: "inline-flex", border: `1px solid ${T.border}`, borderRadius: 4, overflow: "hidden", background: T.pageBg }}>
+                <button
+                  type="button"
+                  onClick={() => switchViewScope("company")}
+                  disabled={!hasCompanyScope}
+                  title={hasCompanyScope ? undefined : "Admin sin company asignada"}
+                  style={{
+                    border: "none",
+                    borderRight: `1px solid ${T.border}`,
+                    background: viewScope === "company" ? T.headerBg : "transparent",
+                    color: viewScope === "company" ? "#fff" : hasCompanyScope ? T.text : T.muted,
+                    cursor: hasCompanyScope ? "pointer" : "not-allowed",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: T.fontBody,
+                    padding: "6px 10px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Vista mi company
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchViewScope("global")}
+                  style={{
+                    border: "none",
+                    background: viewScope === "global" ? T.headerBg : "transparent",
+                    color: viewScope === "global" ? "#fff" : T.text,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: T.fontBody,
+                    padding: "6px 10px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Vista global
+                </button>
+              </div>
+            )}
             <Btn variant="outline" size="sm" icon={<Icon.refresh size={13} />} onClick={handleSincronizar}>
               Sincronizar
             </Btn>
@@ -812,9 +1156,9 @@ function SubscriptionsList({
 
         <SyncStatusStrip
           activeProviders={activeProviderIds}
-          isAdmin={isAdmin}
-          status={syncStatusQuery.data}
-          statusError={syncStatusQuery.isError ? (syncStatusQuery.error instanceof Error ? syncStatusQuery.error.message : "No se pudo consultar la sincronización") : null}
+          isAdmin={isAdmin && viewScope === "company"}
+          status={viewScope === "company" ? syncStatusQuery.data : undefined}
+          statusError={viewScope === "company" && syncStatusQuery.isError ? (syncStatusQuery.error instanceof Error ? syncStatusQuery.error.message : "No se pudo consultar la sincronización") : null}
           activeJob={activeJobQuery.data}
           triggerResult={triggerSyncMutation.data}
           triggeringProvider={triggerSyncMutation.variables ?? null}
@@ -966,6 +1310,36 @@ function SubscriptionsList({
           })}
         </div>
 
+        <KpiStrip
+          rows={rows}
+          scope={viewScope}
+          activeSrc={activeSrc}
+          imei={advImei}
+          operator={advOperator}
+          dataService={advServiceData}
+          smsService={advServiceSms}
+          staleLuOnly={advStaleLuOnly}
+          kiteAlias={kiteAlias}
+          kiteCommercialGroup={kiteCommercialGroup}
+          kiteSupervisionGroup={kiteSupervisionGroup}
+          kiteServicePack={kiteServicePack}
+          kiteCustomFields={kiteCustomFields}
+          tele2RatePlan={tele2RatePlan}
+          tele2CommunicationPlan={tele2CommunicationPlan}
+          tele2AccountId={tele2AccountId}
+          tele2AccountCustoms={tele2AccountCustoms}
+          tele2OperatorCustoms={tele2OperatorCustoms}
+          tele2CustomerCustoms={tele2CustomerCustoms}
+          moabitsProductName={moabitsProductName}
+          moabitsProductCode={moabitsProductCode}
+          moabitsCompanyCode={moabitsCompanyCode}
+          moabitsAutorenewal={moabitsAutorenewal}
+          moabitsDataLimitMb={moabitsDataLimitMb}
+          moabitsSmsLimit={moabitsSmsLimit}
+          moabitsCountry={moabitsCountry}
+          moabitsRatType={moabitsRatType}
+        />
+
         <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
           <StatusFilterControls
             activeSrc={activeSrc}
@@ -1031,108 +1405,24 @@ function SubscriptionsList({
       </div>
 
       <div style={{ flex: 1, overflow: "auto", background: T.cardBg, position: "relative" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: GRID_COLS,
-            fontSize: 10.5,
-            letterSpacing: 0.6,
-            color: T.tableHeaderText,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            background: T.tableHeaderBg,
-            borderBottom: `1px solid ${T.border}`,
-            position: "sticky",
-            top: 0,
-            zIndex: 2,
-          }}
-        >
-          <div />
-          <div style={cellH}>ICCID</div>
-          <div style={cellH}>MSISDN</div>
-          <div style={cellH}>IMSI</div>
-          <div style={cellH}>Plan</div>
-          <div style={cellH}>Operador</div>
-          <div style={cellH}>Estado</div>
-          <div style={cellH}>Última actualización</div>
-          <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }} />
-        </div>
-
-        {rows.length === 0 && <EmptyState query={q || "tus filtros"} source={activeSrc} failedProviders={failedProviders} />}
-
-        {rows.map((r, i) => {
-          const src = SOURCES[r.provider]
-          const detail = detailsQuery.data?.results[r.iccid]
-          const isDetailPending = detailsQuery.isFetching && !detail
-          const rowIssue = detail && detail.status !== "ok" ? detail : null
-          const isNotFound = rowIssue?.status === "not_found"
-          const isHov = hovered === rowKey(r)
-          return (
-            <div
-              key={rowKey(r)}
-              onClick={() => { if (!isNotFound) setOpenRecord(r) }}
-              onMouseEnter={() => setHovered(rowKey(r))}
-              onMouseLeave={() => setHovered(null)}
-              style={{
-                display: "grid",
-                gridTemplateColumns: GRID_COLS,
-                alignItems: "stretch",
-                background: isNotFound ? "#F1F5F9" : isHov ? T.zebra : i % 2 ? T.zebra : T.cardBg,
-                borderBottom: `1px solid ${T.rowDivider}`,
-                cursor: isNotFound ? "not-allowed" : "pointer",
-                transition: "background .12s",
-                fontSize: 12.5,
-                opacity: isNotFound ? 0.62 : 1,
-              }}
-            >
-              <div style={{ background: src.color }} />
-              <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: T.fontMono, fontSize: 11.5, color: T.title, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {r.iccid}
-                </span>
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center", fontFamily: T.fontMono, color: T.title }}>
-                {isDetailPending ? <DetailCellSkeleton /> : secondary(r.msisdn)}
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center", fontFamily: T.fontMono, color: T.title }}>
-                {isDetailPending ? <DetailCellSkeleton /> : secondary(r.imsi)}
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center", color: T.title, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {rowIssue ? <RowDetailState detail={rowIssue} fallbackValue={r.planDisplay} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton wide /> : r.planDisplay}
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
-                <SourceBadge source={r.provider} size="sm" />
-                <span style={{ fontSize: 12, color: T.title, fontWeight: 600 }}>{src.shortName}</span>
-              </div>
-              <div style={{ ...cell, display: "flex", alignItems: "center" }}>
-                <StatusPillWithNative
-                  provider={r.provider}
-                  status={r.status}
-                  nativeStatus={r.nativeStatus}
-                  displayLabel={r.statusLabel}
-                  statusGroup={r.statusGroup}
-                  showContext={false}
-                  size="sm"
-                />
-              </div>
-              <div style={{ ...cell, fontSize: 12, color: T.text, display: "flex", alignItems: "center" }}>
-                {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(r.updatedAt)}
-              </div>
-              <div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (!isNotFound) setOpenRecord(r)
-                }}
-                title="Abrir suscripción"
-                style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 12 }}
-              >
-                <span style={{ color: T.muted, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 4 }}>
-                  <Icon.arrowRight size={13} />
-                </span>
-              </div>
-            </div>
-          )
-        })}
+        {activeSrc === "moabits"
+          ? <MoabitsTable
+              rows={rows}
+              detailsQuery={detailsQuery}
+              hovered={hovered}
+              setHovered={setHovered}
+              setOpenRecord={setOpenRecord}
+              emptyState={rows.length === 0 ? <EmptyState query={q || "tus filtros"} source={activeSrc} failedProviders={failedProviders} /> : null}
+            />
+          : <DefaultTable
+              rows={rows}
+              detailsQuery={detailsQuery}
+              hovered={hovered}
+              setHovered={setHovered}
+              setOpenRecord={setOpenRecord}
+              emptyState={rows.length === 0 ? <EmptyState query={q || "tus filtros"} source={activeSrc} failedProviders={failedProviders} /> : null}
+            />
+        }
       </div>
 
       {advOpen && (
@@ -1184,10 +1474,9 @@ function SubscriptionsList({
                 })}
               </DrawerGroup>
 
-              {isAdmin && (
-                <>
-                  <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
-                  <DrawerGroup title="BÚSQUEDA AVANZADA">
+              <>
+                <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
+                <DrawerGroup title="GENERALES">
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                         <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Plan</span>
@@ -1223,10 +1512,97 @@ function SubscriptionsList({
                           )}
                         </div>
                       </label>
+                      <TextFilterInput label="IMEI" value={advImei} onChange={setAdvImei} placeholder="359000000000001" />
+                      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                        <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Operador celular</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: T.pageBg, border: `1px solid ${advOperator.trim() ? T.headerBg : T.border}`, borderRadius: 4, padding: "6px 9px" }}>
+                          <span style={{ color: T.muted, display: "inline-flex", flexShrink: 0 }}><Icon.search size={13} /></span>
+                          <input
+                            value={advOperator}
+                            onChange={(e) => setAdvOperator(e.target.value)}
+                            placeholder="Claro, AT&T, Telefonica..."
+                            style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, fontFamily: T.fontBody, color: T.text, minWidth: 0 }}
+                          />
+                          {advOperator && (
+                            <button type="button" onClick={() => setAdvOperator("")} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", lineHeight: 0, padding: 2, flexShrink: 0 }}>
+                              <Icon.close size={11} />
+                            </button>
+                          )}
+                        </div>
+                      </label>
                     </div>
-                  </DrawerGroup>
-                </>
-              )}
+                </DrawerGroup>
+                <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
+                <DrawerGroup title="SERVICIOS Y SEÑALIZACIÓN">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      <TristateRow
+                        label="Servicio de datos"
+                        value={advServiceData}
+                        onChange={setAdvServiceData}
+                      />
+                      <TristateRow
+                        label="Servicio SMS"
+                        value={advServiceSms}
+                        onChange={setAdvServiceSms}
+                      />
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 4, cursor: "pointer", background: advStaleLuOnly ? T.tableHeaderBg : "transparent" }}>
+                        <input
+                          type="checkbox"
+                          checked={advStaleLuOnly}
+                          onChange={(e) => setAdvStaleLuOnly(e.target.checked)}
+                          style={{ accentColor: T.warning }}
+                        />
+                        <span style={{ fontSize: 12.5, color: T.title, fontWeight: 600 }}>Sólo SIMs sin LU reciente (&gt; 30 días)</span>
+                      </label>
+                    </div>
+                </DrawerGroup>
+                {isAdmin && activeSrc !== "all" && (
+                  <>
+                    <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
+                    <ProviderSpecificFilters
+                      activeSrc={activeSrc}
+                      kiteAlias={kiteAlias}
+                      setKiteAlias={setKiteAlias}
+                      kiteCommercialGroup={kiteCommercialGroup}
+                      setKiteCommercialGroup={setKiteCommercialGroup}
+                      kiteSupervisionGroup={kiteSupervisionGroup}
+                      setKiteSupervisionGroup={setKiteSupervisionGroup}
+                      kiteServicePack={kiteServicePack}
+                      setKiteServicePack={setKiteServicePack}
+                      kiteCustomFields={kiteCustomFields}
+                      setKiteCustomFields={setKiteCustomFields}
+                      tele2RatePlan={tele2RatePlan}
+                      setTele2RatePlan={setTele2RatePlan}
+                      tele2CommunicationPlan={tele2CommunicationPlan}
+                      setTele2CommunicationPlan={setTele2CommunicationPlan}
+                      tele2AccountId={tele2AccountId}
+                      setTele2AccountId={setTele2AccountId}
+                      tele2AccountCustoms={tele2AccountCustoms}
+                      setTele2AccountCustoms={setTele2AccountCustoms}
+                      tele2OperatorCustoms={tele2OperatorCustoms}
+                      setTele2OperatorCustoms={setTele2OperatorCustoms}
+                      tele2CustomerCustoms={tele2CustomerCustoms}
+                      setTele2CustomerCustoms={setTele2CustomerCustoms}
+                      moabitsProductName={moabitsProductName}
+                      setMoabitsProductName={setMoabitsProductName}
+                      moabitsProductCode={moabitsProductCode}
+                      setMoabitsProductCode={setMoabitsProductCode}
+                      moabitsCompanyCode={moabitsCompanyCode}
+                      setMoabitsCompanyCode={setMoabitsCompanyCode}
+                      moabitsAutorenewal={moabitsAutorenewal}
+                      setMoabitsAutorenewal={setMoabitsAutorenewal}
+                      moabitsDataLimitMb={moabitsDataLimitMb}
+                      setMoabitsDataLimitMb={setMoabitsDataLimitMb}
+                      moabitsSmsLimit={moabitsSmsLimit}
+                      setMoabitsSmsLimit={setMoabitsSmsLimit}
+                      moabitsCountry={moabitsCountry}
+                      setMoabitsCountry={setMoabitsCountry}
+                      moabitsRatType={moabitsRatType}
+                      setMoabitsRatType={setMoabitsRatType}
+                    />
+                  </>
+                )}
+              </>
             </div>
 
             <div style={{ padding: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, background: T.cardBg }}>
@@ -1835,6 +2211,249 @@ function DrawerGroup({ title, children }: { title: string; children: ReactNode }
   )
 }
 
+function ProviderSpecificFilters({
+  activeSrc,
+  kiteAlias,
+  setKiteAlias,
+  kiteCommercialGroup,
+  setKiteCommercialGroup,
+  kiteSupervisionGroup,
+  setKiteSupervisionGroup,
+  kiteServicePack,
+  setKiteServicePack,
+  kiteCustomFields,
+  setKiteCustomFields,
+  tele2RatePlan,
+  setTele2RatePlan,
+  tele2CommunicationPlan,
+  setTele2CommunicationPlan,
+  tele2AccountId,
+  setTele2AccountId,
+  tele2AccountCustoms,
+  setTele2AccountCustoms,
+  tele2OperatorCustoms,
+  setTele2OperatorCustoms,
+  tele2CustomerCustoms,
+  setTele2CustomerCustoms,
+  moabitsProductName,
+  setMoabitsProductName,
+  moabitsProductCode,
+  setMoabitsProductCode,
+  moabitsCompanyCode,
+  setMoabitsCompanyCode,
+  moabitsAutorenewal,
+  setMoabitsAutorenewal,
+  moabitsDataLimitMb,
+  setMoabitsDataLimitMb,
+  moabitsSmsLimit,
+  setMoabitsSmsLimit,
+  moabitsCountry,
+  setMoabitsCountry,
+  moabitsRatType,
+  setMoabitsRatType,
+}: {
+  activeSrc: SourceId
+  kiteAlias: string
+  setKiteAlias: (value: string) => void
+  kiteCommercialGroup: string
+  setKiteCommercialGroup: (value: string) => void
+  kiteSupervisionGroup: string
+  setKiteSupervisionGroup: (value: string) => void
+  kiteServicePack: string
+  setKiteServicePack: (value: string) => void
+  kiteCustomFields: string[]
+  setKiteCustomFields: (values: string[]) => void
+  tele2RatePlan: string
+  setTele2RatePlan: (value: string) => void
+  tele2CommunicationPlan: string
+  setTele2CommunicationPlan: (value: string) => void
+  tele2AccountId: string
+  setTele2AccountId: (value: string) => void
+  tele2AccountCustoms: string[]
+  setTele2AccountCustoms: (values: string[]) => void
+  tele2OperatorCustoms: string[]
+  setTele2OperatorCustoms: (values: string[]) => void
+  tele2CustomerCustoms: string[]
+  setTele2CustomerCustoms: (values: string[]) => void
+  moabitsProductName: string
+  setMoabitsProductName: (value: string) => void
+  moabitsProductCode: string
+  setMoabitsProductCode: (value: string) => void
+  moabitsCompanyCode: string
+  setMoabitsCompanyCode: (value: string) => void
+  moabitsAutorenewal: "any" | "on" | "off"
+  setMoabitsAutorenewal: (value: "any" | "on" | "off") => void
+  moabitsDataLimitMb: string
+  setMoabitsDataLimitMb: (value: string) => void
+  moabitsSmsLimit: string
+  setMoabitsSmsLimit: (value: string) => void
+  moabitsCountry: string
+  setMoabitsCountry: (value: string) => void
+  moabitsRatType: string
+  setMoabitsRatType: (value: string) => void
+}) {
+  if (activeSrc === "kite") {
+    return (
+      <DrawerGroup title="ESPECÍFICOS DEL PROVEEDOR">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <TextFilterInput label="Alias" value={kiteAlias} onChange={setKiteAlias} placeholder="Nombre de SIM..." />
+          <TextFilterInput label="Commercial group" value={kiteCommercialGroup} onChange={setKiteCommercialGroup} placeholder="Grupo comercial..." />
+          <TextFilterInput label="Supervision group" value={kiteSupervisionGroup} onChange={setKiteSupervisionGroup} placeholder="Grupo de supervisión..." />
+          <TextFilterInput label="Service pack" value={kiteServicePack} onChange={setKiteServicePack} placeholder="Pack de servicio..." />
+          {kiteCustomFields.map((value, index) => (
+            <TextFilterInput
+              key={index}
+              label={`Custom field ${index + 1}`}
+              value={value}
+              onChange={(nextValue) => {
+                const next = [...kiteCustomFields]
+                next[index] = nextValue
+                setKiteCustomFields(next)
+              }}
+              placeholder={`customField${index + 1}`}
+            />
+          ))}
+        </div>
+      </DrawerGroup>
+    )
+  }
+  if (activeSrc === "tele2") {
+    return (
+      <DrawerGroup title="ESPECÍFICOS DEL PROVEEDOR">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <TextFilterInput label="Rate plan" value={tele2RatePlan} onChange={setTele2RatePlan} placeholder="PAYU, pooled..." />
+          <TextFilterInput label="Communication plan" value={tele2CommunicationPlan} onChange={setTele2CommunicationPlan} placeholder="Data LTE SMS..." />
+          <TextFilterInput label="Account ID" value={tele2AccountId} onChange={setTele2AccountId} placeholder="100020620" />
+          <IndexedTextFilters labelPrefix="Account custom" values={tele2AccountCustoms} onChange={setTele2AccountCustoms} />
+          <IndexedTextFilters labelPrefix="Operator custom" values={tele2OperatorCustoms} onChange={setTele2OperatorCustoms} />
+          <IndexedTextFilters labelPrefix="Customer custom" values={tele2CustomerCustoms} onChange={setTele2CustomerCustoms} />
+        </div>
+      </DrawerGroup>
+    )
+  }
+  return (
+    <DrawerGroup title="ESPECÍFICOS DEL PROVEEDOR">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <TextFilterInput label="Plan asociado" value={moabitsProductName} onChange={setMoabitsProductName} placeholder="15MB Fixed Plan..." />
+        <TextFilterInput label="Código de producto" value={moabitsProductCode} onChange={setMoabitsProductCode} placeholder="FP15M-Z5-01" />
+        <TextFilterInput label="Company code" value={moabitsCompanyCode} onChange={setMoabitsCompanyCode} placeholder="48123" />
+        <TristateRow label="Auto-renovación" value={moabitsAutorenewal} onChange={setMoabitsAutorenewal} />
+        <TextFilterInput label="Límite datos MB" value={moabitsDataLimitMb} onChange={setMoabitsDataLimitMb} placeholder="1500" />
+        <TextFilterInput label="Límite SMS" value={moabitsSmsLimit} onChange={setMoabitsSmsLimit} placeholder="100" />
+        <TextFilterInput label="País" value={moabitsCountry} onChange={setMoabitsCountry} placeholder="Colombia" />
+        <TextFilterInput label="RAT" value={moabitsRatType} onChange={setMoabitsRatType} placeholder="4G, LTE..." />
+      </div>
+    </DrawerGroup>
+  )
+}
+
+function IndexedTextFilters({
+  labelPrefix,
+  values,
+  onChange,
+}: {
+  labelPrefix: string
+  values: string[]
+  onChange: (values: string[]) => void
+}) {
+  return (
+    <>
+      {values.map((value, index) => (
+        <TextFilterInput
+          key={`${labelPrefix}-${index}`}
+          label={`${labelPrefix} ${index + 1}`}
+          value={value}
+          onChange={(nextValue) => {
+            const next = [...values]
+            next[index] = nextValue
+            onChange(next)
+          }}
+          placeholder={`${labelPrefix.replace(/\s+/g, "")}${index + 1}`}
+        />
+      ))}
+    </>
+  )
+}
+
+function TextFilterInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, background: T.pageBg, border: `1px solid ${value.trim() ? T.headerBg : T.border}`, borderRadius: 4, padding: "6px 9px" }}>
+        <span style={{ color: T.muted, display: "inline-flex", flexShrink: 0 }}><Icon.search size={13} /></span>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, fontFamily: T.fontBody, color: T.text, minWidth: 0 }}
+        />
+        {value && (
+          <button type="button" onClick={() => onChange("")} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", lineHeight: 0, padding: 2, flexShrink: 0 }}>
+            <Icon.close size={11} />
+          </button>
+        )}
+      </div>
+    </label>
+  )
+}
+
+function TristateRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: "any" | "on" | "off"
+  onChange: (v: "any" | "on" | "off") => void
+}) {
+  const options: { key: "any" | "on" | "off"; label: string; tone: string }[] = [
+    { key: "any", label: "Cualquiera", tone: T.muted },
+    { key: "on", label: "Activo", tone: T.success },
+    { key: "off", label: "Inactivo", tone: T.danger },
+  ]
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
+      <div style={{ display: "flex", gap: 4 }}>
+        {options.map((o) => {
+          const active = value === o.key
+          return (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => onChange(o.key)}
+              style={{
+                flex: 1,
+                padding: "5px 8px",
+                border: `1px solid ${active ? o.tone : T.border}`,
+                background: active ? o.tone : "#fff",
+                color: active ? "#fff" : T.text,
+                borderRadius: 4,
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: T.fontBody,
+              }}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function RoutingMapEmptyState({
   failedProviders = [],
   activeProviders = PROVIDER_IDS,
@@ -1877,4 +2496,539 @@ function RoutingMapEmptyState({
       </div>
     </div>
   )
+}
+
+// ── Tablas (default / moabits) ──────────────────────────────────────────────────
+
+type DetailsQueryLike = {
+  data: { results: Record<string, SimDetailsResult> } | undefined
+  isFetching: boolean
+  refetch: () => unknown
+}
+
+interface TableProps {
+  rows: SubscriptionRow[]
+  detailsQuery: DetailsQueryLike
+  hovered: string | null
+  setHovered: (key: string | null) => void
+  setOpenRecord: (row: SubscriptionRow | null) => void
+  emptyState: ReactNode
+}
+
+function DefaultTable({ rows, detailsQuery, hovered, setHovered, setOpenRecord, emptyState }: TableProps) {
+  return (
+    <>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: GRID_COLS_DEFAULT,
+          fontSize: 10.5,
+          letterSpacing: 0.6,
+          color: T.tableHeaderText,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          background: T.tableHeaderBg,
+          borderBottom: `1px solid ${T.border}`,
+          position: "sticky",
+          top: 0,
+          zIndex: 2,
+        }}
+      >
+        <div />
+        <div style={cellH}>ICCID</div>
+        <div style={cellH}>MSISDN</div>
+        <div style={cellH}>IMSI</div>
+        <div style={cellH}>Plan</div>
+        <div style={cellH}>Operador</div>
+        <div style={cellH}>Estado</div>
+        <div style={cellH}>Última actualización</div>
+        <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }} />
+      </div>
+      {emptyState}
+      {rows.map((r, i) => {
+        const src = SOURCES[r.provider]
+        const detail = detailsQuery.data?.results[r.iccid]
+        const isDetailPending = detailsQuery.isFetching && !detail
+        const rowIssue = detail && detail.status !== "ok" ? detail : null
+        const isNotFound = rowIssue?.status === "not_found"
+        const isHov = hovered === rowKey(r)
+        return (
+          <div
+            key={rowKey(r)}
+            onClick={() => { if (!isNotFound) setOpenRecord(r) }}
+            onMouseEnter={() => setHovered(rowKey(r))}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              display: "grid",
+              gridTemplateColumns: GRID_COLS_DEFAULT,
+              alignItems: "stretch",
+              background: isNotFound ? "#F1F5F9" : isHov ? T.zebra : i % 2 ? T.zebra : T.cardBg,
+              borderBottom: `1px solid ${T.rowDivider}`,
+              cursor: isNotFound ? "not-allowed" : "pointer",
+              transition: "background .12s",
+              fontSize: 12.5,
+              opacity: isNotFound ? 0.62 : 1,
+            }}
+          >
+            <div style={{ background: src.color }} />
+            <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 11.5, color: T.title, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {r.iccid}
+              </span>
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", fontFamily: T.fontMono, color: T.title }}>
+              {isDetailPending ? <DetailCellSkeleton /> : secondary(r.msisdn)}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", fontFamily: T.fontMono, color: T.title }}>
+              {isDetailPending ? <DetailCellSkeleton /> : secondary(r.imsi)}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", color: T.title, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {rowIssue ? <RowDetailState detail={rowIssue} fallbackValue={r.planDisplay} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton wide /> : r.planDisplay}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
+              <SourceBadge source={r.provider} size="sm" />
+              <span style={{ fontSize: 12, color: T.title, fontWeight: 600 }}>{src.shortName}</span>
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center" }}>
+              <StatusPillWithNative
+                provider={r.provider}
+                status={r.status}
+                nativeStatus={r.nativeStatus}
+                displayLabel={r.statusLabel}
+                statusGroup={r.statusGroup}
+                showContext={false}
+                size="sm"
+              />
+            </div>
+            <div style={{ ...cell, fontSize: 12, color: T.text, display: "flex", alignItems: "center" }}>
+              {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(r.updatedAt)}
+            </div>
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!isNotFound) setOpenRecord(r)
+              }}
+              title="Abrir suscripción"
+              style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 12 }}
+            >
+              <span style={{ color: T.muted, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 4 }}>
+                <Icon.arrowRight size={13} />
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+function MoabitsTable({ rows, detailsQuery, hovered, setHovered, setOpenRecord, emptyState }: TableProps) {
+  return (
+    <>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: GRID_COLS_MOABITS,
+          fontSize: 10.5,
+          letterSpacing: 0.6,
+          color: T.tableHeaderText,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          background: T.tableHeaderBg,
+          borderBottom: `1px solid ${T.border}`,
+          position: "sticky",
+          top: 0,
+          zIndex: 2,
+        }}
+      >
+        <div />
+        <div style={cellH}>ICCID</div>
+        <div style={cellH}>Estado</div>
+        <div style={cellH}>LastLu</div>
+        <div style={cellH}>LastCdr</div>
+        <div style={cellH}>IMEI</div>
+        <div style={cellH}>Operador</div>
+        <div style={cellH}>IMSI</div>
+        <div style={cellH}>Servicios</div>
+        <div style={{ ...cellH, textAlign: "right", paddingRight: 16 }} />
+      </div>
+      {emptyState}
+      {rows.map((r, i) => {
+        const src = SOURCES[r.provider]
+        const detail = detailsQuery.data?.results[r.iccid]
+        const isDetailPending = detailsQuery.isFetching && !detail
+        const rowIssue = detail && detail.status !== "ok" ? detail : null
+        const isNotFound = rowIssue?.status === "not_found"
+        const isHov = hovered === rowKey(r)
+        const luStale = isStaleLu(r.lastLuAt)
+        return (
+          <div
+            key={rowKey(r)}
+            onClick={() => { if (!isNotFound) setOpenRecord(r) }}
+            onMouseEnter={() => setHovered(rowKey(r))}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              display: "grid",
+              gridTemplateColumns: GRID_COLS_MOABITS,
+              alignItems: "stretch",
+              background: isNotFound ? "#F1F5F9" : isHov ? T.zebra : i % 2 ? T.zebra : T.cardBg,
+              borderBottom: `1px solid ${T.rowDivider}`,
+              cursor: isNotFound ? "not-allowed" : "pointer",
+              transition: "background .12s",
+              fontSize: 12.5,
+              opacity: isNotFound ? 0.62 : 1,
+            }}
+          >
+            <div style={{ background: src.color }} />
+            <div style={{ ...cell, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 11.5, color: T.title, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {r.iccid}
+              </span>
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center" }}>
+              <StatusPillWithNative
+                provider={r.provider}
+                status={r.status}
+                nativeStatus={r.nativeStatus}
+                displayLabel={r.statusLabel}
+                statusGroup={r.statusGroup}
+                showContext={false}
+                size="sm"
+              />
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", color: luStale ? T.warning : T.text, fontWeight: luStale ? 700 : 500 }}>
+              {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(r.lastLuAt)}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", color: T.text }}>
+              {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(r.lastCdrAt)}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", fontFamily: T.fontMono, color: T.title }}>
+              {isDetailPending ? <DetailCellSkeleton /> : secondary(r.imei)}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", color: T.title, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {rowIssue ? <RowDetailState detail={rowIssue} fallbackValue={r.operator ?? "—"} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton /> : (r.operator ?? "—")}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", fontFamily: T.fontMono, color: T.title }}>
+              {isDetailPending ? <DetailCellSkeleton /> : secondary(r.imsi)}
+            </div>
+            <div style={{ ...cell, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <ServicePill enabled={r.dataService} label="Datos" />
+              <ServicePill enabled={r.smsService} label="SMS" />
+            </div>
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!isNotFound) setOpenRecord(r)
+              }}
+              title="Abrir suscripción"
+              style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", paddingRight: 12 }}
+            >
+              <span style={{ color: T.muted, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 4 }}>
+                <Icon.arrowRight size={13} />
+              </span>
+            </div>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+function ServicePill({ enabled, label }: { enabled: boolean | null; label: string }) {
+  const tone = enabled === true ? { bg: "#D7ECE4", color: "#1F6B53" } : enabled === false ? { bg: "#FADDD6", color: "#9B3A2A" } : { bg: T.zebra, color: T.muted }
+  return (
+    <span style={{ background: tone.bg, color: tone.color, fontSize: 10.5, fontWeight: 700, padding: "2px 7px", borderRadius: 99, letterSpacing: 0.2 }}>
+      {label} {enabled === true ? "✓" : enabled === false ? "✗" : "—"}
+    </span>
+  )
+}
+
+// ── KPIs dinamicos ──────────────────────────────────────────────────────────────
+
+const STALE_LU_MS = 30 * 24 * 60 * 60 * 1000
+
+type KpiBucket = { key: string; label: string; count: number; tone: string }
+
+function KpiStrip({
+  rows,
+  scope,
+  activeSrc,
+  imei,
+  operator,
+  dataService,
+  smsService,
+  staleLuOnly,
+  kiteAlias,
+  kiteCommercialGroup,
+  kiteSupervisionGroup,
+  kiteServicePack,
+  kiteCustomFields,
+  tele2RatePlan,
+  tele2CommunicationPlan,
+  tele2AccountId,
+  tele2AccountCustoms,
+  tele2OperatorCustoms,
+  tele2CustomerCustoms,
+  moabitsProductName,
+  moabitsProductCode,
+  moabitsCompanyCode,
+  moabitsAutorenewal,
+  moabitsDataLimitMb,
+  moabitsSmsLimit,
+  moabitsCountry,
+  moabitsRatType,
+}: {
+  rows: SubscriptionRow[]
+  scope: ViewScope
+  activeSrc: SourceFilter
+  imei?: string
+  operator?: string
+  dataService?: "any" | "on" | "off"
+  smsService?: "any" | "on" | "off"
+  staleLuOnly?: boolean
+  kiteAlias?: string
+  kiteCommercialGroup?: string
+  kiteSupervisionGroup?: string
+  kiteServicePack?: string
+  kiteCustomFields?: string[]
+  tele2RatePlan?: string
+  tele2CommunicationPlan?: string
+  tele2AccountId?: string
+  tele2AccountCustoms?: string[]
+  tele2OperatorCustoms?: string[]
+  tele2CustomerCustoms?: string[]
+  moabitsProductName?: string
+  moabitsProductCode?: string
+  moabitsCompanyCode?: string
+  moabitsAutorenewal?: "any" | "on" | "off"
+  moabitsDataLimitMb?: string
+  moabitsSmsLimit?: string
+  moabitsCountry?: string
+  moabitsRatType?: string
+}) {
+  const providerFilterKey = JSON.stringify({
+    kiteAlias,
+    kiteCommercialGroup,
+    kiteSupervisionGroup,
+    kiteServicePack,
+    kiteCustomFields,
+    tele2RatePlan,
+    tele2CommunicationPlan,
+    tele2AccountId,
+    tele2AccountCustoms,
+    tele2OperatorCustoms,
+    tele2CustomerCustoms,
+    moabitsProductName,
+    moabitsProductCode,
+    moabitsCompanyCode,
+    moabitsAutorenewal,
+    moabitsDataLimitMb,
+    moabitsSmsLimit,
+    moabitsCountry,
+    moabitsRatType,
+  })
+  const statsQuery = useQuery({
+    queryKey: ["sim-stats", scope, activeSrc, imei?.trim() ?? "", operator?.trim() ?? "", dataService ?? "any", smsService ?? "any", Boolean(staleLuOnly), providerFilterKey] as const,
+    queryFn: async () => {
+      const result = await loadSimStats({
+        scope,
+        provider: activeSrc === "all" ? undefined : activeSrc,
+        imei: imei?.trim() || undefined,
+        operator: operator?.trim() || undefined,
+        dataService,
+        smsService,
+        staleLuOnly,
+        kiteAlias,
+        kiteCommercialGroup,
+        kiteSupervisionGroup,
+        kiteServicePack,
+        kiteCustomFields,
+        tele2RatePlan,
+        tele2CommunicationPlan,
+        tele2AccountId,
+        tele2AccountCustoms,
+        tele2OperatorCustoms,
+        tele2CustomerCustoms,
+        moabitsProductName,
+        moabitsProductCode,
+        moabitsCompanyCode,
+        moabitsAutorenewal,
+        moabitsDataLimitMb,
+        moabitsSmsLimit,
+        moabitsCountry,
+        moabitsRatType,
+      })
+      if (!result.ok) throw new Error(result.error.detail || result.error.title || "No se pudieron cargar los KPIs")
+      return result.data
+    },
+    retry: false,
+    staleTime: STALE_TIME_MS,
+  })
+  const buckets = useMemo<KpiBucket[]>(
+    () => statsQuery.data ? computeKpisFromStats(statsQuery.data, activeSrc) : computeKpis(rows, activeSrc),
+    [activeSrc, rows, statsQuery.data],
+  )
+  const isInitialStatsLoading = statsQuery.isLoading && !statsQuery.data
+  const isRefreshingStats = statsQuery.isFetching && !isInitialStatsLoading
+  const displayBuckets = isInitialStatsLoading ? computeKpisFromStats({ total: 0, by_status: {}, stale_lu_count: 0 }, activeSrc) : buckets
+  if (displayBuckets.length === 0) return null
+  return (
+    <div
+      aria-busy={statsQuery.isFetching || undefined}
+      aria-live="polite"
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${displayBuckets.length}, minmax(120px, 1fr))`,
+        gap: 1,
+        background: T.border,
+        borderRadius: 6,
+        overflow: "hidden",
+        marginTop: 16,
+      }}
+    >
+      {displayBuckets.map((b) => (
+        <div key={b.key} style={{ background: T.cardBg, padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: b.tone, flexShrink: 0 }} />
+            <span style={{ fontSize: 10.5, letterSpacing: 0.7, color: T.muted, fontWeight: 700, textTransform: "uppercase" }}>
+              {b.label}
+            </span>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: T.title, fontFamily: T.fontMono, letterSpacing: -0.3 }}>
+            {isInitialStatsLoading ? <KpiCountSkeleton /> : b.count.toLocaleString("es-CO")}
+          </div>
+        </div>
+      ))}
+      {(isInitialStatsLoading || isRefreshingStats || statsQuery.isError || statsQuery.data?.partial) && (
+        <div style={{ gridColumn: `1 / -1`, background: T.cardBg, color: T.muted, fontSize: 11.5, padding: "7px 12px", borderTop: `1px solid ${T.border}` }}>
+          {isInitialStatsLoading
+            ? "Cargando KPIs agregados..."
+            : isRefreshingStats
+              ? "Actualizando KPIs agregados..."
+              : statsQuery.isError
+                ? "KPIs de la página actual."
+                : "Conteo aproximado, base parcial."}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function KpiCountSkeleton() {
+  return (
+    <span
+      className="animate-pulse"
+      style={{
+        display: "inline-block",
+        width: 64,
+        height: 25,
+        borderRadius: 4,
+        background: T.zebra,
+        verticalAlign: "middle",
+      }}
+    />
+  )
+}
+
+function computeKpisFromStats(stats: { total: number; by_status: Record<string, number>; stale_lu_count: number }, activeSrc: SourceFilter): KpiBucket[] {
+  const total: KpiBucket = { key: "total", label: "Total líneas", count: stats.total, tone: T.headerBg }
+  const staleLu: KpiBucket = { key: "stale-lu", label: "Sin LU reciente", count: stats.stale_lu_count, tone: T.warning }
+  const statusCount = (needle: string) =>
+    Object.entries(stats.by_status).reduce((sum, [status, count]) => statusKey(status).includes(needle) ? sum + count : sum, 0)
+  if (activeSrc === "moabits") {
+    return [
+      total,
+      { key: "active", label: "Activas", count: statusCount("active"), tone: T.success },
+      { key: "ready", label: "Ready", count: statusCount("ready"), tone: T.headerAccent },
+      { key: "suspended", label: "Suspendidas", count: statusCount("suspended"), tone: T.danger },
+      staleLu,
+    ]
+  }
+  if (activeSrc === "kite") {
+    return [
+      total,
+      { key: "active", label: "ACTIVE", count: stats.by_status.ACTIVE ?? 0, tone: T.success },
+      { key: "test", label: "TEST", count: stats.by_status.TEST ?? 0, tone: T.headerAccent },
+      { key: "activation_pendant", label: "Activation Pendant", count: stats.by_status.ACTIVATION_PENDANT ?? 0, tone: T.warning },
+      { key: "inactive_new", label: "INACTIVE", count: stats.by_status.INACTIVE_NEW ?? 0, tone: T.muted },
+      staleLu,
+    ]
+  }
+  if (activeSrc === "tele2") {
+    return [
+      total,
+      { key: "activated", label: "ACTIVATED", count: stats.by_status.ACTIVATED ?? 0, tone: T.success },
+      { key: "deactivated", label: "DEACTIVATED", count: stats.by_status.DEACTIVATED ?? 0, tone: T.warning },
+      { key: "purged", label: "PURGED", count: stats.by_status.PURGED ?? 0, tone: T.danger },
+      { key: "inventory", label: "INVENTORY", count: stats.by_status.INVENTORY ?? 0, tone: T.muted },
+      staleLu,
+    ]
+  }
+  return [total, staleLu]
+}
+
+function computeKpis(rows: SubscriptionRow[], activeSrc: SourceFilter): KpiBucket[] {
+  if (rows.length === 0) return []
+
+  const total: KpiBucket = { key: "total", label: "Total líneas", count: rows.length, tone: T.headerBg }
+  const staleLuCount = rows.filter((r) => isStaleLu(r.lastLuAt)).length
+  const staleLu: KpiBucket = { key: "stale-lu", label: "Sin LU reciente", count: staleLuCount, tone: T.warning }
+
+  if (activeSrc === "moabits") {
+    return [
+      total,
+      countByStatus(rows, "active", "Activas", T.success),
+      countByStatus(rows, "ready", "Ready", T.headerAccent),
+      countByStatus(rows, "suspended", "Suspendidas", T.danger),
+      staleLu,
+    ]
+  }
+  if (activeSrc === "kite") {
+    return [
+      total,
+      countByStatus(rows, "active", "ACTIVE", T.success),
+      countByStatus(rows, "test", "TEST", T.headerAccent),
+      countByStatus(rows, "activation_pendant", "Activation Pendant", T.warning),
+      countByStatus(rows, "inactive_new", "INACTIVE", T.muted),
+      staleLu,
+    ]
+  }
+  if (activeSrc === "tele2") {
+    return [
+      total,
+      countByStatus(rows, "activated", "ACTIVATED", T.success),
+      countByStatus(rows, "deactivated", "DEACTIVATED", T.warning),
+      countByStatus(rows, "purged", "PURGED", T.danger),
+      countByStatus(rows, "inventory", "INVENTORY", T.muted),
+      staleLu,
+    ]
+  }
+
+  return [
+    total,
+    countByGroup(rows, "active_like", "Activas", T.success),
+    countByGroup(rows, "test_like", "Test", T.headerAccent),
+    countByGroup(rows, "suspended_like", "Suspendidas/Inactivas", T.warning),
+    countByGroup(rows, "purged_like", "Purgadas", T.danger),
+    countByGroup(rows, "terminal_like", "Terminales", T.muted),
+    staleLu,
+  ]
+}
+
+function countByStatus(rows: SubscriptionRow[], statusKeyValue: string, label: string, tone: string): KpiBucket {
+  const key = statusKeyValue.toLowerCase()
+  const count = rows.filter((r) => (r.status || "").trim().toLowerCase() === key).length
+  return { key: `status-${key}`, label, count, tone }
+}
+
+function countByGroup(rows: SubscriptionRow[], group: string, label: string, tone: string): KpiBucket {
+  const count = rows.filter((r) => (r.statusGroup || "").toLowerCase() === group).length
+  return { key: `group-${group}`, label, count, tone }
+}
+
+function isStaleLu(value: string | null): boolean {
+  if (!value) return true
+  const ts = Date.parse(value)
+  if (Number.isNaN(ts)) return true
+  return Date.now() - ts > STALE_LU_MS
 }

@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { Profile, Company } from "@/lib/types/user"
-import type { AsyncJobOut, SimDetailsOut, SimListOut, SyncStatusOut, SyncTriggerOut, UsageOut, PresenceOut, SimImportOut } from "@/lib/types/api/sims"
+import type { AsyncJobOut, LocationOut, SimDetailsOut, SimListOut, SimStatsOut, SmsHistoryOut, StatusHistoryOut, SyncStatusOut, SyncTriggerOut, UsageOut, PresenceOut, SimImportOut } from "@/lib/types/api/sims"
 import type { SubscriptionOut } from "@/lib/types/api/sims"
 import type { CredentialMetadataOut, CredentialProbeOut, CompanyProviderMappingOut, MoabitsSourceCompanyOut, LocalCompanyMoabitsMappingOut, MoabitsProviderMappingDiscoveryOut, CredentialTestOut } from "@/lib/types/api"
 import type { ProviderCapabilitiesOut, CapabilityOut } from "@/lib/types/api/providers"
@@ -230,8 +230,55 @@ export const PresenceOutSchema: z.ZodSchema<PresenceOut> = z.object({
   last_seen_at: DateString.nullable(),
 }).loose()
 
+export const LocationOutSchema: z.ZodSchema<LocationOut> = z.object({
+  iccid: z.string(),
+  latitude: z.union([z.string(), z.number()]).nullable(),
+  longitude: z.union([z.string(), z.number()]).nullable(),
+  accuracy_m: z.union([z.string(), z.number()]).nullable(),
+  timestamp: DateString.nullable(),
+  source: z.string().nullable(),
+}).loose()
+
 export const SimImportOutSchema: z.ZodSchema<SimImportOut> = z.object({
   imported: z.number().int().nonnegative(),
+}).loose()
+
+export const SmsHistoryOutSchema: z.ZodSchema<SmsHistoryOut> = z.object({
+  iccid: z.string(),
+  period_start: DateString,
+  period_end: DateString,
+  records: z.array(z.object({
+    iccid: z.string(),
+    date: DateString,
+    message: z.string(),
+    sms_type: z.enum(["MO", "MT"]),
+    gateway_delivered: z.boolean().nullable(),
+    sms_center_delivered: z.boolean().nullable(),
+  }).loose()),
+}).loose()
+
+export const StatusHistoryOutSchema: z.ZodSchema<StatusHistoryOut> = z.object({
+  iccid: z.string(),
+  period_start: DateString.nullable(),
+  period_end: DateString.nullable(),
+  records: z.array(z.object({
+    state: z.string(),
+    automatic: z.boolean(),
+    time: DateString,
+    reason: z.string().nullable(),
+    user: z.string().nullable(),
+  }).loose()),
+}).loose()
+
+export const SimStatsOutSchema: z.ZodSchema<SimStatsOut> = z.object({
+  total: z.number().int().nonnegative(),
+  by_status: z.record(z.string(), z.number().int().nonnegative()),
+  by_status_group: z.record(z.string(), z.number().int().nonnegative()),
+  stale_lu_count: z.number().int().nonnegative(),
+  provider: ProviderSchema.nullable(),
+  fresh_at: DateString,
+  partial: z.boolean(),
+  failed_providers: z.array(FailedProviderSchema),
 }).loose()
 
 const SimDetailsErrorSchema = z.object({

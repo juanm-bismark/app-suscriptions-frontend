@@ -20,7 +20,9 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
   const activeProviders = await listActiveCredentialProviders()
 
   const params = await searchParams
+  const initialScope: "company" | "global" = single(params.scope) === "global" || !profile.company_id ? "global" : "company"
   const filters = {
+    scope: initialScope,
     provider: single(params.provider),
     status: single(params.status),
     statuses: single(params.statuses),
@@ -31,7 +33,12 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
 
   return (
     <Suspense fallback={<LoadingState filters={filters} />}>
-      <SubscriptionsClient filters={filters} isAdmin={profile.role === ROLES.ADMIN} activeProviders={activeProviders} />
+      <SubscriptionsClient
+        filters={filters}
+        isAdmin={profile.role === ROLES.ADMIN}
+        activeProviders={activeProviders}
+        hasCompanyScope={Boolean(profile.company_id)}
+      />
     </Suspense>
   )
 }

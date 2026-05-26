@@ -88,6 +88,15 @@ export interface PresenceOut {
   last_seen_at: string | null;
 }
 
+export interface LocationOut {
+  iccid: string;
+  latitude: string | number | null;
+  longitude: string | number | null;
+  accuracy_m: string | number | null;
+  timestamp: string | null;
+  source: string | null;
+}
+
 export interface StatusChangeIn {
   target: SimStatus;
   data_service?: boolean | null;
@@ -104,6 +113,13 @@ export interface SimSearchFilters {
   msisdn?: string | null;
   modified_since?: string | null;
   modified_till?: string | null;
+  imei?: string | null;
+  operator?: string | null;
+  data_service?: boolean | null;
+  sms_service?: boolean | null;
+  last_lu_since?: string | null;
+  last_lu_till?: string | null;
+  imsi_list?: string[] | null;
   custom?: Record<string, string> | null;
 }
 
@@ -116,6 +132,48 @@ export interface SimSearchIn {
 
 export interface SimImportIn { sims: { iccid: string; provider: Provider }[]; }
 export interface SimImportOut { imported: number; }
+
+export interface SmsHistoryRecord {
+  iccid: string;
+  date: string;
+  message: string;
+  sms_type: "MO" | "MT";
+  gateway_delivered: boolean | null;
+  sms_center_delivered: boolean | null;
+}
+
+export interface SmsHistoryOut {
+  iccid: string;
+  period_start: string;
+  period_end: string;
+  records: SmsHistoryRecord[];
+}
+
+export interface StatusHistoryRecord {
+  state: string;
+  automatic: boolean;
+  time: string;
+  reason: string | null;
+  user: string | null;
+}
+
+export interface StatusHistoryOut {
+  iccid: string;
+  period_start: string | null;
+  period_end: string | null;
+  records: StatusHistoryRecord[];
+}
+
+export interface SimStatsOut {
+  total: number;
+  by_status: Record<string, number>;
+  by_status_group: Record<string, number>;
+  stale_lu_count: number;
+  provider: Provider | null;
+  fresh_at: string;
+  partial: boolean;
+  failed_providers: { provider: string; code: string; title: string }[];
+}
 
 export type SimDetailsStatus = "ok" | "not_found" | "timeout" | "error" | "rate_limited";
 

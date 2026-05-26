@@ -30,6 +30,7 @@ export async function listActiveCredentialProviders(): Promise<ActiveCredentialP
   if (profile.role !== ROLES.ADMIN && profile.role !== ROLES.MANAGER) {
     return null;
   }
+  if (!profile.company_id) return null;
 
   const credentials = await fetchApi("/companies/me/credentials", {
     schema: CredentialMetadataOutSchema.array(),
