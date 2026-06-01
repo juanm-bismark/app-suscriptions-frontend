@@ -1,4 +1,5 @@
 import { Link2, Link2Off } from "lucide-react"
+import { formatDate } from "@/lib/formatters"
 import type { CompanyProviderMappingOut } from "@/lib/types/api"
 
 type Props = {
@@ -8,14 +9,14 @@ type Props = {
 
 export function MoabitsCompanyMappingInfo({ mapping, error }: Props) {
   return (
-    <section className="bg-[#F5FAFA] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
+    <section className="bg-panel-soft rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
       <h2 className="text-xl font-semibold text-title mb-1">Vinculación Moabits</h2>
       <p className="text-sm text-muted mb-4">
         Empresa Moabits asignada a tu compañía para sincronización de suscripciones.
       </p>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
+        <div className="mb-4 rounded-lg bg-warning-soft p-4 text-sm text-warning-text-soft shadow-sm shadow-warn-bg/5">
           {error}
         </div>
       )}
@@ -23,7 +24,7 @@ export function MoabitsCompanyMappingInfo({ mapping, error }: Props) {
       {mapping ? (
         <div className="rounded-lg bg-white/70 p-4 shadow-sm shadow-header-top/5">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#DDF1F2] text-[#12343B]">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-ink-teal">
               <Link2 className="h-4 w-4" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -35,7 +36,7 @@ export function MoabitsCompanyMappingInfo({ mapping, error }: Props) {
                 {mapping.clie_id != null && <> · clie_id: {mapping.clie_id}</>}
               </p>
               <p className="mt-1 text-xs text-muted">
-                Actualizado {formatDate(mapping.updated_at)}
+                Actualizado {formatDate(mapping.updated_at, { fallback: "—", locale: "es" })}
               </p>
             </div>
           </div>
@@ -43,7 +44,7 @@ export function MoabitsCompanyMappingInfo({ mapping, error }: Props) {
       ) : (
         !error && (
           <div className="flex items-center gap-3 rounded-lg bg-white/55 p-4 shadow-sm shadow-header-top/5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#F5EAEA] text-[#7A3535]">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-danger-soft text-danger-text-soft">
               <Link2Off className="h-4 w-4" aria-hidden="true" />
             </span>
             <div>
@@ -57,11 +58,4 @@ export function MoabitsCompanyMappingInfo({ mapping, error }: Props) {
       )}
     </section>
   )
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "—"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "—"
-  return new Intl.DateTimeFormat("es", { dateStyle: "medium" }).format(date)
 }

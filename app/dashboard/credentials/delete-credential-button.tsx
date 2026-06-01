@@ -59,7 +59,7 @@ export function DeleteCredentialButton({
           type="button"
           title="Eliminar credencial"
           aria-label={`Eliminar credencial de ${providerName(provider)}`}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-[#FFF7E7] text-[#6D4D16] hover:bg-[#FEEAC8] hover:text-[#4A3010]"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-warning-soft text-warning-text-soft hover:bg-[#FEEAC8] hover:text-warning-hover-soft"
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -68,7 +68,7 @@ export function DeleteCredentialButton({
       <AlertDialogContent className="gap-5">
         <AlertDialogHeader className="space-y-3">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#FFF7E7] text-[#765315]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-warning-soft text-warning-icon-soft">
               <AlertTriangle className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -80,7 +80,7 @@ export function DeleteCredentialButton({
           </div>
         </AlertDialogHeader>
 
-        <div className="rounded-md border border-[#F2D49B] bg-[#FFF7E7] px-3 py-2 text-sm font-medium text-[#6D4D16]">
+        <div className="rounded-md border border-warning-border-soft bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
           Esta acción no elimina datos históricos, pero detiene el uso de estas credenciales de inmediato.
         </div>
 
@@ -92,7 +92,7 @@ export function DeleteCredentialButton({
             loading={loading}
             loadingText="Desactivando..."
             onClick={() => void handleDelete()}
-            className="border-0 bg-[#6D4D16] text-white shadow-sm hover:bg-[#4A3010]"
+            className="border-0 bg-warning-text-soft text-white shadow-sm hover:bg-warning-hover-soft"
           >
             Desactivar
           </Button>

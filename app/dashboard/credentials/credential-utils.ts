@@ -1,14 +1,13 @@
 import type { Provider } from "@/lib/types/api"
-import { SOURCES, STATUS_TONES } from "@/app/dashboard/subscriptions/tokens"
+import { PROVIDER_IDS, providerDisplayName } from "@/lib/provider-meta"
+import { formatDateTime } from "@/lib/formatters"
+import { STATUS_TONES } from "@/lib/status-tones"
 
-export const PROVIDERS: Provider[] = ["kite", "tele2", "moabits"]
-
-export function isProvider(value: string): value is Provider {
-  return PROVIDERS.includes(value as Provider)
-}
+export { isProvider } from "@/lib/provider-meta"
+export const PROVIDERS: Provider[] = PROVIDER_IDS
 
 export function providerName(provider: Provider) {
-  return SOURCES[provider].name
+  return providerDisplayName(provider)
 }
 
 export const EXPIRY_META = {
@@ -19,13 +18,10 @@ export const EXPIRY_META = {
 } as const
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return "Sin registro"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+  return formatDateTime(value, {
+    fallback: "Sin registro",
+    invalidFallback: value ?? "Sin registro",
+  })
 }
 
 export function scopeValue(scope: Record<string, unknown>, key: string) {

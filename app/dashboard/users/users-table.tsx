@@ -65,11 +65,11 @@ export default function UsersTable({
   return (
     <div className="space-y-3">
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-success-soft text-success-text-soft p-3 rounded-md">{success}</div>}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
-          <thead className="text-xs text-[#285F68] uppercase bg-[#EAF6F7]">
+          <thead className="text-xs text-action-soft uppercase bg-hover-soft">
             <tr>
               <th scope="col" className="px-6 py-3 rounded-tl-lg">Nombre</th>
               <th scope="col" className="px-6 py-3">Correo</th>
@@ -188,5 +188,5 @@ function roleBadgeClassName(role: User["role"]) {
   const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase"
   if (role === "admin") return `${base} bg-[#FCEADC] text-[#7A3A10]`
   if (role === "manager") return `${base} bg-[#EDE5FB] text-[#422889]`
-  return `${base} bg-[#DDF4EA] text-[#16603B]`
+  return `${base} bg-success-soft text-success-text-soft`
 }

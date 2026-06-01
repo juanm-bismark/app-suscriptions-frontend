@@ -10,10 +10,4 @@ export function positiveInt(value: string | null | undefined, fallback: number):
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-CO", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-}
+export { formatDate } from "@/lib/formatters"

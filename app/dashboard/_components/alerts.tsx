@@ -8,7 +8,7 @@ interface AlertProps {
 export function WarningAlert({ children, className = "" }: AlertProps) {
   return (
     <div
-      className={`rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5 ${className}`}
+      className={`rounded-lg bg-warning-soft p-4 text-sm text-warning-text-soft shadow-sm shadow-warn-bg/5 ${className}`}
     >
       {children}
     </div>
@@ -28,7 +28,7 @@ export function ErrorAlert({ children, className = "" }: AlertProps) {
 export function SuccessAlert({ children, className = "" }: AlertProps) {
   return (
     <div
-      className={`rounded-lg bg-[#DDF4EA] p-4 text-sm text-[#16603B] shadow-sm shadow-success-bg/5 ${className}`}
+      className={`rounded-lg bg-success-soft p-4 text-sm text-success-text-soft shadow-sm shadow-success-bg/5 ${className}`}
     >
       {children}
     </div>

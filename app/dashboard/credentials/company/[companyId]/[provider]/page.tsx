@@ -14,7 +14,7 @@ function StatusBadge({ active, expiry }: { active: boolean; expiry: CredentialEx
   if (!active) return <Badge variant="secondary">Inactiva</Badge>
   if (expiry === "expired") return <Badge variant="destructive">Expirada</Badge>
   if (expiry === "expiring") return (
-    <Badge className="border-[#F2D49B] bg-[#FFF7E7] text-[#6D4D16]">Por vencer</Badge>
+    <Badge className="border-warning-border-soft bg-warning-soft text-warning-text-soft">Por vencer</Badge>
   )
   return <Badge variant="success">Activa</Badge>
 }
@@ -93,7 +93,7 @@ export default async function AdminCompanyCredentialPage({
       )}
 
       {/* Form card */}
-      <div className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+      <div className="rounded-lg bg-accent-soft p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <CredentialForm provider={provider} credential={credential} companyId={companyId} />
       </div>
     </div>

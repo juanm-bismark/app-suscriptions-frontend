@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react"
 import { useFormStatus } from "react-dom"
 import { cn } from "@/lib/utils"
+import { dashboardStyles } from "./dashboard-styles"
 
 type SearchSubmitButtonProps = {
   children?: React.ReactNode
@@ -23,7 +24,7 @@ export function SearchSubmitButton({
       disabled={pending}
       aria-busy={pending || undefined}
       className={cn(
-        "inline-flex items-center justify-center rounded-md bg-[#0F202A] px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-header-top/20 transition-colors hover:bg-[#163C41] disabled:pointer-events-none disabled:opacity-60",
+        dashboardStyles.primaryAction,
         className,
       )}
     >

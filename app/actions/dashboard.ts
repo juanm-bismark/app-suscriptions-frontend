@@ -3,6 +3,7 @@
 import { ApiError } from "@/lib/api-client"
 import { listSims } from "@/lib/api/sims"
 import { requireCompanyUser } from "@/lib/auth/current-user"
+import { isProvider } from "@/lib/provider-meta"
 import type { Provider, SimListOut } from "@/lib/types/api"
 import { listActiveCredentialProviders } from "./providers"
 
@@ -142,10 +143,6 @@ function hintsFromProviderStatuses(result: SimListOut): DashboardProviderHint[] 
       status: item.status === "ok" ? "ok" as const : item.status === "partial" ? "partial" as const : item.status === "not_queried" ? "not_queried" as const : "error" as const,
       error: item.title || item.code,
     }))
-}
-
-function isProvider(value: string): value is Provider {
-  return value === "kite" || value === "tele2" || value === "moabits"
 }
 
 function errorTitleFor(error: unknown) {

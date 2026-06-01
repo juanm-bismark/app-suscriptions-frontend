@@ -3,14 +3,14 @@ export default function DashboardLoading() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="mb-6 rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:mb-8 sm:p-6">
+      <div className="mb-6 rounded-lg bg-panel-soft p-5 shadow-sm shadow-header-top/5 sm:mb-8 sm:p-6">
         <div className="flex animate-pulse flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="mb-2 h-10 w-64 rounded bg-zebra" />
             <div className="h-4 w-80 max-w-full rounded bg-zebra" />
           </div>
-          <div className="flex w-full max-w-full shrink-0 items-center gap-3 rounded-md border border-[#C9DFE3] bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 md:w-72 xl:w-80">
-            <div className="h-9 w-9 shrink-0 rounded-md bg-[#DDF1F2]" />
+          <div className="flex w-full max-w-full shrink-0 items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 md:w-72 xl:w-80">
+            <div className="h-9 w-9 shrink-0 rounded-md bg-accent-soft" />
             <div className="min-w-0 flex-1">
               <div className="mb-1.5 h-3 w-16 rounded bg-zebra" />
               <div className="h-4 w-28 rounded bg-zebra" />
@@ -25,7 +25,7 @@ export default function DashboardLoading() {
             {[1, 2, 3].map((item) => (
               <div key={item} className="flex min-h-32 animate-pulse flex-col justify-between rounded-lg bg-gradient-to-b from-white to-[#EAF6F7] px-4 py-4 shadow-sm shadow-header-top/5">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-md bg-[#DDF1F2]" />
+                  <div className="h-8 w-8 rounded-md bg-accent-soft" />
                   <div className="h-4 w-24 rounded bg-zebra" />
                 </div>
                 <div className="h-9 w-20 rounded bg-zebra" />
@@ -34,7 +34,7 @@ export default function DashboardLoading() {
             ))}
           </div>
 
-          <div className="animate-pulse rounded-lg bg-[#DDF1F2] p-4 shadow-sm shadow-header-top/5">
+          <div className="animate-pulse rounded-lg bg-accent-soft p-4 shadow-sm shadow-header-top/5">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="h-3 w-24 rounded bg-zebra" />
@@ -61,14 +61,14 @@ export default function DashboardLoading() {
                   <div className="h-4 w-20 rounded bg-zebra" />
                   <div className="h-3 w-24 rounded bg-zebra" />
                 </div>
-                <div className="h-6 w-16 rounded-full bg-[#DDF4EA]" />
+                <div className="h-6 w-16 rounded-full bg-success-soft" />
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <div className="mt-10 rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+      <div className="mt-10 rounded-lg bg-panel-soft p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <div className="mb-4 h-6 w-44 animate-pulse rounded bg-zebra" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((item) => (

@@ -15,7 +15,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={`rounded-lg bg-[#F5FAFA] p-5 shadow-sm shadow-header-top/5 sm:p-6 ${className}`}
+      className={`rounded-lg bg-panel-soft p-5 shadow-sm shadow-header-top/5 sm:p-6 ${className}`}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">

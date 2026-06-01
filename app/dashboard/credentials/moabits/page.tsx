@@ -29,20 +29,20 @@ export default async function MoabitsCredentialsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        <section className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
+        <section className="bg-accent-soft rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-xl font-semibold text-title">Credenciales</h2>
             {isAdmin && credential?.active && (
               <Link
                 href="/dashboard/company/moabits"
-                className="inline-flex items-center justify-center rounded-md bg-white/75 px-3 py-2 text-sm font-semibold text-[#285F68] shadow-sm shadow-header-top/5 hover:bg-white hover:text-[#12343B]"
+                className="inline-flex items-center justify-center rounded-md bg-white/75 px-3 py-2 text-sm font-semibold text-action-soft shadow-sm shadow-header-top/5 hover:bg-white hover:text-ink-teal"
               >
                 Gestionar vinculaciones Moabits
               </Link>
             )}
           </div>
           {!credentialResult.ok && credentialResult.status !== 404 && (
-            <div className="mb-4 rounded-lg bg-[#FFF7E7] p-4 text-sm text-[#6D4D16] shadow-sm shadow-warn-bg/5">
+            <div className="mb-4 rounded-lg bg-warning-soft p-4 text-sm text-warning-text-soft shadow-sm shadow-warn-bg/5">
               {credentialResult.error}
             </div>
           )}

@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { isSearchField } from "@/lib/sim-identifiers"
 import { listActiveCredentialProviders } from "@/app/actions/providers"
 import { requireCompanyUser } from "@/lib/auth/current-user"
 import { ROLES } from "@/lib/types/user"
@@ -15,6 +16,11 @@ function single(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v
 }
 
+function searchField(v: string | string[] | undefined) {
+  const value = single(v)
+  return isSearchField(value) ? value : undefined
+}
+
 export default async function SubscriptionsPage({ searchParams }: { searchParams: SearchParams }) {
   const profile = await requireCompanyUser()
   const activeProviders = await listActiveCredentialProviders()
@@ -29,10 +35,11 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
     cursor: single(params.cursor),
     size: single(params.size),
     q: single(params.q),
+    searchField: searchField(params.searchField),
   }
 
   return (
-    <Suspense fallback={<LoadingState filters={filters} />}>
+    <Suspense fallback={<LoadingState filters={filters} activeProviders={activeProviders} />}>
       <SubscriptionsClient
         filters={filters}
         isAdmin={profile.role === ROLES.ADMIN}

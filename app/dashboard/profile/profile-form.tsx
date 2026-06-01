@@ -79,7 +79,7 @@ export default function ProfileForm({
       </div>
 
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-success-soft text-success-text-soft p-3 rounded-md">{success}</div>}
 
       {/* Editable fields */}
       <Form {...form}>
@@ -132,7 +132,7 @@ export default function ProfileForm({
             type="submit"
             loading={form.formState.isSubmitting}
             loadingText="Guardando..."
-            className="bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
+            className="bg-header-top text-white shadow-sm shadow-header-top/20 hover:bg-header-bg hover:text-white"
           >
             Guardar cambios
           </Button>

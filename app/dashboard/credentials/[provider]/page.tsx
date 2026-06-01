@@ -38,7 +38,7 @@ export default async function ProviderCredentialPage({
         </WarningAlert>
       )}
 
-      <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-5 sm:p-6">
+      <div className="bg-accent-soft rounded-lg shadow-sm shadow-header-top/5 p-5 sm:p-6">
         <CredentialForm provider={provider} credential={credential} isAdmin={isAdmin} />
       </div>
     </div>

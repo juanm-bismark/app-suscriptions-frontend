@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { type FieldPath, type Resolver, useForm, useWatch } from "react-hook-form"
-import { z } from "zod"
+import { type Resolver, useForm, useWatch } from "react-hook-form"
 import { AlertTriangle } from "lucide-react"
 import {
   deactivateCompanyCredential,
@@ -32,139 +31,10 @@ import {
   toast,
 } from "@/components/ui"
 import type { CredentialMetadataOut, CredentialUpsertIn, Provider } from "@/lib/types/api"
+import { dashboardStyles } from "../_components/dashboard-styles"
 import { credentialDefaults, pruneEmptyStrings } from "./credential-payload"
 import { providerName } from "./credential-utils"
-
-const environment = {
-  production: "Produccion",
-  staging: "Staging",
-  sandbox: "Sandbox",
-} as const
-
-const kiteSchema = z.object({
-  credentials: z.object({
-    endpoint: z.string().url("URL invalida").refine((u) => u.startsWith("https://"), "Debe ser HTTPS"),
-    username: z.string().optional(),
-    password: z.string().optional(),
-    client_cert_pfx_b64: z.string().optional(),
-    client_cert_password: z.string().optional(),
-    server_ca_bundle_pem_b64: z.string().optional(),
-  }).refine((v) => !!v.username === !!v.password, {
-    message: "username y password de WS-Sec deben ir juntos",
-    path: ["username"],
-  }).refine((v) => !v.client_cert_pfx_b64 || !!v.client_cert_password, {
-    message: "Ingresa la clave del certificado",
-    path: ["client_cert_password"],
-  }),
-  account_scope: z.object({
-    environment: z.enum(["production", "staging", "sandbox"]).default("production"),
-    end_customer_id: z.string().optional(),
-  }),
-})
-
-const tele2Schema = z.object({
-  credentials: z.object({
-    cobrand_url: z.string().default("restapi3.jasper.com"),
-    username: z.string().min(1, "Ingresa el usuario"),
-    api_key: z.string().min(1, "Ingresa el API key"),
-  }),
-  account_scope: z.object({
-    account_id: z.string().min(1, "Ingresa el account ID"),
-    max_tps: z.coerce.number().int().min(1).max(50).default(5),
-    environment: z.enum(["production", "staging"]).default("production"),
-  }),
-})
-
-const moabitsSchema = z.object({
-  credentials: z.object({
-    base_url: z.string().url("URL invalida").default("https://www.api.myorion.co"),
-    x_api_key: z.string().min(1, "Ingresa el x-api-key"),
-  }),
-  account_scope: z.object({
-    environment: z.enum(["production", "staging"]).default("production"),
-  }),
-})
-
-const moabitsUserSchema = z.object({
-  credentials: z.object({
-    x_api_key: z.string().min(1, "Ingresa el x-api-key"),
-  }),
-  account_scope: z.record(z.string(), z.unknown()).default({}),
-})
-
-const tele2UserSchema = z.object({
-  credentials: z.object({
-    api_key: z.string().min(1, "Ingresa el API key"),
-  }),
-  account_scope: z.record(z.string(), z.unknown()).default({}),
-})
-
-const kiteUserSchema = z.object({
-  credentials: z.object({
-    client_cert_pfx_b64: z.string().min(1, "Carga el certificado PFX"),
-    client_cert_password: z.string().min(1, "Ingresa la clave del certificado"),
-  }),
-  account_scope: z.record(z.string(), z.unknown()).default({}),
-})
-
-const SCHEMAS = {
-  kite: kiteSchema,
-  tele2: tele2Schema,
-  moabits: moabitsSchema,
-} as const
-
-function getSchema(provider: Provider, isAdmin: boolean) {
-  if (!isAdmin && provider === "moabits") return moabitsUserSchema
-  if (!isAdmin && provider === "tele2") return tele2UserSchema
-  if (!isAdmin && provider === "kite") return kiteUserSchema
-  return SCHEMAS[provider]
-}
-
-type Field =
-  | { kind: "text" | "password" | "number"; name: FieldPath<CredentialUpsertIn>; label: string; placeholder?: string; adminOnly?: boolean }
-  | { kind: "select"; name: FieldPath<CredentialUpsertIn>; label: string; options: readonly (keyof typeof environment)[]; adminOnly?: boolean }
-  | { kind: "file"; name: FieldPath<CredentialUpsertIn>; label: string; adminOnly?: boolean }
-
-const FIELDS: Record<Provider, Field[]> = {
-  kite: [
-    { kind: "text", name: "credentials.endpoint", label: "Endpoint SOAP", placeholder: "https://...", adminOnly: true },
-    { kind: "text", name: "credentials.username", label: "WS-Sec username", adminOnly: true },
-    { kind: "password", name: "credentials.password", label: "WS-Sec password", adminOnly: true },
-    { kind: "file", name: "credentials.client_cert_pfx_b64", label: "Certificado cliente PFX" },
-    { kind: "password", name: "credentials.client_cert_password", label: "Clave del certificado" },
-    { kind: "text", name: "credentials.server_ca_bundle_pem_b64", label: "CA bundle PEM base64", adminOnly: true },
-    { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging", "sandbox"], adminOnly: true },
-    { kind: "text", name: "account_scope.end_customer_id", label: "End customer ID", adminOnly: true },
-  ],
-  tele2: [
-    { kind: "text", name: "credentials.cobrand_url", label: "Cobrand URL", adminOnly: true },
-    { kind: "text", name: "credentials.username", label: "Usuario", adminOnly: true },
-    { kind: "password", name: "credentials.api_key", label: "API key" },
-    { kind: "text", name: "account_scope.account_id", label: "Account ID", adminOnly: true },
-    { kind: "number", name: "account_scope.max_tps", label: "Max TPS", adminOnly: true },
-    { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging"], adminOnly: true },
-  ],
-  moabits: [
-    { kind: "text", name: "credentials.base_url", label: "Base URL", adminOnly: true },
-    { kind: "password", name: "credentials.x_api_key", label: "x-api-key" },
-    { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging"], adminOnly: true },
-  ],
-}
-
-function getPath(source: unknown, path: string) {
-  return path.split(".").reduce<unknown>((acc, part) => {
-    if (!acc || typeof acc !== "object") return undefined
-    return (acc as Record<string, unknown>)[part]
-  }, source)
-}
-
-async function fileToBase64(file: File) {
-  const buffer = await file.arrayBuffer()
-  let binary = ""
-  const bytes = new Uint8Array(buffer)
-  for (let i = 0; i < bytes.byteLength; i += 1) binary += String.fromCharCode(bytes[i])
-  return window.btoa(binary)
-}
+import { environment, fieldsForProvider, fileToBase64, getPath, getSchema, userCredentialPayload } from "./form"
 
 export function CredentialForm({
   provider,
@@ -188,10 +58,7 @@ export function CredentialForm({
   const [deactivating, setDeactivating] = useState(false)
   const schema = getSchema(provider, isAdmin)
   const defaultValues = useMemo(() => credentialDefaults(provider, credential), [provider, credential])
-  const fields = useMemo(
-    () => FIELDS[provider].filter((field) => isAdmin || !field.adminOnly),
-    [provider, isAdmin]
-  )
+  const fields = useMemo(() => fieldsForProvider(provider, isAdmin), [provider, isAdmin])
 
   const form = useForm<CredentialUpsertIn>({
     resolver: zodResolver(schema) as unknown as Resolver<CredentialUpsertIn>,
@@ -206,16 +73,7 @@ export function CredentialForm({
     const payload = pruneEmptyStrings(values) as CredentialUpsertIn
     if (!isAdmin) {
       const creds = payload.credentials as Record<string, unknown>
-      if (provider === "tele2") {
-        payload.credentials = { api_key: creds.api_key }
-      } else if (provider === "moabits") {
-        payload.credentials = { x_api_key: creds.x_api_key }
-      } else if (provider === "kite") {
-        payload.credentials = {
-          client_cert_pfx_b64: creds.client_cert_pfx_b64,
-          client_cert_password: creds.client_cert_password,
-        }
-      }
+      payload.credentials = userCredentialPayload(provider, creds)
       delete payload.account_scope
     }
 
@@ -357,7 +215,7 @@ export function CredentialForm({
           loading={submittingMode === "test"}
           loadingText="Probando..."
           onClick={form.handleSubmit((values) => submit("test", values))}
-          className="border-0 bg-white/80 text-header-bg shadow-sm shadow-header-top/10 hover:bg-white hover:text-header-top"
+          className={dashboardStyles.softButton}
         >
           Probar
         </Button>
@@ -366,7 +224,7 @@ export function CredentialForm({
           disabled={form.formState.isSubmitting}
           loading={submittingMode === "save"}
           loadingText="Guardando..."
-          className="border-0 bg-[#060D13] text-white shadow-sm shadow-black/30 hover:bg-[#0A1520]"
+          className={dashboardStyles.primaryAction}
         >
           Guardar
         </Button>
@@ -376,7 +234,7 @@ export function CredentialForm({
               <Button
                 type="button"
                 disabled={form.formState.isSubmitting || deactivating}
-                className="border-0 bg-white/80 text-[#6D4D16] shadow-sm shadow-header-top/5 hover:bg-[#FFF7E7] hover:text-[#4A3010] sm:ml-auto"
+                className="border-0 bg-white/80 text-warning-text-soft shadow-sm shadow-header-top/5 hover:bg-warning-soft hover:text-warning-hover-soft sm:ml-auto"
               >
                 Desactivar
               </Button>
@@ -384,7 +242,7 @@ export function CredentialForm({
             <AlertDialogContent className="gap-5">
               <AlertDialogHeader className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#FFF7E7] text-[#765315]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-warning-soft text-warning-icon-soft">
                     <AlertTriangle className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
@@ -395,7 +253,7 @@ export function CredentialForm({
                   </div>
                 </div>
               </AlertDialogHeader>
-              <div className="rounded-md border border-[#F2D49B] bg-[#FFF7E7] px-3 py-2 text-sm font-medium text-[#6D4D16]">
+              <div className="rounded-md border border-warning-border-soft bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
                 Esta accion no elimina datos historicos, pero detiene el uso de estas credenciales.
               </div>
               <AlertDialogFooter className="pt-1">
@@ -406,7 +264,7 @@ export function CredentialForm({
                   loading={deactivating}
                   loadingText="Desactivando..."
                   onClick={() => void deactivate()}
-                  className="border-0 bg-[#6D4D16] text-white shadow-sm hover:bg-[#4A3010]"
+                  className="border-0 bg-warning-text-soft text-white shadow-sm hover:bg-warning-hover-soft"
                 >
                   Desactivar
                 </Button>

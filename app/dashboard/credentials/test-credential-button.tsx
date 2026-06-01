@@ -4,6 +4,7 @@ import { useState } from "react"
 import { probeCompanyCredential, probeStoredCredential } from "@/app/actions/credentials"
 import { Button, toast } from "@/components/ui"
 import type { Provider } from "@/lib/types/api"
+import { dashboardStyles } from "../_components/dashboard-styles"
 import { providerName } from "./credential-utils"
 
 export function TestCredentialButton({ provider, companyId }: { provider: Provider; companyId?: string }) {
@@ -44,7 +45,7 @@ export function TestCredentialButton({ provider, companyId }: { provider: Provid
       title="Probar credencial"
       aria-label={`Probar credencial de ${providerName(provider)}`}
       onClick={() => void handleTest()}
-      className="border-0 bg-[#EAF6F7] px-3 text-[#285F68] shadow-sm shadow-header-top/5 hover:bg-[#DDF1F2] hover:text-[#12343B]"
+      className={dashboardStyles.softButton}
     >
       Probar
     </Button>

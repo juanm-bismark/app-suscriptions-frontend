@@ -75,7 +75,7 @@ export default function CreateUserForm({
   return (
     <div className="space-y-4">
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-success-soft text-success-text-soft p-3 rounded-md">{success}</div>}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -178,7 +178,7 @@ export default function CreateUserForm({
             type="submit"
             loading={form.formState.isSubmitting}
             loadingText="Añadiendo..."
-            className="w-full bg-[#0E7490] text-white shadow-sm shadow-[#0E7490]/20 hover:bg-[#0F4C5C] hover:text-white"
+            className="w-full bg-action-teal text-white shadow-sm shadow-[#0E7490]/20 hover:bg-action-teal-hover hover:text-white"
           >
             Añadir usuario
           </Button>

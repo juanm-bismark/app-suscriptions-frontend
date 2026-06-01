@@ -2,7 +2,7 @@ export default function CredentialsCompanyLoading() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <div className="animate-pulse space-y-6">
-        <div className="rounded-lg bg-[#F5FAFA] p-6">
+        <div className="rounded-lg bg-panel-soft p-6">
           <div className="h-8 w-48 rounded bg-zebra" />
         </div>
         <div className="grid gap-6 min-[480px]:grid-cols-[200px_minmax(0,1fr)]">

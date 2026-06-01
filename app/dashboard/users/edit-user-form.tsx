@@ -103,7 +103,7 @@ export function EditUserForm({
   return (
     <div className="space-y-4">
       {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-[#DDF4EA] text-[#16603B] p-3 rounded-md">{success}</div>}
+      {success && <div className="text-sm bg-success-soft text-success-text-soft p-3 rounded-md">{success}</div>}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -219,7 +219,7 @@ export function EditUserForm({
               type="submit"
               loading={form.formState.isSubmitting}
               loadingText="Guardando..."
-              className="flex-1 bg-[#0F202A] text-white shadow-sm shadow-header-top/20 hover:bg-[#163C41] hover:text-white"
+              className="flex-1 bg-header-top text-white shadow-sm shadow-header-top/20 hover:bg-header-bg hover:text-white"
             >
               Guardar cambios
             </Button>
@@ -228,7 +228,7 @@ export function EditUserForm({
               variant="outline"
               onClick={onCancel}
               disabled={form.formState.isSubmitting}
-              className="border-[#C9DFE3] text-[#285F68] hover:bg-[#EAF6F7] hover:text-[#12343B]"
+              className="border-soft-border text-action-soft hover:bg-hover-soft hover:text-ink-teal"
             >
               Cancelar
             </Button>

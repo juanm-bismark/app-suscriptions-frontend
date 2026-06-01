@@ -33,7 +33,7 @@ export default async function CompanyMoabitsMappingsPage({
           description="Revisa los vinculos entre empresas en BD y empresas traidas desde Moabits."
           className="mt-3"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#DDF1F2] text-[#12343B]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent-soft text-ink-teal">
             <Link2 className="h-5 w-5" aria-hidden="true" />
           </span>
         </PageHeader>

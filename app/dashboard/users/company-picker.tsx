@@ -56,7 +56,7 @@ export function CompanyPicker({
               ? "border-destructive"
               : selected
               ? "border-[#33A6B2] text-title"
-              : "border-[#C9DFE3] text-muted"
+              : "border-soft-border text-muted"
           } ${selected ? "pr-10" : ""}`}
         >
           <Building2 className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
@@ -74,7 +74,7 @@ export function CompanyPicker({
             type="button"
             aria-label="Quitar empresa"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:bg-[#EAF6F7] hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
+            className="absolute right-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:bg-hover-soft hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
           >
             <X className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -85,15 +85,15 @@ export function CompanyPicker({
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery("") }}>
         <DialogContent className="max-w-sm gap-0 p-0">
-          <DialogHeader className="border-b border-[#C9DFE3] px-4 py-3">
+          <DialogHeader className="border-b border-soft-border px-4 py-3">
             <DialogTitle className="text-base text-title">Seleccionar empresa</DialogTitle>
             <DialogDescription className="sr-only">
               Busca y selecciona la empresa a la que pertenecerá el usuario.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border-b border-[#C9DFE3] px-3 py-2">
-            <div className="flex h-9 items-center gap-2 rounded-md border border-[#C9DFE3] bg-[#F5FAFA] px-2.5 focus-within:ring-2 focus-within:ring-header-accent">
+          <div className="border-b border-soft-border px-3 py-2">
+            <div className="flex h-9 items-center gap-2 rounded-md border border-soft-border bg-panel-soft px-2.5 focus-within:ring-2 focus-within:ring-header-accent">
               <Search className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
               <input
                 autoFocus
@@ -107,7 +107,7 @@ export function CompanyPicker({
                   type="button"
                   aria-label="Limpiar búsqueda"
                   onClick={() => setQuery("")}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted hover:bg-[#EAF6F7] hover:text-title"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted hover:bg-hover-soft hover:text-title"
                 >
                   <X className="h-3 w-3" aria-hidden="true" />
                 </button>
@@ -140,8 +140,8 @@ export function CompanyPicker({
                     onClick={() => handleSelect(company.id)}
                     className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-header-accent ${
                       isSelected
-                        ? "bg-[#DDF1F2] text-title"
-                        : "text-title hover:bg-[#EAF6F7]"
+                        ? "bg-accent-soft text-title"
+                        : "text-title hover:bg-hover-soft"
                     }`}
                   >
                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${isSelected ? "bg-[#33A6B2]/20 text-[#0E7490]" : "bg-[#F0F8F8] text-muted"}`}>

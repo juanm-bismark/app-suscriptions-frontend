@@ -6,13 +6,9 @@ import { requireCompanyUser, requireProfile } from "@/lib/auth/current-user";
 import type { ProviderCapabilitiesOut } from "@/lib/types/api";
 import type { Provider } from "@/lib/types/api/common";
 import { ROLES } from "@/lib/types/user";
+import { isProvider, PROVIDER_IDS } from "@/lib/provider-meta";
 
-const PROVIDERS: Provider[] = ["kite", "tele2", "moabits"];
 export type ActiveCredentialProviders = Provider[] | null;
-
-function isProvider(value: string): value is Provider {
-  return PROVIDERS.includes(value as Provider);
-}
 
 export async function getProviderCapabilities(provider: Provider): Promise<ProviderCapabilitiesOut> {
   await requireProfile();
@@ -42,5 +38,5 @@ export async function listActiveCredentialProviders(): Promise<ActiveCredentialP
       .map((credential) => credential.provider as Provider)
   );
 
-  return PROVIDERS.filter((provider) => active.has(provider));
+  return PROVIDER_IDS.filter((provider) => active.has(provider));
 }

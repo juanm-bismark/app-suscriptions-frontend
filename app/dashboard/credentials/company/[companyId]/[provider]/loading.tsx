@@ -21,7 +21,7 @@ export default function AdminCompanyCredentialLoading() {
       </div>
 
       {/* Form card */}
-      <div className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+      <div className="rounded-lg bg-accent-soft p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="rounded-lg bg-white/30 p-4 sm:p-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

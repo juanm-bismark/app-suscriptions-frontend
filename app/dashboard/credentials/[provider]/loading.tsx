@@ -10,7 +10,7 @@ export default function ProviderCredentialLoading() {
       </div>
 
       {/* Form card */}
-      <div className="rounded-lg bg-[#DDF1F2] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+      <div className="rounded-lg bg-accent-soft p-5 shadow-sm shadow-header-top/5 sm:p-6">
         <FormSkeleton />
       </div>
     </div>

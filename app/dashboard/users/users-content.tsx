@@ -37,13 +37,13 @@ export function UsersContent({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 flex flex-col bg-[#F5FAFA] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
+      <div className="lg:col-span-2 flex flex-col bg-panel-soft rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-title">Usuarios de la empresa</h2>
           <form className="flex w-full gap-2 sm:max-w-md" action="/dashboard/users" method="get">
             <input type="hidden" name="page" value="1" />
             <input type="hidden" name="size" value={pageSize} />
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-[#C9DFE3] bg-white px-3 shadow-sm shadow-header-top/5 focus-within:ring-2 focus-within:ring-header-accent">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-soft-border bg-white px-3 shadow-sm shadow-header-top/5 focus-within:ring-2 focus-within:ring-header-accent">
               <input
                 name="q"
                 defaultValue={query}
@@ -55,7 +55,7 @@ export function UsersContent({
                   href={clearSearchHref}
                   title="Limpiar busqueda"
                   aria-label="Limpiar busqueda"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-[#EAF6F7] hover:text-title"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted hover:bg-hover-soft hover:text-title"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </Link>
@@ -91,7 +91,7 @@ export function UsersContent({
         )}
       </div>
 
-      <div className="bg-[#DDF1F2] rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
+      <div className="bg-accent-soft rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
         {editingUser ? (
           <>
             <h2 className="text-xl font-semibold mb-1 text-title">Editar usuario</h2>

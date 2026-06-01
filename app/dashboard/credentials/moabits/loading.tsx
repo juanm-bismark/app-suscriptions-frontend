@@ -12,7 +12,7 @@ export default function MoabitsCredentialsLoading() {
       <div className="grid grid-cols-1 gap-8">
 
         {/* Credentials form section */}
-        <section className="rounded-lg bg-[#DDF1F2] p-6 shadow-sm shadow-header-top/5 sm:p-8">
+        <section className="rounded-lg bg-accent-soft p-6 shadow-sm shadow-header-top/5 sm:p-8">
           <div className="mb-4 flex animate-pulse items-center justify-between">
             <div className="h-6 w-28 rounded bg-zebra" />
             <div className="h-9 w-44 rounded-md bg-white/60" />
@@ -36,12 +36,12 @@ export default function MoabitsCredentialsLoading() {
         </section>
 
         {/* Mapping info section */}
-        <section className="animate-pulse rounded-lg bg-[#F5FAFA] p-6 shadow-sm shadow-header-top/5 sm:p-8">
+        <section className="animate-pulse rounded-lg bg-panel-soft p-6 shadow-sm shadow-header-top/5 sm:p-8">
           <div className="mb-1 h-6 w-40 rounded bg-zebra" />
           <div className="mb-4 h-4 w-72 max-w-full rounded bg-zebra" />
           <div className="rounded-lg bg-white/70 p-4 shadow-sm shadow-header-top/5">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 shrink-0 rounded-md bg-[#DDF1F2]" />
+              <div className="h-9 w-9 shrink-0 rounded-md bg-accent-soft" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 w-48 rounded bg-zebra" />
                 <div className="h-3 w-36 rounded bg-zebra" />
