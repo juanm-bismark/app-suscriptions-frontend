@@ -22,15 +22,15 @@ export default function UsersLoading() {
           <div className="h-6 bg-zebra rounded w-40 mb-4" />
           <div className="overflow-hidden rounded-lg">
             <div className="grid grid-cols-[1.2fr_.7fr_auto] bg-hover-soft px-6 py-3 gap-4">
-              <div className="h-3 bg-[#D4E8EA] rounded w-20" />
-              <div className="h-3 bg-[#D4E8EA] rounded w-16" />
-              <div className="ml-auto h-3 bg-[#D4E8EA] rounded w-20" />
+              <div className="h-3 bg-divider rounded w-20" />
+              <div className="h-3 bg-divider rounded w-16" />
+              <div className="ml-auto h-3 bg-divider rounded w-20" />
             </div>
             {[1, 2, 3, 4].map((item) => (
               <div key={item} className="grid grid-cols-[1.2fr_.7fr_auto] items-center gap-4 px-6 py-4">
                 <div className="h-4 bg-zebra rounded w-36 max-w-full" />
                 <div className="h-6 bg-success-soft rounded-full w-20" />
-                <div className="h-9 w-9 rounded-md bg-[#ECFEFF]" />
+                <div className="h-9 w-9 rounded-md bg-action-teal-soft" />
               </div>
             ))}
           </div>
@@ -48,16 +48,16 @@ export default function UsersLoading() {
         </div>
 
         <div className="bg-accent-soft rounded-lg shadow-sm shadow-header-top/5 p-6 sm:p-8 self-start">
-          <div className="h-6 bg-[#C8E8EA] rounded w-36 mb-5" />
+          <div className="h-6 bg-badge-bg rounded w-36 mb-5" />
           <div className="space-y-4">
             {[1, 2, 3].map((item) => (
               <div key={item}>
-                <div className="h-4 bg-[#C8E8EA] rounded w-28 mb-2" />
+                <div className="h-4 bg-badge-bg rounded w-28 mb-2" />
                 <div className="h-10 bg-white/80 rounded-md shadow-sm shadow-header-top/5" />
               </div>
             ))}
             <div>
-              <div className="h-4 bg-[#C8E8EA] rounded w-24 mb-2" />
+              <div className="h-4 bg-badge-bg rounded w-24 mb-2" />
               <div className="h-10 bg-white/80 rounded-md shadow-sm shadow-header-top/5" />
             </div>
             <div className="h-10 bg-header-top rounded-md" />

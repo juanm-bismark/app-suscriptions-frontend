@@ -56,7 +56,7 @@ export function MappingEditor({
   onRemoveMapping: (companyId: string) => void
 }) {
   return (
-    <section className="rounded-lg bg-[#FCEADC] p-5 shadow-sm shadow-header-top/5 sm:p-6">
+    <section className="rounded-lg bg-provider-moabits-soft p-5 shadow-sm shadow-header-top/5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white/70 text-ink-teal">

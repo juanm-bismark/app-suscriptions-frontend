@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { dashboardStyles } from "../_components/dashboard-styles"
 import { ROLES, type Company, type User, type UserRole } from "@/lib/types/user"
 
 type UsersTableProps = {
@@ -88,7 +89,7 @@ export default function UsersTable({
                   key={user.id}
                   className={
                     isSelected
-                      ? "bg-white shadow-[inset_3px_0_0_#33A6B2] transition-colors"
+                      ? dashboardStyles.selectedRow
                       : "transition-colors hover:bg-white/65"
                   }
                 >
@@ -112,7 +113,7 @@ export default function UsersTable({
                             size="icon"
                             title="Editar usuario"
                             aria-label="Editar usuario"
-                            className="h-9 w-9 border-[#0891B2]/30 bg-white text-[#0E7490] shadow-sm shadow-[#0891B2]/10 hover:border-[#0E7490] hover:bg-[#ECFEFF] hover:text-[#0F4C5C]"
+                            className={dashboardStyles.editIconButton}
                             onClick={() => onEdit(user)}
                           >
                             <Pencil className="h-4 w-4" aria-hidden="true" />
@@ -154,7 +155,7 @@ function DeleteUserDialog({
           size="icon"
           title="Eliminar usuario"
           aria-label="Eliminar usuario"
-          className="h-9 w-9 border-[#DC2626]/25 bg-white text-[#B91C1C] shadow-sm shadow-[#DC2626]/10 hover:border-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#7F1D1D]"
+          className={dashboardStyles.dangerIconButton}
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -174,7 +175,7 @@ function DeleteUserDialog({
             loading={deleting}
             loadingText="Eliminando..."
             onClick={onConfirm}
-            className="border-[#DC2626] bg-[#DC2626] text-white hover:bg-[#B91C1C] hover:text-white"
+            className={dashboardStyles.dangerAction}
           >
             Eliminar
           </Button>
@@ -186,7 +187,7 @@ function DeleteUserDialog({
 
 function roleBadgeClassName(role: User["role"]) {
   const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase"
-  if (role === "admin") return `${base} bg-[#FCEADC] text-[#7A3A10]`
-  if (role === "manager") return `${base} bg-[#EDE5FB] text-[#422889]`
+  if (role === "admin") return `${base} ${dashboardStyles.roleAdminBadge}`
+  if (role === "manager") return `${base} ${dashboardStyles.roleManagerBadge}`
   return `${base} bg-success-soft text-success-text-soft`
 }

@@ -35,7 +35,7 @@ export default function AdminCompanyCredentialLoading() {
           </div>
           <div className="flex gap-3 border-t border-header-top/10 pt-3">
             <div className="h-10 w-36 rounded-md bg-white/80" />
-            <div className="h-10 w-24 rounded-md bg-[#060D13]/70" />
+            <div className="h-10 w-24 rounded-md bg-dark-skeleton/70" />
             <div className="ml-auto h-10 w-28 rounded-md bg-white/80" />
           </div>
         </div>

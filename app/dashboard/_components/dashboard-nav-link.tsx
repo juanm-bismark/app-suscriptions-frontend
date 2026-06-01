@@ -32,7 +32,7 @@ export function DashboardNavLink({ href, label, variant = "desktop" }: Dashboard
         "inline-flex items-center justify-center whitespace-nowrap transition-colors",
         variant === "desktop" ? "h-full px-1 text-sm" : "h-8 px-0.5 text-sm",
         active
-          ? "text-title font-bold shadow-[inset_0_-3px_0_0_#33A6B2]"
+          ? "border-b-[3px] border-header-accent font-bold text-title"
           : "text-muted hover:text-title",
       )}
     >

@@ -24,7 +24,7 @@ export default function CompanyLoading() {
               <div className="mb-2 h-7 w-40 rounded bg-skeleton-soft" />
               <div className="h-4 w-48 rounded bg-skeleton-muted" />
             </div>
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#C8E8EA] border-t-[#326472]" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-badge-bg border-t-table-header-text" />
           </div>
 
           <div className="flex h-11 items-center gap-2 rounded-md border border-soft-border bg-white px-3 shadow-sm shadow-header-top/5">
@@ -56,7 +56,7 @@ export default function CompanyLoading() {
         </section>
 
         <section className="rounded-lg bg-accent-soft p-5 shadow-sm shadow-header-top/5 sm:p-6">
-          <div className="h-7 w-36 animate-pulse rounded bg-[#C8E8EA]" />
+          <div className="h-7 w-36 animate-pulse rounded bg-badge-bg" />
           <div className="mt-5 rounded-lg bg-white/65 p-6 shadow-sm shadow-header-top/5">
             <div className="h-4 w-72 max-w-full animate-pulse rounded bg-divider-soft" />
           </div>

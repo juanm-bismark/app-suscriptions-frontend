@@ -108,8 +108,8 @@ export function SelectStep({
                   onClick={() => onSelectProvider(provider)}
                   className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-sm font-semibold transition-colors ${
                     selectedProvider === provider
-                      ? "border-[#12343B] bg-accent-soft text-title"
-                      : "border-soft-border bg-white text-muted hover:border-[#A5CDD3] hover:text-title"
+                      ? "border-strong-border bg-accent-soft text-title"
+                      : "border-soft-border bg-white text-muted hover:border-soft-border-hover hover:text-title"
                   }`}
                 >
                   <SourceBadge source={provider} size="lg" />

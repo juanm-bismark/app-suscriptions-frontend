@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { dashboardStyles } from "../../_components/dashboard-styles"
 
 export function DeleteCompanyDialog({
   company,
@@ -42,7 +43,7 @@ export function DeleteCompanyDialog({
             loading={deleting}
             loadingText="Eliminando..."
             onClick={onConfirm}
-            className="border-[#DC2626] bg-[#DC2626] text-white hover:bg-[#B91C1C] hover:text-white"
+            className={dashboardStyles.dangerAction}
           >
             Eliminar
           </Button>

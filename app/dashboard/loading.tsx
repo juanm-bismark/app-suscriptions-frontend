@@ -1,5 +1,5 @@
 export default function DashboardLoading() {
-  const providerSkeletonColors = ["bg-[#E5F5F6]", "bg-[#F0EAFB]", "bg-[#FCEADC]"]
+  const providerSkeletonColors = ["bg-provider-kite-soft", "bg-provider-tele2-soft", "bg-provider-moabits-soft"]
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -23,7 +23,7 @@ export default function DashboardLoading() {
         <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="grid gap-3 sm:grid-cols-3">
             {[1, 2, 3].map((item) => (
-              <div key={item} className="flex min-h-32 animate-pulse flex-col justify-between rounded-lg bg-gradient-to-b from-white to-[#EAF6F7] px-4 py-4 shadow-sm shadow-header-top/5">
+              <div key={item} className="flex min-h-32 animate-pulse flex-col justify-between rounded-lg bg-gradient-to-b from-white to-metric-soft px-4 py-4 shadow-sm shadow-header-top/5">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 rounded-md bg-accent-soft" />
                   <div className="h-4 w-24 rounded bg-zebra" />
@@ -40,7 +40,7 @@ export default function DashboardLoading() {
                 <div className="h-3 w-24 rounded bg-zebra" />
                 <div className="h-6 w-52 rounded bg-zebra" />
               </div>
-              <div className="h-5 w-5 rounded bg-[#326472]" />
+              <div className="h-5 w-5 rounded bg-table-header-text" />
             </div>
             <div className="mt-3 space-y-2">
               <div className="h-4 w-full rounded bg-zebra" />

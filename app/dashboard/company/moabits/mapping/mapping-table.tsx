@@ -105,7 +105,7 @@ export function MappingTable({
                           variant="outline"
                           onClick={() => onConfirmRemove(row.company_id)}
                           disabled={deletingId === row.company_id}
-                          className="gap-1.5 border-0 bg-danger-soft text-danger-text-soft shadow-sm shadow-header-top/5 hover:bg-[#FCEADC] hover:text-[#5C2020]"
+                          className="gap-1.5 border-0 bg-danger-soft text-danger-text-soft shadow-sm shadow-header-top/5 hover:bg-danger-tint hover:text-danger-action-dark"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                           Quitar

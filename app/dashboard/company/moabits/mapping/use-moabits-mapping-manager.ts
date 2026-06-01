@@ -1,35 +1,19 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import {
   deleteMoabitsProviderMapping,
-  discoverMoabitsProviderMappings,
   upsertMoabitsProviderMapping,
 } from "@/app/actions/company"
 import { getClientActionErrorMessage } from "@/lib/client-action-error"
 import type { Page } from "@/lib/types/user"
-import type {
-  LocalCompanyMoabitsMappingOut,
-  MoabitsCompanyOut,
-  MoabitsProviderMappingDiscoveryOut,
-} from "@/lib/types/api"
+import type { LocalCompanyMoabitsMappingOut } from "@/lib/types/api"
 import { EMPTY_DRAFT } from "./constants"
-import {
-  loadAllMappingsFromDb,
-  loadMappingManagerSnapshot,
-  loadMoabitsSourceCompaniesFromCache,
-} from "./data"
-import type { Draft, EditorMode, MappingPageInfo } from "./types"
-import {
-  buildLocalCompanySearchOptions,
-  buildMoabitsOptions,
-  buildMoabitsSearchOptions,
-  findMappedCompany,
-  findMoabitsOption,
-  mergeMappings,
-  namesAreEqual,
-  withSelectedMoabitsOption,
-} from "./utils"
+import { draftFromLocalCompany, savedMappingMessage, validateMappingDraft } from "./draft"
+import type { Draft, EditorMode } from "./types"
+import { useMoabitsMappingData } from "./use-moabits-mapping-data"
+import { useMoabitsMappingOptions } from "./use-moabits-mapping-options"
+import { findMappedCompany, findMoabitsOption, mergeMappings } from "./utils"
 
 export function useMoabitsMappingManager({
   initialPage,
@@ -42,75 +26,41 @@ export function useMoabitsMappingManager({
   pageSize: number
   query: string
 }) {
-  const [linkedRows, setLinkedRows] = useState(initialPage.items)
-  const [pageInfo, setPageInfo] = useState<MappingPageInfo>({
-    page: initialPage.page,
-    pages: initialPage.pages,
-    size: initialPage.size,
-    total: initialPage.total,
-  })
-  const [allMappings, setAllMappings] = useState<LocalCompanyMoabitsMappingOut[]>(initialPage.items)
-  const [cachedMoabitsCompanies, setCachedMoabitsCompanies] = useState<MoabitsCompanyOut[]>([])
-  const [discovery, setDiscovery] = useState<MoabitsProviderMappingDiscoveryOut | null>(null)
   const [editing, setEditing] = useState(false)
   const [editorMode, setEditorMode] = useState<EditorMode | null>(null)
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
-  const [loadingDb, setLoadingDb] = useState(false)
-  const [loadingDiscovery, setLoadingDiscovery] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    void loadAllMappingsFromDb().then((result) => {
-      if (!cancelled && result.success) {
-        setAllMappings((current) => mergeMappings(current, result.data))
-      }
-    })
-    void loadMoabitsSourceCompaniesFromCache().then((result) => {
-      if (!cancelled && result.success) {
-        setCachedMoabitsCompanies(result.data)
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
+  const {
+    allMappings,
+    cachedMoabitsCompanies,
+    discovery,
+    linkedRows,
+    loadingDb,
+    loadingDiscovery,
+    pageInfo,
+    refreshDiscoveryOnly,
+    refreshFromDb,
+    setAllMappings,
+  } = useMoabitsMappingData({
+    initialPage,
+    currentPage,
+    pageSize,
+    query,
+    clearMessages,
+    onError: setError,
+    onSuccess: setSuccess,
+  })
+  const mappingOptions = useMoabitsMappingOptions({
+    allMappings,
+    cachedMoabitsCompanies,
+    discovery,
+    draft,
+  })
   const linkedCount = pageInfo.total ?? linkedRows.length
-  const localCompanyOptions = useMemo(() => buildLocalCompanySearchOptions(allMappings), [allMappings])
-  const moabitsOptions = useMemo(
-    () =>
-      buildMoabitsOptions({
-        liveCompanies: discovery?.moabits_companies ?? null,
-        cachedCompanies: cachedMoabitsCompanies,
-        mappings: allMappings,
-      }),
-    [discovery, cachedMoabitsCompanies, allMappings],
-  )
-  const baseMoabitsSearchOptions = useMemo(() => buildMoabitsSearchOptions(moabitsOptions), [moabitsOptions])
-  const moabitsSearchOptions = useMemo(
-    () => withSelectedMoabitsOption(baseMoabitsSearchOptions, draft),
-    [baseMoabitsSearchOptions, draft],
-  )
-
-  const selectedLocalCompany = findMappedCompany(allMappings, draft.companyId)
-  const selectedMoabitsCompany = findMoabitsOption(moabitsOptions, draft.companyCode)
-  const selectedMoabitsTitle =
-    selectedMoabitsCompany?.companyName || draft.companyName || (draft.companyCode ? draft.companyCode : "Sin seleccionar")
-  const selectedMoabitsDetail =
-    selectedMoabitsCompany?.companyCode || draft.companyCode || "Selecciona una empresa Moabits"
-  const selectedMapping = selectedLocalCompany?.mapping ?? null
-  const linkedElsewhere = allMappings.filter(
-    (item) => item.company_id !== draft.companyId && item.mapping?.companyCode === draft.companyCode,
-  )
-  const namesMatch = namesAreEqual(selectedLocalCompany?.company_name, selectedMoabitsCompany?.companyName)
-  const moabitsOptionSource = discovery ? "Moabits en vivo" : "Cache Moabits"
 
   function clearMessages() {
     setError(null)
@@ -134,14 +84,7 @@ export function useMoabitsMappingManager({
   function setDraftFromLocal(companyOrId: string | LocalCompanyMoabitsMappingOut) {
     const companyId = typeof companyOrId === "string" ? companyOrId : companyOrId.company_id
     const localCompany = typeof companyOrId === "string" ? findMappedCompany(allMappings, companyId) : companyOrId
-    const mapping = localCompany?.mapping ?? null
-
-    setDraft({
-      companyId,
-      companyCode: mapping?.companyCode ?? "",
-      companyName: mapping?.companyName ?? "",
-      clieId: mapping?.clie_id != null ? String(mapping.clie_id) : "",
-    })
+    setDraft(draftFromLocalCompany(companyId, localCompany))
   }
 
   function startEdit(row: LocalCompanyMoabitsMappingOut) {
@@ -168,7 +111,7 @@ export function useMoabitsMappingManager({
   }
 
   function applyMoabitsCompany(companyCode: string) {
-    const company = findMoabitsOption(moabitsOptions, companyCode)
+    const company = findMoabitsOption(mappingOptions.moabitsOptions, companyCode)
     setDraft((current) => ({
       ...current,
       companyCode,
@@ -178,76 +121,10 @@ export function useMoabitsMappingManager({
     clearMessages()
   }
 
-  async function refreshDiscoveryOnly() {
-    setLoadingDiscovery(true)
-    clearMessages()
-
-    try {
-      const result = await discoverMoabitsProviderMappings()
-      if (result.success !== true) {
-        setError(result.error ?? "No se pudo actualizar el descubrimiento Moabits.")
-        return null
-      }
-
-      setDiscovery(result.data)
-      setCachedMoabitsCompanies(result.data.moabits_companies)
-      setAllMappings((current) => mergeMappings(current, result.data.local_companies))
-      setSuccess("Consulta de Moabits finalizada. La cache de companias Moabits fue actualizada.")
-      return result.data
-    } catch (error) {
-      setError(getClientActionErrorMessage(error, "No se pudo actualizar el descubrimiento Moabits."))
-      return null
-    } finally {
-      setLoadingDiscovery(false)
-    }
-  }
-
-  async function refreshFromDb({ showSuccess = true }: { showSuccess?: boolean } = {}) {
-    setLoadingDb(true)
-    setError(null)
-    if (showSuccess) setSuccess(null)
-
-    try {
-      const result = await loadMappingManagerSnapshot({ page: currentPage, size: pageSize, query })
-      if (result.success !== true) {
-        setError(result.error)
-        return null
-      }
-
-      setLinkedRows(result.data.linkedRows)
-      setPageInfo(result.data.pageInfo)
-      setAllMappings(result.data.allMappings)
-      setCachedMoabitsCompanies(result.data.cachedMoabitsCompanies)
-      setDiscovery(null)
-
-      if (showSuccess) setSuccess("Cache de companias y vinculaciones actualizadas desde BD.")
-      return result.data.linkedRows
-    } catch (error) {
-      setError(getClientActionErrorMessage(error, "No se pudo consultar la cache de companias desde BD."))
-      return null
-    } finally {
-      setLoadingDb(false)
-    }
-  }
-
   async function saveMapping() {
-    const cleanCompanyId = draft.companyId.trim()
-    const cleanCode = draft.companyCode.trim()
-    const cleanName = draft.companyName.trim()
-    const cleanClieId = draft.clieId.trim()
-
-    if (!cleanCompanyId) {
-      setError("Selecciona una empresa de la BD.")
-      return
-    }
-
-    if (!cleanCode) {
-      setError("Selecciona o ingresa el codigo de compania Moabits.")
-      return
-    }
-
-    if (cleanClieId && !Number.isInteger(Number(cleanClieId))) {
-      setError("clie_id debe ser un numero entero.")
+    const validation = validateMappingDraft(draft)
+    if (validation.success !== true) {
+      setError(validation.error)
       return
     }
 
@@ -255,10 +132,10 @@ export function useMoabitsMappingManager({
     clearMessages()
 
     try {
-      const result = await upsertMoabitsProviderMapping(cleanCompanyId, {
-        companyCode: cleanCode,
-        companyName: cleanName || null,
-        clie_id: cleanClieId ? Number(cleanClieId) : null,
+      const result = await upsertMoabitsProviderMapping(validation.data.companyId, {
+        companyCode: validation.data.companyCode,
+        companyName: validation.data.companyName,
+        clie_id: validation.data.clieId,
       })
 
       if (result.error) {
@@ -268,11 +145,7 @@ export function useMoabitsMappingManager({
 
       const refreshed = await refreshFromDb({ showSuccess: false })
       if (!refreshed) return
-      setSuccess(
-        editorMode === "create"
-          ? "Vinculacion Moabits creada para esta empresa."
-          : "Vinculacion Moabits actualizada para esta empresa.",
-      )
+      setSuccess(savedMappingMessage(editorMode))
       if (editorMode === "create") {
         setEditing(false)
         setEditorMode(null)
@@ -324,15 +197,15 @@ export function useMoabitsMappingManager({
     editorMode,
     error,
     linkedCount,
-    linkedElsewhere,
+    linkedElsewhere: mappingOptions.linkedElsewhere,
     linkedRows,
     loadingDb,
     loadingDiscovery,
-    localCompanyOptions,
-    moabitsOptionSource,
-    moabitsOptions,
-    moabitsSearchOptions,
-    namesMatch,
+    localCompanyOptions: mappingOptions.localCompanyOptions,
+    moabitsOptionSource: mappingOptions.moabitsOptionSource,
+    moabitsOptions: mappingOptions.moabitsOptions,
+    moabitsSearchOptions: mappingOptions.moabitsSearchOptions,
+    namesMatch: mappingOptions.namesMatch,
     pageInfo,
     refreshDiscoveryOnly,
     refreshFromDb,
@@ -340,11 +213,11 @@ export function useMoabitsMappingManager({
     saveMapping,
     saving,
     selectLocalCompany,
-    selectedLocalCompany,
-    selectedMapping,
-    selectedMoabitsCompany,
-    selectedMoabitsDetail,
-    selectedMoabitsTitle,
+    selectedLocalCompany: mappingOptions.selectedLocalCompany,
+    selectedMapping: mappingOptions.selectedMapping,
+    selectedMoabitsCompany: mappingOptions.selectedMoabitsCompany,
+    selectedMoabitsDetail: mappingOptions.selectedMoabitsDetail,
+    selectedMoabitsTitle: mappingOptions.selectedMoabitsTitle,
     setConfirmingId,
     startCreate,
     startEdit,
@@ -352,4 +225,3 @@ export function useMoabitsMappingManager({
     updateDraft,
   }
 }
-

@@ -55,7 +55,7 @@ export function CompanyPicker({
             error
               ? "border-destructive"
               : selected
-              ? "border-[#33A6B2] text-title"
+              ? "border-header-accent text-title"
               : "border-soft-border text-muted"
           } ${selected ? "pr-10" : ""}`}
         >
@@ -144,12 +144,12 @@ export function CompanyPicker({
                         : "text-title hover:bg-hover-soft"
                     }`}
                   >
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${isSelected ? "bg-[#33A6B2]/20 text-[#0E7490]" : "bg-[#F0F8F8] text-muted"}`}>
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${isSelected ? "bg-header-accent/20 text-action-teal" : "bg-table-header-bg text-muted"}`}>
                       <Building2 className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1 truncate font-medium">{company.name}</span>
                     {isSelected && (
-                      <span className="shrink-0 text-xs text-[#0E7490]">Seleccionada</span>
+                      <span className="shrink-0 text-xs text-action-teal">Seleccionada</span>
                     )}
                   </button>
                 )

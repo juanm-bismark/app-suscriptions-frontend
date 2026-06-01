@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import {
   createCompany,
   deleteCompany,
-  searchCompanies,
   updateCompany,
 } from "@/app/actions/company"
 import type { Company } from "@/lib/types/user"
 import type { CompanyManagerProps } from "./types"
+import { useCompanyListing } from "./use-company-listing"
 
 export function useCompanyManager({
   initialCompanies,
@@ -19,72 +19,31 @@ export function useCompanyManager({
   initialQuery,
   initialError,
 }: CompanyManagerProps) {
-  const [query, setQuery] = useState(initialQuery)
-  const [companies, setCompanies] = useState(initialCompanies)
-  const [total, setTotal] = useState(initialTotal)
-  const [page, setPage] = useState(initialPage)
-  const [pageSize, setPageSize] = useState(initialSize)
-  const [pages, setPages] = useState(initialPages)
+  const listing = useCompanyListing({
+    initialCompanies,
+    initialTotal,
+    initialPage,
+    initialSize,
+    initialPages,
+    initialQuery,
+    initialError,
+  })
   const [selected, setSelected] = useState<Company | null>(null)
   const selectedIdRef = useRef<string | null>(null)
   const [draftName, setDraftName] = useState("")
   const [isCreatingNew, setIsCreatingNew] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(initialError ?? null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null)
-  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
-    let active = true
-    const timer = window.setTimeout(() => {
-      async function loadCompanies() {
-        setIsSearching(true)
-        setSearchError(null)
-
-        try {
-          const result = await searchCompanies({ q: query, page, size: pageSize })
-
-          if (!active) return
-
-          if (result.success !== true) {
-            setSearchError(result.error ?? "No se pudieron cargar las empresas")
-            return
-          }
-
-          const params = new URLSearchParams({
-            page: String(result.page),
-            size: String(result.size),
-          })
-          const cleanQuery = query.trim()
-          if (cleanQuery) params.set("q", cleanQuery)
-          window.history.replaceState(null, "", `/dashboard/company?${params.toString()}`)
-
-          setCompanies(result.companies)
-          const selectedId = selectedIdRef.current
-          if (selectedId && !result.companies.some((company) => company.id === selectedId)) {
-            clearSelectedCompany()
-          }
-          setTotal(result.total)
-          setPage(result.page)
-          setPageSize(result.size)
-          setPages(result.pages)
-        } finally {
-          if (active) setIsSearching(false)
-        }
-      }
-
-      void loadCompanies()
-    }, 250)
-
-    return () => {
-      active = false
-      window.clearTimeout(timer)
+    const selectedId = selectedIdRef.current
+    if (selectedId && !listing.companies.some((company) => company.id === selectedId)) {
+      clearSelectedCompany()
     }
-  }, [query, page, pageSize, reloadToken])
+  }, [listing.companies])
 
   const selectedCreatedAt = useMemo(() => {
     if (!selected) return null
@@ -136,19 +95,15 @@ export function useCompanyManager({
   }
 
   function updateQuery(value: string) {
-    setQuery(value)
-    setPage(1)
+    listing.updateQuery(value)
   }
 
   function goToPage(nextPage: number) {
-    if (nextPage === page || nextPage < 1) return
-    if (pages !== null && nextPage > pages) return
-    setPage(nextPage)
+    listing.goToPage(nextPage)
   }
 
   function updatePageSize(nextSize: number) {
-    setPageSize(nextSize)
-    setPage(1)
+    listing.updatePageSize(nextSize)
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -174,9 +129,9 @@ export function useCompanyManager({
       setSelected(result.company)
       setDraftName(result.company.name)
       setIsCreatingNew(false)
-      setQuery("")
-      setPage(1)
-      setReloadToken((value) => value + 1)
+      listing.setQuery("")
+      listing.resetToFirstPage()
+      listing.reload()
       setSuccess(result.message || "Empresa creada")
       return
     }
@@ -197,7 +152,7 @@ export function useCompanyManager({
     const updated = result.company
     selectedIdRef.current = updated.id
     setSelected(updated)
-    setCompanies((items) => items.map((company) => company.id === updated.id ? updated : company))
+    listing.replaceCompany(updated)
     setSuccess(result.message || "Empresa actualizada")
   }
 
@@ -210,7 +165,7 @@ export function useCompanyManager({
 
     const companyToDelete = deleteTarget
     const deletedId = companyToDelete.id
-    const isLastCompanyOnPage = companies.length === 1
+    const isLastCompanyOnPage = listing.companies.length === 1
     const formData = new FormData()
     formData.append("id", deletedId)
 
@@ -229,42 +184,41 @@ export function useCompanyManager({
       setDraftName("")
       setIsCreatingNew(false)
     }
-    setCompanies((items) => items.filter((company) => company.id !== deletedId))
-    setTotal((current) => current === null ? current : Math.max(0, current - 1))
-    if (isLastCompanyOnPage && page > 1) {
-      setPage(page - 1)
+    listing.removeCompany(deletedId)
+    if (isLastCompanyOnPage && listing.page > 1) {
+      listing.goToPage(listing.page - 1)
     } else {
-      setReloadToken((value) => value + 1)
+      listing.reload()
     }
     setSuccess(result.message || "Empresa eliminada")
   }
 
   return {
     clearSelectedCompany,
-    companies,
+    companies: listing.companies,
     deleteTarget,
     draftName,
     goToPage,
     isCreatingNew,
     isDeleting,
     isSaving,
-    isSearching,
+    isSearching: listing.isSearching,
     onDeleteTarget,
     onSubmit,
-    page,
-    pageSize,
-    pages,
-    query,
+    page: listing.page,
+    pageSize: listing.pageSize,
+    pages: listing.pages,
+    query: listing.query,
     requestDeleteCompany,
     saveError,
-    searchError,
+    searchError: listing.searchError,
     selected,
     selectedCreatedAt,
     selectCompany,
     setDraftName,
     startCreateCompany,
     success,
-    total,
+    total: listing.total,
     updateDeleteDialogOpen,
     updatePageSize,
     updateQuery,

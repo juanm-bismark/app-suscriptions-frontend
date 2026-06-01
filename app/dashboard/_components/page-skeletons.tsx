@@ -95,7 +95,7 @@ export function DashboardTableSkeleton({ rows = 3, columns = 6 }: { rows?: numbe
     <div className="animate-pulse">
       <div className="grid gap-3 bg-hover-soft px-6 py-3" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {Array.from({ length: columns }).map((_, index) => (
-          <div key={index} className="h-3 rounded bg-[#D4E8EA]" />
+          <div key={index} className="h-3 rounded bg-divider" />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, row) => (

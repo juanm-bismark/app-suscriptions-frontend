@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col bg-page">
       <nav
-        className="sticky top-0 z-[60] bg-[#E7F4F2]/55 shadow-sm shadow-[#6A9AA0]/5 ring-1 ring-white/35 backdrop-blur-md"
+        className="sticky top-0 z-[60] bg-nav-soft/55 shadow-sm shadow-nav-shadow/5 ring-1 ring-white/35 backdrop-blur-md"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 gap-3">
@@ -57,10 +57,10 @@ export default async function DashboardLayout({
                 <Button
                   asChild
                   variant="secondary"
-                  className="h-9 gap-2 border border-white/75 bg-white/70 px-3 font-semibold text-[#226F78] shadow-sm shadow-header-top/5 hover:bg-[#F6FCFC] hover:text-[#184F56]"
+                  className="h-9 gap-2 border border-white/75 bg-white/70 px-3 font-semibold text-nav-button-text shadow-sm shadow-header-top/5 hover:bg-nav-button-soft hover:text-nav-button-hover"
                 >
                   <Link href="/dashboard/profile" aria-label="Mi Perfil">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#2B8790] text-white">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-nav-avatar text-white">
                       <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
                     </span>
                     <span className="hidden sm:inline">Mi Perfil</span>

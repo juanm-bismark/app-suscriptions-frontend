@@ -6,4 +6,5 @@ export {
   getSchema,
   userCredentialPayload,
 } from "./config"
-
+export { CredentialActions } from "./credential-actions"
+export { CredentialFieldGrid } from "./credential-fields"

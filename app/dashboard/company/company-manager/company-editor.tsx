@@ -56,7 +56,7 @@ export function CompanyEditor({
             disabled={isDeleting}
             loading={isDeleting && deleteTarget?.id === selected.id}
             onClick={() => onRequestDelete(selected)}
-            className="h-9 w-9 border-[#DC2626]/25 bg-white text-[#B91C1C] shadow-sm shadow-[#DC2626]/10 hover:border-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#7F1D1D]"
+            className={dashboardStyles.dangerIconButton}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           </Button>

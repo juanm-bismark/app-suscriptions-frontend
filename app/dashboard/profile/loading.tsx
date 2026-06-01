@@ -21,7 +21,7 @@ export default function ProfileLoading() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2].map((item) => (
             <div key={item}>
-              <div className="h-4 bg-[#C8E8EA] rounded w-28 mb-2" />
+              <div className="h-4 bg-badge-bg rounded w-28 mb-2" />
               <div className="h-11 bg-white/55 rounded-md shadow-sm shadow-header-top/5" />
             </div>
           ))}
@@ -29,7 +29,7 @@ export default function ProfileLoading() {
 
         <div className="mt-6 space-y-4">
           <div>
-            <div className="h-4 bg-[#C8E8EA] rounded w-32 mb-2" />
+            <div className="h-4 bg-badge-bg rounded w-32 mb-2" />
             <div className="h-10 bg-white/80 rounded-md shadow-sm shadow-header-top/5" />
           </div>
           <div className="h-10 bg-header-top rounded-md w-40" />

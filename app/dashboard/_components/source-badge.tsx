@@ -48,12 +48,12 @@ export function SourceBadge({
 
   return (
     <span
+      className="text-title"
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: dim.gap,
         fontFamily: FONT_BODY,
-        color: "#111111",
         fontSize: dim.label,
         fontWeight: 600,
         whiteSpace: "nowrap",

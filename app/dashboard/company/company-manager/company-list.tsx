@@ -104,7 +104,7 @@ export function CompanyList({
               key={company.id}
               value={company.id}
               onSelect={() => onSelectCompany(company)}
-              className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-3 text-left outline-none aria-selected:bg-[#E5F5F6] ${selected?.id === company.id ? "bg-accent-soft" : ""}`}
+              className={`flex cursor-pointer items-center gap-3 rounded-md px-3 py-3 text-left outline-none aria-selected:bg-provider-kite-soft ${selected?.id === company.id ? "bg-accent-soft" : ""}`}
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-ink-teal">
                 <Building2 className="h-4 w-4" aria-hidden="true" />
@@ -126,7 +126,7 @@ export function CompanyList({
                   event.stopPropagation()
                   onRequestDelete(company)
                 }}
-                className="h-8 w-8 shrink-0 border-[#DC2626]/25 bg-white text-[#B91C1C] shadow-sm shadow-[#DC2626]/10 hover:border-[#B91C1C] hover:bg-[#FEE2E2] hover:text-[#7F1D1D]"
+                className={dashboardStyles.dangerSmallIconButton}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               </Button>

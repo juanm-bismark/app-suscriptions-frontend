@@ -59,7 +59,7 @@ export function DeleteCredentialButton({
           type="button"
           title="Eliminar credencial"
           aria-label={`Eliminar credencial de ${providerName(provider)}`}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-warning-soft text-warning-text-soft hover:bg-[#FEEAC8] hover:text-warning-hover-soft"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-warning-soft text-warning-text-soft hover:bg-warning-hover-bg hover:text-warning-hover-soft"
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </button>
