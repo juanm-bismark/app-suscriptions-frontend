@@ -43,7 +43,7 @@ export function UsersContent({
           <form className="flex w-full gap-2 sm:max-w-md" action="/dashboard/users" method="get">
             <input type="hidden" name="page" value="1" />
             <input type="hidden" name="size" value={pageSize} />
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-soft-border bg-white px-3 shadow-sm shadow-header-top/5 focus-within:ring-2 focus-within:ring-header-accent">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-soft-border/35 bg-white px-3 shadow-sm shadow-header-top/5 focus-within:ring-2 focus-within:ring-header-accent">
               <input
                 name="q"
                 defaultValue={query}

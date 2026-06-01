@@ -211,7 +211,7 @@ export function MappingEditor({
             disabled={deletingId === draft.companyId}
             loading={deletingId === draft.companyId}
             loadingText="Quitando..."
-            className="gap-2 border-0"
+            className="gap-2 border-0 bg-danger-action text-white hover:bg-danger-action-hover hover:text-white"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
             Quitar vinculo

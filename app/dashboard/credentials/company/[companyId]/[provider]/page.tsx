@@ -14,7 +14,7 @@ function StatusBadge({ active, expiry }: { active: boolean; expiry: CredentialEx
   if (!active) return <Badge variant="secondary">Inactiva</Badge>
   if (expiry === "expired") return <Badge variant="destructive">Expirada</Badge>
   if (expiry === "expiring") return (
-    <Badge className="border-warning-border-soft bg-warning-soft text-warning-text-soft">Por vencer</Badge>
+    <Badge className="border-warning-border-soft/45 bg-warning-soft text-warning-text-soft">Por vencer</Badge>
   )
   return <Badge variant="success">Activa</Badge>
 }

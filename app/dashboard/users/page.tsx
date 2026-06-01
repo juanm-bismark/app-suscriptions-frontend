@@ -70,7 +70,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         description="Administra los accesos del equipo a la plataforma"
         className="mb-8"
       >
-        <div className="flex max-w-full items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 sm:max-w-xs">
+        <div className="self-start sm:self-auto flex max-w-full items-center gap-3 rounded-md bg-white px-3 py-2.5 shadow-sm shadow-header-top/5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-ink-teal">
             <UsersRound className="h-4 w-4" aria-hidden="true" />
           </span>

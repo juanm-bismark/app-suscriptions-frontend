@@ -38,7 +38,7 @@ export function HeroSection() {
         <div className="text-center">
           <div className="mb-6 flex justify-center">
             <div className="inline-flex items-center justify-center rounded-lg bg-white/75 px-5 py-3 shadow-sm shadow-[#6A9AA0]/10 ring-1 ring-white/80 backdrop-blur-sm">
-              <Logo size="md" />
+              <Logo size="md" priority />
             </div>
           </div>
 

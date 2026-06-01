@@ -53,7 +53,7 @@ export function SearchableSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-soft-border bg-white shadow-lg shadow-header-top/10">
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-soft-border/35 bg-white shadow-lg shadow-header-top/10">
           <div className="border-b border-metric-soft p-2">
             <div className="flex h-8 items-center gap-2 rounded-md bg-panel-soft px-2">
               <Search className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden="true" />

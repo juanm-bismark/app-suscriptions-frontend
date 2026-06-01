@@ -48,7 +48,7 @@ export function SimImportUploadCard({
           type="file"
           accept=".csv,text/csv"
           onChange={(event) => void onFileSelected(event.target.files?.[0])}
-          className="mt-3 block w-full rounded border border-border bg-page px-3 py-2 text-sm text-title file:mr-4 file:rounded file:border-0 file:bg-header-bg file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+          className="mt-3 block w-full rounded border border-border/45 bg-page px-3 py-2 text-sm text-title file:mr-4 file:rounded file:border-0 file:bg-header-bg file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
         />
       </label>
 

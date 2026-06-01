@@ -31,7 +31,7 @@ export function ListEmptyShell({ query }: { query?: string }) {
 export function NoActiveProvidersState() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="rounded-lg border border-border bg-panel-soft p-6 shadow-sm shadow-header-top/5">
+      <div className="rounded-lg border border-border/45 bg-panel-soft p-6 shadow-sm shadow-header-top/5">
         <p className="text-sm font-semibold uppercase tracking-wide text-muted">Sin proveedores activos</p>
         <h1 className="mt-2 text-2xl font-bold text-title">Configura credenciales para consultar SIMs</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">

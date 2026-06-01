@@ -95,7 +95,7 @@ export function CompanyList({
             </button>
           )}
         </div>
-        <Command.List className="max-h-[420px] overflow-y-auto rounded-lg border border-divider-soft bg-white p-2 shadow-sm shadow-header-top/5">
+        <Command.List className="max-h-[420px] overflow-y-auto rounded-lg border border-divider-soft/45 bg-white p-2 shadow-sm shadow-header-top/5">
           <Command.Empty className="px-3 py-8 text-center text-sm text-muted">
             No se encontraron empresas.
           </Command.Empty>

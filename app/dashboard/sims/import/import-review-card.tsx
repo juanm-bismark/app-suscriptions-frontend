@@ -16,14 +16,14 @@ export function SimImportReviewCard({
 
       <div className="mt-5 space-y-3">
         {providerCounts.map(({ provider, count }) => (
-          <div key={provider} className="flex items-center justify-between gap-3 rounded border border-border bg-page px-3 py-2">
+          <div key={provider} className="flex items-center justify-between gap-3 rounded border border-border/45 bg-page px-3 py-2">
             <SourceBadge source={provider} withName />
             <span className="font-mono text-sm font-semibold text-title">{count}</span>
           </div>
         ))}
       </div>
 
-      <div className="mt-5 rounded-lg border border-border bg-page p-4 text-sm text-muted">
+      <div className="mt-5 rounded-lg border border-border/45 bg-page p-4 text-sm text-muted">
         <p className="font-semibold text-title">Reglas</p>
         <p className="mt-2">
           Cada fila debe tener ICCID no vacio y proveedor en {activeProviders.length > 0 ? activeProviders.join(", ") : "un proveedor activo"}.

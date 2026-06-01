@@ -22,7 +22,7 @@ export function PageHeader({
           <h1 className="text-3xl font-bold text-title mb-2">{title}</h1>
           {description && <p className="text-muted">{description}</p>}
         </div>
-        {children && <div className="flex items-center gap-3">{children}</div>}
+        {children && <div className="flex max-w-full flex-wrap items-center justify-start gap-3 sm:justify-end">{children}</div>}
       </div>
     </div>
   )

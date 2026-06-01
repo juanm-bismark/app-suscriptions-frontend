@@ -109,7 +109,7 @@ export default function UsersTable({
                         <>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
                             title="Editar usuario"
                             aria-label="Editar usuario"
@@ -151,7 +151,7 @@ function DeleteUserDialog({
       <AlertDialogTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
           title="Eliminar usuario"
           aria-label="Eliminar usuario"

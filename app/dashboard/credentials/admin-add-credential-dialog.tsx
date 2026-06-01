@@ -121,7 +121,7 @@ export function AdminAddCredentialDialog() {
       </DialogTrigger>
 
       <DialogContent className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-panel-soft p-0">
-        <DialogHeader className="shrink-0 border-b border-divider-soft px-6 py-5">
+        <DialogHeader className="shrink-0 border-b border-divider-soft/45 px-6 py-5">
           <DialogTitle className="text-lg font-semibold text-title">
             {step === "select"
               ? "Agregar credencial"

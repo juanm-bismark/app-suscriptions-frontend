@@ -12,7 +12,7 @@ export default function CredentialsLoading() {
         {/* Company sidebar */}
         <div>
           <DashboardPanelSkeleton />
-          <div className="mt-4 grid grid-cols-2 gap-2 border-t border-divider-soft pt-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 border-t border-divider-soft/45 pt-4">
             <div className="h-8 rounded-md bg-previous-soft" />
             <div className="h-8 rounded-md bg-next-soft" />
           </div>
@@ -20,7 +20,7 @@ export default function CredentialsLoading() {
 
         {/* Credentials table */}
         <div className="overflow-hidden rounded-lg bg-panel-soft shadow-sm shadow-header-top/5">
-          <div className="animate-pulse border-b border-divider-soft p-5 sm:p-6">
+          <div className="animate-pulse border-b border-divider-soft/45 p-5 sm:p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="h-6 w-48 rounded bg-zebra" />
               <div className="flex items-center gap-3">

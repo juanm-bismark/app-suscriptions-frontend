@@ -18,6 +18,9 @@ interface LogoProps {
 
 export function Logo({ size = "md", priority = false, className = "" }: LogoProps) {
   const config = SIZE_CONFIG[size]
+  const loading = priority ? "eager" : "lazy"
+  const fetchPriority = priority ? "high" : "auto"
+
   return (
     <Image
       src={LOGO_URL}
@@ -25,6 +28,8 @@ export function Logo({ size = "md", priority = false, className = "" }: LogoProp
       width={config.width}
       height={config.height}
       priority={priority}
+      loading={loading}
+      fetchPriority={fetchPriority}
       style={{ width: "auto", height: "auto" }}
       className={`object-contain ${className}`}
     />

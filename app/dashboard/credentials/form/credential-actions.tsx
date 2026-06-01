@@ -104,7 +104,7 @@ function DeactivateCredentialDialog({
             </div>
           </div>
         </AlertDialogHeader>
-        <div className="rounded-md border border-warning-border-soft bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
+        <div className="rounded-md border border-warning-border-soft/45 bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
           Esta accion no elimina datos historicos, pero detiene el uso de estas credenciales.
         </div>
         <AlertDialogFooter className="pt-1">

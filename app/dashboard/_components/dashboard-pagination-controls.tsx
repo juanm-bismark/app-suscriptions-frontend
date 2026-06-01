@@ -99,7 +99,7 @@ export function DashboardPaginationControls({
 
   if (variant === "compact") {
     return (
-      <div className="mt-5 space-y-3 border-t border-divider-soft pt-4 text-sm text-muted">
+      <div className="mt-5 space-y-3 border-t border-divider-soft/45 pt-4 text-sm text-muted">
         {nav}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-stretch xl:flex-row xl:items-center">
           <span>{summary}</span>

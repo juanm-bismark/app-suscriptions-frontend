@@ -31,7 +31,7 @@ export function DashboardSummaryBadge({
       <span className={dashboardStyles.summaryIcon}>
         {icon}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full">
         <p className="text-xs font-medium text-muted">{label}</p>
         <p className="truncate text-sm font-semibold text-title">{value}</p>
       </div>

@@ -55,7 +55,7 @@ export function CompanyPicker({
             error
               ? "border-destructive"
               : selected
-              ? "border-header-accent text-title"
+              ? "border-soft-focus text-title"
               : "border-soft-border text-muted"
           } ${selected ? "pr-10" : ""}`}
         >
@@ -93,7 +93,7 @@ export function CompanyPicker({
           </DialogHeader>
 
           <div className="border-b border-soft-border px-3 py-2">
-            <div className="flex h-9 items-center gap-2 rounded-md border border-soft-border bg-panel-soft px-2.5 focus-within:ring-2 focus-within:ring-header-accent">
+            <div className="flex h-9 items-center gap-2 rounded-md border border-soft-border/35 bg-panel-soft px-2.5 focus-within:ring-2 focus-within:ring-header-accent">
               <Search className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
               <input
                 autoFocus

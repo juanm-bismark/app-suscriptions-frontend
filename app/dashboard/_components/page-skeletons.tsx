@@ -61,7 +61,7 @@ export function DashboardHeaderSkeleton({ actions = 2 }: { actions?: number }) {
             </div>
           )}
         </div>
-        <div className="flex w-full max-w-xs items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5">
+        <div className="flex w-full max-w-xs items-center gap-3 rounded-md bg-white px-3 py-2.5 shadow-sm shadow-header-top/5">
           <div className="h-9 w-9 shrink-0 rounded-md bg-accent-soft" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="h-3 w-20 rounded bg-zebra" />
@@ -77,7 +77,7 @@ export function DashboardPanelSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="animate-pulse rounded-lg bg-panel-soft p-4 shadow-sm shadow-header-top/5 sm:p-5">
       <div className="mb-4 h-6 w-24 rounded bg-zebra" />
-      <div className="mb-2 h-9 rounded-md border border-soft-border bg-white" />
+      <div className="mb-2 h-9 rounded-md border border-soft-border/35 bg-white" />
       <div className="mb-4 h-8 rounded-md bg-header-top/80" />
       <div className="space-y-2">
         {Array.from({ length: rows }).map((_, index) => (

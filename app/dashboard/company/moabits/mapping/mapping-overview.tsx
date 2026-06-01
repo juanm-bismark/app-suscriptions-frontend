@@ -116,7 +116,7 @@ export function MappingOverview({
                   </div>
                 </div>
               </AlertDialogHeader>
-              <div className="rounded-md border border-warning-border-soft bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
+              <div className="rounded-md border border-warning-border-soft/45 bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
                 Si en Moabits hubo actualizaciones de codigos para cada compania, esta consulta puede generar
                 informacion incongruente entre companias hasta que se revisen las vinculaciones.
               </div>

@@ -100,7 +100,7 @@ export function SubscriptionsPaginationControls({
           disabled={!hasPrevious || isPending}
           onClick={() => go(previousHref())}
           style={{
-            border: `1px solid ${hasPrevious ? "#94A3B8" : "#CBD5E1"}`,
+            border: "1px solid transparent",
             background: hasPrevious ? "#E8EEF2" : "#EEF3F5",
             color: hasPrevious ? "#334155" : "#64748B99",
             borderRadius: 5,
@@ -118,9 +118,9 @@ export function SubscriptionsPaginationControls({
           disabled={!hasNext || isPending}
           onClick={() => go(nextHref())}
           style={{
-            border: `1px solid ${hasNext ? "#0E749055" : "#B8DDE1"}`,
-            background: hasNext ? "#D8F0F2" : "#E3F1F2",
-            color: hasNext ? "#155E75" : "#32647288",
+            border: "1px solid transparent",
+            background: hasNext ? "#ECFEFF" : "#E5F0F1",
+            color: hasNext ? "#0E7490" : "#32647288",
             borderRadius: 5,
             padding: "7px 10px",
             cursor: hasNext && !isPending ? "pointer" : "not-allowed",

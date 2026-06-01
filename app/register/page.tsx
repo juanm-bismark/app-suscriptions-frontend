@@ -69,7 +69,7 @@ export default function RegisterPage() {
       <div className="bg-[#E7F4F2]/55 shadow-sm shadow-[#6A9AA0]/5 ring-1 ring-white/35 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
-            <Logo size="md" />
+            <Logo size="md" priority />
           </Link>
         </div>
       </div>

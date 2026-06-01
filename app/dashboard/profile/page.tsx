@@ -14,7 +14,7 @@ export default async function ProfilePage() {
             <h1 className="text-3xl font-bold text-title mb-2">Mi Perfil</h1>
             <p className="text-muted">Actualiza tu información personal</p>
           </div>
-          <div className="flex max-w-full items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 sm:max-w-xs">
+          <div className="self-start sm:self-auto flex max-w-full items-center gap-3 rounded-md bg-white px-3 py-2.5 shadow-sm shadow-header-top/5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-ink-teal">
               <Building2 className="h-4 w-4" aria-hidden="true" />
             </span>

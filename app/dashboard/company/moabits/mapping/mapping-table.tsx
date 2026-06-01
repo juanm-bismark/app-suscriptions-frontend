@@ -72,7 +72,7 @@ export function MappingTable({
                         type="button"
                         variant="outline"
                         onClick={() => onEdit(row)}
-                        className="border-0 bg-hover-soft text-action-soft shadow-sm shadow-header-top/5 hover:bg-accent-soft hover:text-ink-teal"
+                        className="border-0 bg-action-teal-soft text-action-teal shadow-sm shadow-action-teal/10 hover:bg-accent-soft hover:text-action-teal-hover"
                       >
                         Editar vinculo
                       </Button>
@@ -105,7 +105,7 @@ export function MappingTable({
                           variant="outline"
                           onClick={() => onConfirmRemove(row.company_id)}
                           disabled={deletingId === row.company_id}
-                          className="gap-1.5 border-0 bg-danger-soft text-danger-text-soft shadow-sm shadow-header-top/5 hover:bg-danger-tint hover:text-danger-action-dark"
+                          className="gap-1.5 border-0 bg-danger-tint text-danger-action-hover shadow-sm shadow-danger-action/10 hover:bg-danger-soft hover:text-danger-action-dark"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                           Quitar

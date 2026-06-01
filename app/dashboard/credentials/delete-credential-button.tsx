@@ -59,7 +59,7 @@ export function DeleteCredentialButton({
           type="button"
           title="Eliminar credencial"
           aria-label={`Eliminar credencial de ${providerName(provider)}`}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-warning-soft text-warning-text-soft hover:bg-warning-hover-bg hover:text-warning-hover-soft"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-danger-tint text-danger-action-hover shadow-sm shadow-danger-action/10 hover:bg-danger-soft hover:text-danger-action-dark"
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -80,7 +80,7 @@ export function DeleteCredentialButton({
           </div>
         </AlertDialogHeader>
 
-        <div className="rounded-md border border-warning-border-soft bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
+        <div className="rounded-md border border-warning-border-soft/45 bg-warning-soft px-3 py-2 text-sm font-medium text-warning-text-soft">
           Esta acción no elimina datos históricos, pero detiene el uso de estas credenciales de inmediato.
         </div>
 

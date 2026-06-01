@@ -7,7 +7,7 @@ export default function ProfileLoading() {
             <div className="h-9 bg-zebra rounded w-40 mb-2" />
             <div className="h-5 bg-zebra rounded w-72 max-w-full" />
           </div>
-          <div className="flex max-w-full items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 sm:w-56">
+          <div className="self-start sm:self-auto flex max-w-full items-center gap-3 rounded-md bg-white px-3 py-2.5 shadow-sm shadow-header-top/5">
             <div className="h-9 w-9 shrink-0 rounded-md bg-accent-soft" />
             <div className="min-w-0 flex-1">
               <div className="mb-1.5 h-3 w-16 rounded bg-zebra" />

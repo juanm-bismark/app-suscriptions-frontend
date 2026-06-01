@@ -22,8 +22,6 @@ import type {
   CredentialUpsertIn,
 } from "@/lib/types/api"
 
-export type { CredentialActionResult }
-
 export async function listCredentials(): Promise<CredentialActionResult<CredentialMetadataOut[]>> {
   return listCredentialsAction()
 }
@@ -96,4 +94,3 @@ export async function deactivateCompanyCredential(
 ): Promise<CredentialActionResult<Record<string, never>>> {
   return deactivateCompanyCredentialAction(companyId, provider)
 }
-

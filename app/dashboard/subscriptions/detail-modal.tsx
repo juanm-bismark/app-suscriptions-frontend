@@ -70,7 +70,7 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-[680px] max-h-[90vh] bg-card rounded-lg border border-border flex flex-col overflow-hidden font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
+        className="w-full max-w-[680px] max-h-[90vh] bg-card rounded-lg border border-border/45 flex flex-col overflow-hidden font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
       >
         <DetailModalHeader record={activeRecord} onClose={onClose} />
         <div className="flex-1 overflow-auto">

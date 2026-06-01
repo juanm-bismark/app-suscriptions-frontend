@@ -23,7 +23,7 @@ export function PurgeMockDialog({
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="w-[min(460px,100%)] bg-card rounded-lg border border-border overflow-hidden shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
+        className="w-[min(460px,100%)] bg-card rounded-lg border border-border/45 overflow-hidden shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
       >
         <div className="px-[18px] py-4 border-b border-divider">
           <h3 className="m-0 text-title text-base">Purgar SIM</h3>
@@ -38,7 +38,7 @@ export function PurgeMockDialog({
           <button
             type="button"
             onClick={onClose}
-            className="border border-border bg-card text-text rounded-md px-2.5 py-2 cursor-pointer text-xs font-extrabold"
+            className="border border-border/45 bg-card text-text rounded-md px-2.5 py-2 cursor-pointer text-xs font-extrabold"
           >
             Cancelar
           </button>

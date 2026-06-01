@@ -1,6 +1,7 @@
 import { getCompany, requireProfile } from "@/lib/auth/current-user"
 import { canAccessDashboard } from "@/lib/types/user"
 import { Building2 } from "lucide-react"
+import { DashboardSummaryBadge } from "./_components/dashboard-ui"
 import { DashboardOverview } from "./dashboard-overview"
 import ProfileForm from "./profile/profile-form"
 
@@ -40,15 +41,12 @@ export default async function DashboardPage() {
             </h1>
             <p className="text-muted">Aquí podrás gestionar todas tus suscripciones</p>
           </div>
-          <div className="flex w-full max-w-full shrink-0 items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 md:w-72 xl:w-80">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-ink-teal">
-              <Building2 className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-muted">Empresa</p>
-              <p className="truncate text-sm font-semibold text-title">{company?.name || "N/A"}</p>
-            </div>
-          </div>
+          <DashboardSummaryBadge
+            icon={<Building2 className="h-4 w-4" aria-hidden="true" />}
+            label="Empresa"
+            value={company?.name || "N/A"}
+            className="self-start md:self-auto"
+          />
         </div>
       </div>
 

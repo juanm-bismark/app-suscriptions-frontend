@@ -8,7 +8,7 @@ export default function SimImportLoading() {
             <div className="h-4 w-96 max-w-full rounded bg-zebra" />
           </div>
         </div>
-        <div className="rounded-lg bg-white border border-border p-8">
+        <div className="rounded-lg bg-white border border-border/45 p-8">
           <div className="space-y-4">
             <div className="h-10 w-full rounded bg-zebra" />
             <div className="h-32 w-full rounded bg-zebra" />

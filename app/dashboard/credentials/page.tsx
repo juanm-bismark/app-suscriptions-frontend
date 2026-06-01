@@ -177,7 +177,7 @@ async function AdminCredentialsPage({
         </Card>
 
         <Card className={`flex min-h-[calc(100vh-22rem)] flex-col overflow-hidden border-0 ${dashboardStyles.panelShell}`}>
-          <div className="border-b border-divider-soft p-4 sm:p-5">
+          <div className="border-b border-divider-soft/45 p-4 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-title">

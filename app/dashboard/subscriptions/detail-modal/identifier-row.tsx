@@ -40,7 +40,7 @@ export function IdentifierRow({
           type="button"
           onClick={onCopy}
           title={`Copiar ${label}`}
-          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-bold border border-border bg-card text-text transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-bold border border-border/45 bg-card text-text transition-colors"
           style={
             isCopied
               ? { borderColor: color, background: `${color}1a`, color }

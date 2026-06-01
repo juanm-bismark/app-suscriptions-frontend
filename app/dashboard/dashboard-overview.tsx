@@ -79,6 +79,7 @@ export function DashboardOverview() {
               value={totalLabel}
               help={totalHelp}
               loading={isLoading}
+              tone="inventory"
             />
             <MetricCard
               icon={<RadioTower className="h-4 w-4" />}
@@ -86,6 +87,7 @@ export function DashboardOverview() {
               value={topProvider ? providerDisplayName(topProvider.provider) : overview ? "-" : "--"}
               help={topProvider ? `${topProvider.count} en la primera consulta` : "Sin datos disponibles"}
               loading={isLoading}
+              tone="provider"
             />
             <MetricCard
               icon={<ServerCog className="h-4 w-4" />}
@@ -93,6 +95,7 @@ export function DashboardOverview() {
               value={overview ? `${overview.providerHints.filter((item) => item.status !== "not_queried").length}/${activeProviderCount}` : "--"}
               help={overview?.activeProviders !== null && overview?.activeProviders.length === 0 ? "Sin proveedores disponibles" : overview?.providerHints.some((item) => item.status === "error" || item.status === "partial") ? "Hay fuentes con error o respuesta parcial" : overview?.providerHints.some((item) => item.status === "not_queried") ? "Hay fuentes fuera de este resumen" : activeProviderNames}
               loading={isLoading}
+              tone="health"
             />
           </div>
         </div>

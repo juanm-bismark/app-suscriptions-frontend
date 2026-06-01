@@ -7,7 +7,7 @@ export default function CompanyLoading() {
             <div className="mb-2 h-9 w-40 rounded bg-zebra" />
             <div className="h-5 w-96 max-w-full rounded bg-zebra" />
           </div>
-          <div className="flex max-w-full items-center gap-3 rounded-md border border-soft-border bg-white px-3 py-2.5 shadow-sm shadow-header-top/5 sm:w-56">
+          <div className="self-start sm:self-auto flex max-w-full items-center gap-3 rounded-md bg-white px-3 py-2.5 shadow-sm shadow-header-top/5">
             <div className="h-9 w-9 shrink-0 rounded-md bg-accent-soft" />
             <div className="min-w-0 flex-1">
               <div className="mb-1.5 h-3 w-16 rounded bg-zebra" />
@@ -24,15 +24,15 @@ export default function CompanyLoading() {
               <div className="mb-2 h-7 w-40 rounded bg-skeleton-soft" />
               <div className="h-4 w-48 rounded bg-skeleton-muted" />
             </div>
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-badge-bg border-t-table-header-text" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-badge-bg/70 border-t-table-header-text/70" />
           </div>
 
-          <div className="flex h-11 items-center gap-2 rounded-md border border-soft-border bg-white px-3 shadow-sm shadow-header-top/5">
+          <div className="flex h-11 items-center gap-2 rounded-md border border-soft-border/35 bg-white px-3 shadow-sm shadow-header-top/5">
             <div className="h-4 w-4 rounded bg-divider-soft" />
             <div className="h-4 w-44 rounded bg-zebra" />
           </div>
 
-          <div className="mt-3 max-h-[420px] space-y-2 overflow-hidden rounded-lg border border-divider-soft bg-white p-2 shadow-sm shadow-header-top/5">
+          <div className="mt-3 max-h-[420px] space-y-2 overflow-hidden rounded-lg border border-divider-soft/45 bg-white p-2 shadow-sm shadow-header-top/5">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="flex animate-pulse items-center gap-3 rounded-md px-3 py-3">
                 <div className="h-9 w-9 shrink-0 rounded-md bg-accent-soft" />

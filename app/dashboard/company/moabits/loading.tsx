@@ -9,7 +9,7 @@ export default function MoabitsLoading() {
             <div className="h-4 w-96 max-w-full rounded bg-zebra" />
           </div>
         </div>
-        <div className="rounded-lg bg-white border border-border p-6">
+        <div className="rounded-lg bg-white border border-border/45 p-6">
           <div className="h-96 rounded bg-zebra" />
         </div>
       </div>

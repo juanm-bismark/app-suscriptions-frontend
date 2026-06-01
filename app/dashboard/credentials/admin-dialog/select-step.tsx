@@ -60,7 +60,7 @@ export function SelectStep({
           </Alert>
         )}
 
-        <div className="max-h-52 overflow-y-auto rounded-md border border-soft-border bg-white shadow-sm shadow-header-top/5">
+        <div className="max-h-52 overflow-y-auto rounded-md border border-soft-border/35 bg-white shadow-sm shadow-header-top/5">
           {loadingCompanies ? (
             <p className="p-3 text-sm text-muted">Cargando...</p>
           ) : companies.length === 0 ? (
@@ -92,7 +92,7 @@ export function SelectStep({
         <p className="text-sm font-semibold text-title">Proveedor</p>
         {selectedCompany ? (
           loadingMissingProviders ? (
-            <p className="rounded-md border border-soft-border bg-white p-3 text-sm text-muted shadow-sm shadow-header-top/5">
+            <p className="rounded-md border border-soft-border/35 bg-white p-3 text-sm text-muted shadow-sm shadow-header-top/5">
               Consultando credenciales...
             </p>
           ) : credentialError ? (
@@ -106,10 +106,10 @@ export function SelectStep({
                   key={provider}
                   type="button"
                   onClick={() => onSelectProvider(provider)}
-                  className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-sm font-semibold transition-colors ${
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-sm font-semibold shadow-sm shadow-header-top/5 transition-colors ${
                     selectedProvider === provider
-                      ? "border-strong-border bg-accent-soft text-title"
-                      : "border-soft-border bg-white text-muted hover:border-soft-border-hover hover:text-title"
+                      ? "border-soft-focus bg-accent-soft text-title"
+                      : "border-soft-border/70 bg-white text-muted hover:border-soft-border hover:bg-hover-soft hover:text-title"
                   }`}
                 >
                   <SourceBadge source={provider} size="lg" />
@@ -118,12 +118,12 @@ export function SelectStep({
               ))}
             </div>
           ) : (
-            <p className="rounded-md border border-soft-border bg-white p-3 text-sm text-muted shadow-sm shadow-header-top/5">
+            <p className="rounded-md border border-soft-border/35 bg-white p-3 text-sm text-muted shadow-sm shadow-header-top/5">
               Esta empresa ya tiene todas las credenciales configuradas.
             </p>
           )
         ) : (
-          <p className="rounded-md border border-soft-border bg-white p-3 text-sm text-muted shadow-sm shadow-header-top/5">
+          <p className="rounded-md border border-soft-border/35 bg-white p-3 text-sm text-muted shadow-sm shadow-header-top/5">
             Selecciona una empresa para ver sus proveedores pendientes.
           </p>
         )}
