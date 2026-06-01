@@ -63,8 +63,10 @@
   --color-warning-text-soft: #6D4D16;
   --color-warning-icon-soft: #765315;
   --color-warning-hover-soft: #4A3010;
+  --color-success-bg: #16603B;
   --color-success-soft: #DDF4EA;
   --color-success-text-soft: #16603B;
+  --color-destructive: #DC2626;
   --color-danger-soft: #F5EAEA;
   --color-danger-text-soft: #7A3535;
   --color-danger-action: #DC2626;
