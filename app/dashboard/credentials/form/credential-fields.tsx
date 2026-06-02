@@ -51,6 +51,7 @@ function CredentialField({
         <Select
           {...form.register(field.name)}
           value={String(value ?? "")}
+          placeholder={field.placeholder}
           className="h-10 border-0 bg-white/80 shadow-sm shadow-header-top/5 focus-visible:ring-header-accent"
         >
           {field.options.map((option) => (
@@ -110,7 +111,7 @@ function CredentialFileField({
           }
         }}
       />
-      {value ? <p className="text-xs text-muted">Archivo cargado y convertido a base64.</p> : null}
+      {value ? <p className="text-xs text-muted">Archivo cargado.</p> : null}
     </div>
   )
 }

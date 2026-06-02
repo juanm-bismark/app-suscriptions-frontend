@@ -25,14 +25,15 @@ export function credentialDefaults(provider: Provider, credential?: CredentialMe
   if (provider === "tele2") {
     return {
       credentials: {
-        cobrand_url: "restapi3.jasper.com",
+        cobrand_url: "",
         username: "",
         api_key: "",
+        api_version: "",
       },
       account_scope: {
         account_id: scope.account_id ?? "",
-        max_tps: scope.max_tps ?? 5,
-        environment: scope.environment ?? "production",
+        max_tps: scope.max_tps,
+        environment: scope.environment ?? "",
       },
     }
   }
