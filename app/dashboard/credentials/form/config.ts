@@ -120,25 +120,25 @@ export type Field =
 export const FIELDS: Record<Provider, Field[]> = {
   kite: [
     { kind: "text", name: "credentials.endpoint", label: "Endpoint SOAP (obligatorio)", placeholder: KITE_DEFAULT_ENDPOINT, adminOnly: true },
-    { kind: "text", name: "credentials.username", label: "WS-Sec username (opcional)", adminOnly: true },
-    { kind: "password", name: "credentials.password", label: "WS-Sec password (opcional)", adminOnly: true },
     { kind: "file", name: "credentials.client_cert_pfx_b64", label: "Certificado cliente (.pfx/.p12) (obligatorio)" },
     { kind: "password", name: "credentials.client_cert_password", label: "Clave del certificado (obligatoria)" },
+    { kind: "text", name: "credentials.username", label: "WS-Sec username (opcional)", adminOnly: true },
+    { kind: "password", name: "credentials.password", label: "WS-Sec password (opcional)", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente (production por defecto)", options: ["production", "staging", "sandbox"], adminOnly: true },
     { kind: "text", name: "account_scope.end_customer_id", label: "End customer ID (opcional)", adminOnly: true },
   ],
   tele2: [
-    { kind: "text", name: "credentials.cobrand_url", label: "Cobrand URL (opcional)", placeholder: TELE2_DEFAULT_COBRAND_URL, adminOnly: true },
     { kind: "text", name: "credentials.username", label: "Usuario (obligatorio)", adminOnly: true },
     { kind: "password", name: "credentials.api_key", label: "API key (obligatorio)" },
+    { kind: "text", name: "credentials.cobrand_url", label: "Cobrand URL (opcional)", placeholder: TELE2_DEFAULT_COBRAND_URL, adminOnly: true },
     { kind: "text", name: "credentials.api_version", label: "API version (opcional)", placeholder: TELE2_DEFAULT_API_VERSION, adminOnly: true },
     { kind: "text", name: "account_scope.account_id", label: "Account ID (opcional)", adminOnly: true },
     { kind: "number", name: "account_scope.max_tps", label: "Max TPS (opcional)", placeholder: "1", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente (opcional)", options: ["production", "staging"], placeholder: "Sin metadata", adminOnly: true },
   ],
   moabits: [
-    { kind: "text", name: "credentials.base_url", label: "Base URL", adminOnly: true },
     { kind: "password", name: "credentials.x_api_key", label: "x-api-key" },
+    { kind: "text", name: "credentials.base_url", label: "Base URL", adminOnly: true },
     { kind: "select", name: "account_scope.environment", label: "Ambiente", options: ["production", "staging"], adminOnly: true },
   ],
 }
