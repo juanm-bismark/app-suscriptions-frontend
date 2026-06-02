@@ -11,3 +11,10 @@ services:
       - .env.production
     environment:
       - NODE_ENV=production
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    external: true
+    name: app-suscriptions-net
