@@ -1,4 +1,5 @@
 import type { CredentialMetadataOut, CredentialUpsertIn, Provider } from "@/lib/types/api"
+import { KITE_DEFAULT_ENDPOINT } from "./form/config"
 
 
 export function credentialDefaults(provider: Provider, credential?: CredentialMetadataOut | null): CredentialUpsertIn {
@@ -7,7 +8,7 @@ export function credentialDefaults(provider: Provider, credential?: CredentialMe
   if (provider === "kite") {
     return {
       credentials: {
-        endpoint: "",
+        endpoint: KITE_DEFAULT_ENDPOINT,
         username: "",
         password: "",
         client_cert_pfx_b64: "",
@@ -57,4 +58,3 @@ export function pruneEmptyStrings(value: unknown): unknown {
       .map(([key, item]) => [key, pruneEmptyStrings(item)])
   )
 }
-

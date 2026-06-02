@@ -22,7 +22,7 @@ import { credentialDefaults, pruneEmptyStrings } from "./credential-payload"
 import { providerName } from "./credential-utils"
 import { CredentialActions } from "./form/credential-actions"
 import { CredentialFieldGrid } from "./form/credential-fields"
-import { fieldsForProvider, getSchema, userCredentialPayload } from "./form"
+import { fieldsForProvider, getSchema, KITE_DEFAULT_ENDPOINT, userCredentialPayload } from "./form"
 
 export function CredentialForm({
   provider,
@@ -59,6 +59,12 @@ export function CredentialForm({
     setSuccess(null)
     setSubmittingMode(mode)
     const payload = pruneEmptyStrings(values) as CredentialUpsertIn
+    if (provider === "kite") {
+      payload.credentials = {
+        ...(payload.credentials ?? {}),
+        endpoint: KITE_DEFAULT_ENDPOINT,
+      }
+    }
     if (!isAdmin) {
       const creds = payload.credentials as Record<string, unknown>
       payload.credentials = userCredentialPayload(provider, creds)

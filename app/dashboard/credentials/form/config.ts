@@ -8,20 +8,20 @@ export const environment = {
   sandbox: "Sandbox",
 } as const
 
+export const KITE_DEFAULT_ENDPOINT =
+  "https://kiteplatform-api.telefonica.com:8010/services/SOAP/GlobalM2M/Inventory/v12/r12"
+
 const kiteSchema = z.object({
   credentials: z.object({
     endpoint: z.string().url("URL invalida").refine((u) => u.startsWith("https://"), "Debe ser HTTPS"),
     username: z.string().optional(),
     password: z.string().optional(),
-    client_cert_pfx_b64: z.string().optional(),
-    client_cert_password: z.string().optional(),
+    client_cert_pfx_b64: z.string().min(1, "Carga el certificado PFX"),
+    client_cert_password: z.string().min(1, "Ingresa la clave del certificado"),
     server_ca_bundle_pem_b64: z.string().optional(),
   }).refine((v) => !!v.username === !!v.password, {
     message: "username y password de WS-Sec deben ir juntos",
     path: ["username"],
-  }).refine((v) => !v.client_cert_pfx_b64 || !!v.client_cert_password, {
-    message: "Ingresa la clave del certificado",
-    path: ["client_cert_password"],
   }),
   account_scope: z.object({
     environment: z.enum(["production", "staging", "sandbox"]).default("production"),
@@ -94,7 +94,7 @@ export type Field =
 
 export const FIELDS: Record<Provider, Field[]> = {
   kite: [
-    { kind: "text", name: "credentials.endpoint", label: "Endpoint SOAP", placeholder: "https://...", adminOnly: true },
+    { kind: "text", name: "credentials.endpoint", label: "Endpoint SOAP", placeholder: KITE_DEFAULT_ENDPOINT, adminOnly: true },
     { kind: "text", name: "credentials.username", label: "WS-Sec username", adminOnly: true },
     { kind: "password", name: "credentials.password", label: "WS-Sec password", adminOnly: true },
     { kind: "file", name: "credentials.client_cert_pfx_b64", label: "Certificado cliente PFX" },
@@ -119,7 +119,7 @@ export const FIELDS: Record<Provider, Field[]> = {
 }
 
 const USER_CREDENTIAL_KEYS: Record<Provider, readonly string[]> = {
-  kite: ["client_cert_pfx_b64", "client_cert_password"],
+  kite: ["endpoint", "client_cert_pfx_b64", "client_cert_password"],
   tele2: ["api_key"],
   moabits: ["x_api_key"],
 }

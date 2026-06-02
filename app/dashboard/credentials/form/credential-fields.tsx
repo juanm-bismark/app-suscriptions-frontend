@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { Input, Select, SelectItem } from "@/components/ui"
 import type { CredentialUpsertIn } from "@/lib/types/api"
@@ -84,6 +85,10 @@ function CredentialFileField({
   form: UseFormReturn<CredentialUpsertIn>
   value: unknown
 }) {
+  useEffect(() => {
+    form.register(field.name)
+  }, [field.name, form])
+
   return (
     <div className="space-y-2">
       <Input
@@ -92,11 +97,20 @@ function CredentialFileField({
         className="border-0 bg-white/80 shadow-sm shadow-header-top/5 file:text-header-bg focus-visible:ring-header-accent"
         onChange={async (event) => {
           const file = event.target.files?.[0]
-          if (!file) return
-          form.setValue(field.name, await fileToBase64(file), { shouldDirty: true, shouldValidate: true })
+          if (!file) {
+            form.setValue(field.name, "", { shouldDirty: true, shouldValidate: true })
+            return
+          }
+
+          try {
+            form.clearErrors(field.name)
+            form.setValue(field.name, await fileToBase64(file), { shouldDirty: true, shouldValidate: true })
+          } catch {
+            form.setError(field.name, { type: "manual", message: "No se pudo leer el certificado PFX" })
+          }
         }}
       />
-      {value ? <p className="text-xs text-muted">Archivo cargado en base64.</p> : null}
+      {value ? <p className="text-xs text-muted">Archivo cargado y convertido a base64.</p> : null}
     </div>
   )
 }
