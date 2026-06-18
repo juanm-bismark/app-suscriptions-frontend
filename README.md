@@ -24,6 +24,16 @@ npm run dev
 
 Open http://localhost:3000.
 
+## Docker
+
+A production image is provided. `docker-compose.yml` builds from the local
+`Dockerfile`, exposes port 3000, and reads environment from `.env.production`.
+It attaches to an external network named `app-suscriptions-net`.
+
+```bash
+docker compose up --build
+```
+
 ## Auth Flow
 
 The frontend does not own user passwords or tenant data. It delegates auth to
@@ -46,7 +56,7 @@ responses, and exposes them as `ApiError`.
 Key flows:
 
 - SIM listing and detail: `lib/api/sims.ts`
-- Provider credentials and capability checks: `lib/api/credentials.ts`
+- Provider credentials (upsert, test, delete): `lib/credentials/actions/`
 - Current user/company helpers: `lib/auth/current-user.ts`
 - SIM CSV bootstrap import: `/dashboard/sims/import`
 
@@ -56,7 +66,10 @@ Key flows:
 npm run typecheck
 npm run build
 npm run lint
+npm run test
 ```
+
+`npm run test` runs the Vitest suite (`vitest run`).
 
 `next/font` downloads Google font assets during build. In a network-restricted
 sandbox, the build may need network approval.
