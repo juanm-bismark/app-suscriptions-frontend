@@ -19,7 +19,11 @@
 Implementation pointers:
 - Router wiring: [app/main.py](app/main.py)
 - Request ID + version headers: [app/shared/middleware.py](app/shared/middleware.py)
-- Error envelope (problem+json): [app/main.py:60-98](app/main.py#L60-L98) and [app/shared/errors.py](app/shared/errors.py)
+- Error envelope (problem+json): [app/main.py:75-102](app/main.py#L75-L102) and [app/shared/errors.py](app/shared/errors.py)
+
+> **Last verified against `back/app/` code: 2026-06-18.** File references point to
+> the **backend** repository (`back/`); line numbers are best-effort and may drift
+> as the backend is refactored — trust the symbol name over the exact line.
 
 ---
 
@@ -89,7 +93,7 @@ Implementation pointers:
 | `Authorization: Bearer <jwt>` | yes | Issued by `/auth/login`, `/auth/signup`, `/auth/refresh`. See [app/identity/dependencies.py:18](app/identity/dependencies.py#L18). |
 | `Content-Type: application/json` | for `POST/PUT/PATCH` with body | |
 | `X-Request-ID` | optional | If omitted, server generates one and echoes it back. Use one per logical user action so logs/audits/idempotency can be correlated. See [app/shared/middleware.py:32](app/shared/middleware.py#L32). |
-| `Idempotency-Key` | required for write SIM lifecycle ops | Required for `PUT /v1/sims/{iccid}/status` and `POST /v1/sims/{iccid}/purge`. Window: 24h. See [app/subscriptions/routers/sims.py:191-196](app/subscriptions/routers/sims.py#L191-L196) and [app/shared/errors.py:198-201](app/shared/errors.py#L198-L201). |
+| `Idempotency-Key` | required for write SIM lifecycle ops | Required for `PUT /v1/sims/{iccid}/status` and `POST /v1/sims/{iccid}/purge`. Window: 24h. See [app/subscriptions/services/idempotency.py](app/subscriptions/services/idempotency.py) and [app/shared/errors.py](app/shared/errors.py). |
 
 ### Headers in every response
 
@@ -97,13 +101,13 @@ Implementation pointers:
 |---|---|
 | `X-Request-ID` | echoed/generated request id |
 | `X-API-Version` | always `v1` |
-| `Retry-After` | only on `429 provider.rate_limited` and `503 provider.unavailable` when the upstream provider supplied a hint. Value is in **seconds** (integer string). The same value is also mirrored inside the problem+json body as `extra.retry_after`. See [app/main.py:74-77](app/main.py#L74-L77). |
+| `Retry-After` | only on `429 provider.rate_limited` and `503 provider.unavailable` when the upstream provider supplied a hint. Value is in **seconds** (integer string). The same value is also mirrored inside the problem+json body as `extra.retry_after`. See [app/main.py:84-87](app/main.py#L84-L87). |
 
 ### CORS
 
 Allowed origins come from `CORS_ORIGINS` env var (default
 `http://localhost:3000,http://localhost:5173`). All methods and headers are
-allowed; `allow_credentials=true`. See [app/main.py:51-57](app/main.py#L51-L57).
+allowed; `allow_credentials=true`. See [app/main.py:66-72](app/main.py#L66-L72).
 
 ### Identifiers & data types
 
@@ -111,7 +115,7 @@ allowed; `allow_credentials=true`. See [app/main.py:51-57](app/main.py#L51-L57).
 - All datetimes: **ISO-8601 UTC**, e.g. `2026-04-01T00:00:00Z`
 - Some SIM-list filters (`modified_since`, `modified_till`) require the
   exact pattern `yyyy-MM-ddTHH:mm:ssZ` (no fractional seconds, trailing `Z`
-  mandatory). Pattern enforced at [app/subscriptions/routers/sims.py:69](app/subscriptions/routers/sims.py#L69).
+  mandatory). Pattern enforced at [app/subscriptions/routers/sims.py:170](app/subscriptions/routers/sims.py#L170).
 
 ### Roles (RBAC)
 
@@ -919,7 +923,7 @@ Two modes:
 
 **Auth**: any authenticated tenant user.
 
-**Query parameters** ([list_sims signature](app/subscriptions/routers/sims.py#L779-L822)):
+**Query parameters** ([list_sims signature](app/subscriptions/routers/sims.py#L152)):
 
 | Param | Type | Default | Notes |
 |---|---|---|---|
@@ -1007,7 +1011,7 @@ fixed/static addresses stay in `fixed_ip_address`, `fixed_ipv6_address`, or
   ```json
   { "errorMessage": "ModifiedSince is required.", "errorCode": "10000003" }
   ```
-  See [_tele2_missing_modified_since_response](app/subscriptions/routers/sims.py#L468-L475).
+  See [_tele2_missing_modified_since_response](app/subscriptions/services/listing.py#L70).
 - Moabits provider-scoped listing returns `412 subscription.listing_precondition_failed`
   if no Moabits company code mapping is configured (see § 3.7).
 - Global listing may return `not_queried` in `provider_statuses` when a small
@@ -1585,7 +1589,7 @@ For writes, use the `targets` advertised by `GET /v1/providers/{provider}/capabi
 
 ### 8.2 `Provider`
 
-Source: [app/providers/base.py:27-30](app/providers/base.py#L27-L30).
+Source: [app/providers/base.py:29-32](app/providers/base.py#L29-L32).
 
 ```
 kite | tele2 | moabits
@@ -1622,7 +1626,7 @@ online | offline | unknown
 ## 9. Error envelope (RFC 7807)
 
 Every business error returns `application/problem+json` with this shape
-([app/main.py:60-81](app/main.py#L60-L81)):
+([app/main.py:75-102](app/main.py#L75-L102)):
 
 ```json
 {
@@ -1680,7 +1684,7 @@ Three endpoints intentionally do **not** use problem+json:
 - `Pydantic` validation errors return FastAPI's default 422 body
   `{"detail":[{"loc":[...], "msg":"...", "type":"..."}]}`.
 - The Tele2 missing-`modified_since` 400 returns `{"errorMessage":"...","errorCode":"..."}`
-  (mirrors Tele2's own format — see [app/subscriptions/routers/sims.py:468-475](app/subscriptions/routers/sims.py#L468-L475)).
+  (mirrors Tele2's own format — see [app/subscriptions/services/listing.py:70](app/subscriptions/services/listing.py#L70)).
 
 When integrating, the frontend should branch on:
 1. HTTP status code first.
