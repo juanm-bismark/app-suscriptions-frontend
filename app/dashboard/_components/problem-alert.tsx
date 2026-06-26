@@ -51,16 +51,16 @@ export function ProblemAlert({
   }
 
   return (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+    <div role="alert" className="rounded-lg border border-danger-action/20 bg-danger-tint p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+          <p className="text-xs font-semibold uppercase tracking-wide text-danger-action">
             {problem?.status ? `HTTP ${problem.status}` : problem?.code || "Error"}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-red-900">{displayTitle}</h2>
-          <p className="mt-2 text-sm text-red-700">{detail}</p>
+          <h2 className="mt-1 text-lg font-semibold text-danger-strong-text">{displayTitle}</h2>
+          <p className="mt-2 text-sm text-danger-text-soft">{detail}</p>
           {requestId && (
-            <p className="mt-3 break-all text-xs font-mono text-red-700">
+            <p className="mt-3 break-all font-mono text-xs text-danger-text-soft">
               Request id: {requestId}
             </p>
           )}

@@ -39,6 +39,12 @@ declare module "next-auth/jwt" {
 }
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const AUTH_SECRET =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? undefined
+    : "app-suscripciones-local-development-auth-secret")
 const ACCESS_TOKEN_REFRESH_MARGIN_MS = 60_000
 const refreshRequests = new Map<string, Promise<JWT>>()
 
@@ -53,6 +59,13 @@ class InvalidCredentialsError extends CredentialsSignin {
 
 class AuthServiceUnavailableError extends CredentialsSignin {
   code = "auth_service_unavailable"
+}
+
+function logAuthError(error: Error & { type?: string }) {
+  if (process.env.NODE_ENV !== "production" && error.type === "JWTSessionError") {
+    return
+  }
+  console.error(error)
 }
 
 function decodeJwtSubject(accessToken: string): string | null {
@@ -138,6 +151,10 @@ async function revokeRefreshToken(refreshToken: unknown) {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: AUTH_SECRET,
+  logger: {
+    error: logAuthError,
+  },
   providers: [
     Credentials({
       credentials: {

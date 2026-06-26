@@ -28,7 +28,7 @@ function Select({ children, className, name, onChange, placeholder, ...props }: 
       <SelectPrimitive.Trigger
         type="button"
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-title shadow-sm shadow-header-top/5 ring-offset-white transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-10 w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm text-title shadow-sm shadow-header-top/5 ring-offset-page transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
       >
@@ -39,13 +39,12 @@ function Select({ children, className, name, onChange, placeholder, ...props }: 
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
-          className="z-[80] min-w-[8rem] overflow-hidden rounded-md border border-border bg-white text-title shadow-md"
+          className="z-[80] min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-title shadow-md"
           style={{
-            background: "#FFFFFF",
             opacity: 1,
           }}
         >
-          <SelectPrimitive.Viewport className="p-1" style={{ background: "#FFFFFF" }}>
+          <SelectPrimitive.Viewport className="bg-card p-1">
             {children}
           </SelectPrimitive.Viewport>
         </SelectPrimitive.Content>

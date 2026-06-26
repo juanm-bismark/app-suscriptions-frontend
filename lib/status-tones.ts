@@ -8,10 +8,10 @@ export interface ToneMeta {
 export type StatusTone = "success" | "test" | "warn" | "danger" | "neutral" | "info"
 
 export const STATUS_TONES: Record<StatusTone, ToneMeta> = {
-  success: { label: "", color: "#2D8A6F", bg: "#D7ECE4", dot: "#2D8A6F" },
+  success: { label: "", color: "#16603B", bg: "#DDF4EA", dot: "#16603B" },
   test: { label: "", color: "#7B4FE0", bg: "#E9DFFB", dot: "#7B4FE0" },
   warn: { label: "", color: "#C58A1E", bg: "#FBEFD4", dot: "#E0A93F" },
-  danger: { label: "", color: "#C85A4A", bg: "#FADDD6", dot: "#D86550" },
+  danger: { label: "", color: "#DC2626", bg: "#FEE2E2", dot: "#DC2626" },
   neutral: { label: "", color: "#6B7480", bg: "#E5E8EC", dot: "#8B93A0" },
   info: { label: "", color: "#326472", bg: "#D7E7EC", dot: "#33A6B2" },
 }

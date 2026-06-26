@@ -63,8 +63,12 @@ export function CompanyEditor({
         )}
       </div>
 
-      {saveError && <div className="mt-5 rounded-md bg-warn-bg p-3 text-sm text-warn-text">{saveError}</div>}
-      {success && <div className={`mt-5 ${dashboardStyles.successNotice}`}>{success}</div>}
+      {saveError && (
+        <div role="alert" className="mt-5 rounded-md border border-danger-action/20 bg-danger-tint p-3 text-sm text-danger-strong-text">
+          {saveError}
+        </div>
+      )}
+      {success && <div role="status" aria-live="polite" className={`mt-5 ${dashboardStyles.successNotice}`}>{success}</div>}
 
       {!selected && !isCreatingNew ? (
         <div className="mt-5 rounded-lg bg-white/65 p-6 text-sm text-muted shadow-sm shadow-header-top/5">

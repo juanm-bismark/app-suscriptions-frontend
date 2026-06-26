@@ -69,7 +69,7 @@ export function CompanyList({
       </div>
 
       {searchError && (
-        <div className="mb-3 rounded-md bg-warn-bg p-3 text-sm text-warn-text">
+        <div role="alert" className="mb-3 rounded-md border border-danger-action/20 bg-danger-tint p-3 text-sm text-danger-strong-text">
           {searchError}
         </div>
       )}

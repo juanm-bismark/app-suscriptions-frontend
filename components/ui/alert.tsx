@@ -7,9 +7,9 @@ const alertVariants = cva("relative w-full rounded-lg border p-4 text-sm", {
   variants: {
     variant: {
       default: "border-border bg-card text-title",
-      destructive: "border-red-200 bg-red-50 text-red-800",
-      success: "border-green-200 bg-green-50 text-green-800",
-      warning: "border-amber-200 bg-amber-50 text-amber-900",
+      destructive: "border-danger-action/20 bg-danger-tint text-danger-strong-text",
+      success: "border-success-bg/20 bg-success-soft text-success-text-soft",
+      warning: "border-warning-border-soft bg-warning-soft text-warning-text-soft",
     },
   },
   defaultVariants: {

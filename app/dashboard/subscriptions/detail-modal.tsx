@@ -1,6 +1,6 @@
 "use client"
 
-import { toast } from "@/components/ui"
+import { Dialog, DialogContent, DialogDescription, DialogTitle, toast } from "@/components/ui"
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -64,14 +64,16 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
   }
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-[rgba(15,32,42,0.55)] backdrop-blur-sm"
-    >
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-[680px] max-h-[90vh] bg-card rounded-lg border border-border/45 flex flex-col overflow-hidden font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
+    <Dialog open={Boolean(record)} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent
+        className="flex max-h-[90vh] w-full max-w-[680px] flex-col gap-0 overflow-hidden rounded-lg border-border/45 bg-card p-0 font-body shadow-[0_20px_60px_rgba(15,32,42,0.25),0_2px_8px_rgba(15,32,42,0.1)]"
       >
+        <DialogTitle className="sr-only">
+          Detalle de suscripción {activeRecord.iccid}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Identificadores y acciones rápidas de la suscripción seleccionada.
+        </DialogDescription>
         <DetailModalHeader record={activeRecord} onClose={onClose} />
         <div className="flex-1 overflow-auto">
           <PlanBanner record={activeRecord} />
@@ -111,7 +113,7 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
           onOpenDetail={(row) => openDetail(row)}
           onOpenPurge={() => setPurgeMockOpen(true)}
         />
-      </div>
+      </DialogContent>
 
       {purgeMockOpen && (
         <PurgeMockDialog
@@ -120,6 +122,6 @@ export function DetailModal({ record, selectedProvider, onClose }: DetailModalPr
           onConfirm={simulatePurge}
         />
       )}
-    </div>
+    </Dialog>
   )
 }

@@ -123,10 +123,10 @@ export function DetailsResolutionNotice({
 
 export function DetailsQueryNotice({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div style={{ marginTop: 14, border: `1px solid ${T.danger}44`, background: "#FBEAE7", color: T.danger, borderRadius: 6, padding: "10px 12px", fontSize: 12.5, display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ marginTop: 14, border: `1px solid ${T.dangerBorderSoft}`, background: T.dangerTint, color: T.danger, borderRadius: 6, padding: "10px 12px", fontSize: 12.5, display: "flex", alignItems: "center", gap: 10 }}>
       <Icon.warn size={14} />
       <span style={{ flex: 1 }}>{message}</span>
-      <button type="button" onClick={onRetry} style={{ border: `1px solid ${T.danger}55`, background: "#fff", color: T.danger, borderRadius: 4, padding: "5px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+      <button type="button" onClick={onRetry} style={{ border: `1px solid ${T.dangerBorderSoft}`, background: "#fff", color: T.danger, borderRadius: 4, padding: "5px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
         Reintentar
       </button>
     </div>

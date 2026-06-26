@@ -1,8 +1,17 @@
 "use client"
 
-import { Loader2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Input,
+} from "@/components/ui"
 import type { SubscriptionOut } from "@/lib/types/api"
-import { T } from "../../tokens"
 import type { PendingAction } from "./types"
 
 export function ConfirmationDialog({
@@ -28,66 +37,80 @@ export function ConfirmationDialog({
   onCancel: () => void
   onSubmit: () => void
 }) {
+  const confirmDisabled = busy || !servicesValid || !purgeConfirmValid
+
   return (
-    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15, 23, 42, 0.42)", display: "grid", placeItems: "center", padding: 18 }}>
-      <div style={{ width: "min(520px, 100%)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.22)", overflow: "hidden" }}>
-        <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.divider}` }}>
-          <h3 style={{ margin: 0, color: T.title, fontSize: 16 }}>
+    <AlertDialog open onOpenChange={(open) => { if (!open && !busy) onCancel() }}>
+      <AlertDialogContent className="w-[min(92vw,520px)] gap-0 overflow-hidden p-0">
+        <AlertDialogHeader className="border-b border-divider px-[18px] py-4">
+          <AlertDialogTitle className="text-base">
             {pending.kind === "status" ? "Confirmar cambio de estado" : "Confirmar purga"}
-          </h3>
-          <p style={{ margin: "6px 0 0", color: T.muted, fontSize: 13 }}>
-            ICCID <span style={{ fontFamily: T.fontMono }}>{subscription.iccid}</span>
-          </p>
-        </div>
-        <div style={{ padding: 18, display: "grid", gap: 14 }}>
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            ICCID <span className="font-mono">{subscription.iccid}</span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="grid gap-3.5 p-[18px]">
           {pending.kind === "status" ? (
             <>
-              <p style={{ margin: 0, color: T.text, fontSize: 14 }}>
-                Enviar cambio a <span style={{ fontFamily: T.fontMono, fontWeight: 800 }}>{pending.target}</span> en {sourceName}.
+              <p className="m-0 text-sm text-text">
+                Enviar cambio a <span className="font-mono font-extrabold">{pending.target}</span> en {sourceName}.
               </p>
               {isMoabitsServiceTarget && (
-                <div style={{ display: "grid", gap: 8 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, color: T.text, fontSize: 13, fontWeight: 700 }}>
-                    <input type="checkbox" checked={pending.dataService} onChange={(event) => onPendingChange({ ...pending, dataService: event.target.checked })} />
+                <div className="grid gap-2">
+                  <label className="flex items-center gap-2 text-[13px] font-bold text-text">
+                    <input
+                      type="checkbox"
+                      checked={pending.dataService}
+                      onChange={(event) => onPendingChange({ ...pending, dataService: event.target.checked })}
+                      className="h-4 w-4 accent-header-accent"
+                    />
                     Habilitar servicio de datos
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, color: T.text, fontSize: 13, fontWeight: 700 }}>
-                    <input type="checkbox" checked={pending.smsService} onChange={(event) => onPendingChange({ ...pending, smsService: event.target.checked })} />
+                  <label className="flex items-center gap-2 text-[13px] font-bold text-text">
+                    <input
+                      type="checkbox"
+                      checked={pending.smsService}
+                      onChange={(event) => onPendingChange({ ...pending, smsService: event.target.checked })}
+                      className="h-4 w-4 accent-header-accent"
+                    />
                     Habilitar servicio SMS
                   </label>
-                  {!servicesValid && <p style={{ margin: 0, color: T.danger, fontSize: 12 }}>Moabits requiere datos o SMS activo para este cambio.</p>}
+                  {!servicesValid && (
+                    <p role="alert" className="m-0 text-xs text-danger-action">
+                      Moabits requiere datos o SMS activo para este cambio.
+                    </p>
+                  )}
                 </div>
               )}
             </>
           ) : (
-            <label style={{ display: "grid", gap: 7, color: T.text, fontSize: 13, fontWeight: 700 }}>
+            <label className="grid gap-2 text-[13px] font-bold text-text">
               Escribe el ICCID para confirmar
-              <input
+              <Input
                 value={pending.confirmText ?? ""}
                 onChange={(event) => onPendingChange({ ...pending, confirmText: event.target.value })}
-                style={{ border: `1px solid ${T.border}`, borderRadius: 5, padding: "9px 10px", fontFamily: T.fontMono, color: T.text }}
+                className="font-mono"
                 autoFocus
               />
             </label>
           )}
         </div>
-        <div style={{ padding: 14, borderTop: `1px solid ${T.divider}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" onClick={onCancel} disabled={busy} style={{ border: `1px solid ${T.border}`, background: T.cardBg, color: T.text, borderRadius: 5, padding: "9px 11px", cursor: busy ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800 }}>
-            Cancelar
-          </button>
-          <button
+        <AlertDialogFooter className="border-t border-divider p-3.5">
+          <AlertDialogCancel disabled={busy}>Cancelar</AlertDialogCancel>
+          <Button
             type="button"
             onClick={onSubmit}
-            disabled={busy || !servicesValid || !purgeConfirmValid}
+            disabled={confirmDisabled}
             aria-busy={busy || undefined}
-            style={{ border: "1px solid transparent", background: busy || !servicesValid || !purgeConfirmValid ? "#C7CDD4" : T.title, color: "#FFFFFF", borderRadius: 5, padding: "9px 11px", cursor: busy || !servicesValid || !purgeConfirmValid ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 7 }}
+            loading={busy}
+            loadingText="Cargando..."
+            variant={pending.kind === "purge" ? "destructive" : "default"}
           >
-            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-            {busy ? "Cargando..." : "Confirmar"}
-          </button>
-        </div>
-      </div>
-    </div>
+            Confirmar
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
-

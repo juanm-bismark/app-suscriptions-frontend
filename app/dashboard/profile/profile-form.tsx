@@ -65,21 +65,29 @@ export default function ProfileForm({
       {/* Read-only fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-muted mb-1">Correo electrónico</label>
+          <p className="block text-sm font-medium text-muted mb-1">Correo electrónico</p>
           <div className="min-h-11 px-3 py-2.5 bg-white/55 rounded-md text-sm text-muted cursor-not-allowed shadow-sm shadow-header-top/5">
             {email}
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-muted mb-1">Rol</label>
+          <p className="block text-sm font-medium text-muted mb-1">Rol</p>
           <div className="min-h-11 px-3 py-2.5 bg-white/55 rounded-md text-sm text-muted cursor-not-allowed uppercase shadow-sm shadow-header-top/5">
             {role}
           </div>
         </div>
       </div>
 
-      {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-success-soft text-success-text-soft p-3 rounded-md">{success}</div>}
+      {error && (
+        <div role="alert" className="rounded-md border border-danger-action/20 bg-danger-tint p-3 text-sm text-danger-strong-text">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div role="status" aria-live="polite" className="rounded-md bg-success-soft p-3 text-sm text-success-text-soft">
+          {success}
+        </div>
+      )}
 
       {/* Editable fields */}
       <Form {...form}>

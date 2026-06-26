@@ -12,9 +12,9 @@ const buttonVariants = cva(
       variant: {
         default: "bg-header-bg text-header-text hover:bg-header-top",
         destructive:
-          "bg-warn-bg text-warn-text hover:bg-warn-bg/90 border border-warn-border",
+          "border border-danger-action bg-danger-action text-white hover:bg-danger-action-hover",
         outline:
-          "border border-header-bg/40 bg-card text-header-bg hover:bg-header-bg",
+          "border border-header-bg/40 bg-card text-header-bg hover:bg-header-bg hover:text-header-text",
         brandOutline:
           "border-2 border-header-client/90 bg-transparent text-header-text hover:bg-header-client hover:text-header-bg",
         secondary:

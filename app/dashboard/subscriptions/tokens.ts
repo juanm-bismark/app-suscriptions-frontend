@@ -45,8 +45,11 @@ export const T = {
   fontMono: "'JetBrains Mono', 'Courier New', Courier, monospace",
 
   // Derived semantic
-  danger: "#C85A4A",
-  success: "#2D8A6F",
+  danger: "var(--color-danger-action)",
+  dangerBorderSoft: "color-mix(in srgb, var(--color-danger-action) 27%, transparent)",
+  dangerBorder: "color-mix(in srgb, var(--color-danger-action) 34%, transparent)",
+  dangerTint: "var(--color-danger-tint)",
+  success: "var(--color-success-bg)",
   warning: "#C58A1E",
   info: "#33A6B2",
 } as const;

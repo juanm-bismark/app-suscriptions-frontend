@@ -30,7 +30,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-[80] grid w-[min(92vw,480px)] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-lg border border-[#C9DFE3] bg-white p-5 text-title shadow-xl shadow-header-top/20 sm:p-6",
+        "fixed left-1/2 top-1/2 z-[80] grid w-[min(92vw,480px)] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-lg border border-soft-border bg-card p-5 text-title shadow-xl shadow-header-top/20 sm:p-6",
         className
       )}
       {...props}
@@ -84,7 +84,7 @@ const AlertDialogCancel = React.forwardRef<
   <AlertDialogPrimitive.Cancel
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md border border-[#C9DFE3] bg-white px-4 text-sm font-semibold text-[#285F68] shadow-sm shadow-header-top/5 transition-colors hover:bg-[#EAF6F7] hover:text-[#12343B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex h-10 items-center justify-center rounded-md border border-soft-border bg-card px-4 text-sm font-semibold text-action-soft shadow-sm shadow-header-top/5 transition-colors hover:bg-hover-soft hover:text-ink-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}
@@ -99,7 +99,7 @@ const AlertDialogAction = React.forwardRef<
   <AlertDialogPrimitive.Action
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-[#0F202A] px-4 text-sm font-semibold text-white shadow-sm shadow-header-top/20 transition-colors hover:bg-[#163C41] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex h-10 items-center justify-center rounded-md bg-header-top px-4 text-sm font-semibold text-white shadow-sm shadow-header-top/20 transition-colors hover:bg-header-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}

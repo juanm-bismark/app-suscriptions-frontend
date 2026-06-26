@@ -175,7 +175,7 @@ export function MappingEditor({
           </div>
         )}
         {linkedElsewhere.length > 0 && (
-          <div className="rounded-md bg-warn-bg p-3 text-sm text-warn-text">
+          <div role="alert" className="rounded-md border border-warning-border-soft bg-warning-soft p-3 text-sm text-warning-text-soft">
             Esta empresa Moabits ya esta vinculada con {linkedElsewhere.map((item) => item.company_name).join(", ")}.
           </div>
         )}

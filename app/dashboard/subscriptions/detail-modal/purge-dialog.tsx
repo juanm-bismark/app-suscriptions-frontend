@@ -1,5 +1,15 @@
 "use client"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui"
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
 import { SOURCES } from "../tokens"
 
@@ -15,43 +25,27 @@ export function PurgeMockDialog({
   const src = SOURCES[record.provider]
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-      className="fixed inset-0 z-[70] grid place-items-center p-4 bg-[rgba(15,23,42,0.42)]"
-    >
-      <div
-        onClick={(event) => event.stopPropagation()}
-        className="w-[min(460px,100%)] bg-card rounded-lg border border-border/45 overflow-hidden shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
-      >
-        <div className="px-[18px] py-4 border-b border-divider">
-          <h3 className="m-0 text-title text-base">Purgar SIM</h3>
-          <p className="mt-1.5 mb-0 text-muted text-[13px]">
+    <AlertDialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <AlertDialogContent className="w-[min(92vw,460px)] gap-0 overflow-hidden p-0">
+        <AlertDialogHeader className="border-b border-divider px-[18px] py-4">
+          <AlertDialogTitle className="text-base">Purgar SIM</AlertDialogTitle>
+          <AlertDialogDescription>
             Mockup para <span className="font-mono">{record.iccid}</span>
-          </p>
-        </div>
-        <div className="p-[18px] text-text text-sm leading-snug">
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="p-[18px] text-sm leading-snug text-text">
           Esta accion solo simula el flujo de purga para {src.name}. No se llamara al endpoint del backend.
         </div>
-        <div className="px-3.5 py-3.5 border-t border-divider flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="border border-border/45 bg-card text-text rounded-md px-2.5 py-2 cursor-pointer text-xs font-extrabold"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
+        <AlertDialogFooter className="border-t border-divider px-3.5 py-3.5">
+          <AlertDialogCancel onClick={onClose}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
             onClick={onConfirm}
-            className="rounded-md px-2.5 py-2 cursor-pointer text-xs font-extrabold border bg-[#FADDD6] text-[#A84234] border-[#C85A4A]"
+            className="border-danger-action bg-danger-action text-white hover:bg-danger-action-hover"
           >
             Simular purga
-          </button>
-        </div>
-      </div>
-    </div>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
-

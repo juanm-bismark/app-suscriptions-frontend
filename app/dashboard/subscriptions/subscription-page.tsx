@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@/components/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger, toast } from "@/components/ui";
 import type { ProviderCapabilitiesOut, SubscriptionOut } from "@/lib/types/api";
 import type { UserRole } from "@/lib/types/user";
 import { Loader2 } from "lucide-react";
@@ -74,7 +74,12 @@ export function SubscriptionPage({
   }
 
   return (
-    <div style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}>
+    <Tabs
+      value={tab}
+      onValueChange={(value) => setTab(value as TabId)}
+      className="gap-0"
+      style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}
+    >
       {/* Breadcrumb bar */}
       <div style={{ padding: "10px 24px", background: T.cardBg, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
         <Link
@@ -155,44 +160,49 @@ export function SubscriptionPage({
         </div>
 
         {/* Underline tabs */}
-        <div style={{ display: "flex", gap: 2, marginBottom: -1 }}>
+        <TabsList className="flex h-auto items-end gap-0 rounded-none bg-transparent p-0" style={{ marginBottom: -1 }}>
           {TABS.map((item) => (
-            <button
+            <TabsTrigger
               key={item.id}
-              onClick={() => setTab(item.id)}
+              value={item.id}
+              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-[11px] shadow-none ring-offset-card data-[state=active]:bg-transparent data-[state=active]:shadow-none"
               style={{
-                padding: "11px 16px",
-                background: "transparent",
-                border: "none",
                 borderBottom: `2px solid ${tab === item.id ? src.color : "transparent"}`,
                 color: tab === item.id ? T.title : T.muted,
                 fontFamily: T.fontBody,
                 fontSize: 13,
                 fontWeight: tab === item.id ? 700 : 500,
-                cursor: "pointer",
-                letterSpacing: -0.1,
+                letterSpacing: 0,
               }}
             >
               {item.label}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
+        </TabsList>
       </div>
 
       {/* Tab content */}
       <div style={{ flex: 1, padding: 24 }}>
-        {tab === "detail" && <DetailTab subscription={subscription} capabilities={capabilities} />}
-        {tab === "usage" && <UsageTab subscription={subscription} />}
-        {tab === "presence" && <PresenceTab subscription={subscription} capabilities={capabilities} />}
-        {tab === "limits" && <LimitsTab subscription={subscription} />}
-        {tab === "actions" && (
+        <TabsContent value="detail" className="mt-0 focus-visible:outline-none">
+          <DetailTab subscription={subscription} capabilities={capabilities} />
+        </TabsContent>
+        <TabsContent value="usage" className="mt-0 focus-visible:outline-none">
+          <UsageTab subscription={subscription} />
+        </TabsContent>
+        <TabsContent value="presence" className="mt-0 focus-visible:outline-none">
+          <PresenceTab subscription={subscription} capabilities={capabilities} />
+        </TabsContent>
+        <TabsContent value="limits" className="mt-0 focus-visible:outline-none">
+          <LimitsTab subscription={subscription} />
+        </TabsContent>
+        <TabsContent value="actions" className="mt-0 focus-visible:outline-none">
           <ActionsTab
             subscription={subscription}
             capabilities={capabilities}
             currentUserRole={currentUserRole}
           />
-        )}
+        </TabsContent>
       </div>
-    </div>
+    </Tabs>
   );
 }

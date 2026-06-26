@@ -28,8 +28,16 @@ const userSelectClassName = "mt-1 h-11 w-full rounded-md bg-white/80 px-3 text-s
 export function UserFormAlerts({ error, success }: { error: string | null; success: string | null }) {
   return (
     <>
-      {error && <div className="rounded-md bg-warn-bg p-3 text-sm text-warn-text">{error}</div>}
-      {success && <div className="rounded-md bg-success-soft p-3 text-sm text-success-text-soft">{success}</div>}
+      {error && (
+        <div role="alert" className="rounded-md border border-danger-action/20 bg-danger-tint p-3 text-sm text-danger-strong-text">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div role="status" aria-live="polite" className="rounded-md bg-success-soft p-3 text-sm text-success-text-soft">
+          {success}
+        </div>
+      )}
     </>
   )
 }

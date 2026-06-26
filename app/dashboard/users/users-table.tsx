@@ -65,8 +65,16 @@ export default function UsersTable({
 
   return (
     <div className="space-y-3">
-      {error && <div className="text-sm bg-warn-bg text-warn-text p-3 rounded-md">{error}</div>}
-      {success && <div className="text-sm bg-success-soft text-success-text-soft p-3 rounded-md">{success}</div>}
+      {error && (
+        <div role="alert" className="rounded-md border border-danger-action/20 bg-danger-tint p-3 text-sm text-danger-strong-text">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div role="status" aria-live="polite" className="rounded-md bg-success-soft p-3 text-sm text-success-text-soft">
+          {success}
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">

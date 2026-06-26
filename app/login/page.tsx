@@ -81,9 +81,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#D9EEF0] via-[#E7F4F2] to-[#CFE8E6]">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-accent-soft via-nav-soft to-badge-bg">
       {/* Header */}
-      <div className="bg-[#E7F4F2]/55 shadow-sm shadow-[#6A9AA0]/5 ring-1 ring-white/35 backdrop-blur-md">
+      <div className="bg-nav-soft/55 shadow-sm shadow-nav-shadow/5 ring-1 ring-white/35 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <Link href="/" className="flex items-center gap-2 w-fit">
             <Logo size="md" priority />
@@ -94,7 +94,7 @@ export default function LoginPage() {
       {/* Main */}
       <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
-          <div className="rounded-lg bg-[#FAFEFE]/92 p-6 shadow-lg shadow-[#6A9AA0]/10 ring-1 ring-white/70 backdrop-blur-sm sm:p-8">
+          <div className="rounded-lg bg-card/92 p-6 shadow-lg shadow-nav-shadow/10 ring-1 ring-white/70 backdrop-blur-sm sm:p-8">
             <div className="mx-auto mb-6 h-1 w-14 rounded-full bg-header-accent" />
             <h1 className="text-center text-3xl font-bold text-title">Inicia sesión</h1>
             <p className="mb-8 mt-2 text-center text-sm text-muted">
@@ -102,13 +102,13 @@ export default function LoginPage() {
             </p>
 
             {error && (
-              <div className="mb-6 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-left shadow-sm">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+              <div role="alert" className="mb-6 flex items-center gap-3 rounded-lg border border-danger-action/20 bg-danger-tint px-4 py-3 text-left shadow-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card text-danger-action">
                   <CircleAlert className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold leading-5 text-red-900">{error.title}</p>
-                  <p className="mt-1 text-sm leading-5 text-red-700">{error.description}</p>
+                  <p className="text-sm font-semibold leading-5 text-danger-strong-text">{error.title}</p>
+                  <p className="mt-1 text-sm leading-5 text-danger-text-soft">{error.description}</p>
                 </div>
               </div>
             )}
@@ -152,7 +152,7 @@ export default function LoginPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword((value) => !value)}
-                          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors hover:bg-[#EAF5F6] hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent focus-visible:ring-offset-2"
+                          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover-soft hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent focus-visible:ring-offset-2"
                           aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                           aria-pressed={showPassword}
                         >
@@ -172,7 +172,7 @@ export default function LoginPage() {
                   type="submit"
                   loading={form.formState.isSubmitting}
                   loadingText="Iniciando..."
-                  className="mt-6 h-12 w-full bg-[#2B8790] text-base font-bold text-white shadow-md shadow-[#6A9AA0]/20 transition-all duration-200 hover:bg-[#226F78] hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
+                  className="mt-6 h-12 w-full bg-nav-avatar text-base font-bold text-white shadow-md shadow-nav-shadow/20 transition-all duration-200 hover:bg-nav-button-text hover:text-white hover:shadow-lg focus-visible:ring-header-accent"
                 >
                   Iniciar sesión
                 </Button>
@@ -181,7 +181,7 @@ export default function LoginPage() {
 
             <div className="mt-8 text-center">
               <p className="mb-3 text-sm text-muted">¿No tienes cuenta?</p>
-              <Button asChild variant="secondary" className="h-10 w-full border border-white/70 bg-[#E3F3F3]/75 font-semibold text-[#226F78] shadow-sm shadow-[#6A9AA0]/10 hover:bg-[#D6ECEE] hover:text-[#184F56]">
+              <Button asChild variant="secondary" className="h-10 w-full border border-white/70 bg-nav-button-soft/75 font-semibold text-nav-button-text shadow-sm shadow-nav-shadow/10 hover:bg-hover-soft hover:text-nav-button-hover">
                 <Link href="/register">
                   Crear cuenta
                 </Link>
