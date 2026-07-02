@@ -7,6 +7,7 @@ import { Btn, Icon } from "../primitives"
 import { T } from "../tokens"
 import { useSmsHistory, useStatusHistory } from "./hooks"
 import { Card, Empty, KV } from "./primitives"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 
 const smsTh = { textAlign: "left", padding: "8px 12px", color: T.muted, fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 } as const
 const smsTd = { padding: "8px 12px", color: T.text, borderBottom: `1px solid ${T.divider}`, verticalAlign: "top" } as const
@@ -113,8 +114,12 @@ function StatusHistoryRow({ record }: { record: StatusHistoryRecord }) {
 
 function StatusHistoryModal({ data, onClose }: { data: StatusHistoryOut; onClose: () => void }) {
   return (
-    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,0.42)", display: "grid", placeItems: "center", padding: 18 }}>
-      <div style={{ width: "min(860px, 100%)", maxHeight: "min(86vh, 720px)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15,23,42,0.22)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="flex max-h-[min(86vh,720px)] w-[min(860px,100%)] max-w-[min(860px,100%)] flex-col gap-0 overflow-hidden p-0">
+        <DialogTitle className="sr-only">Historial de estados</DialogTitle>
+        <DialogDescription className="sr-only">
+          Tabla completa de cambios de estado de la suscripción {data.iccid}.
+        </DialogDescription>
         <ModalHeader title="Historial de estados" caption={<span>ICCID <span style={{ fontFamily: T.fontMono }}>{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} cambios</span>} onClose={onClose} />
         <div style={{ overflow: "auto", flex: 1 }}>
           {data.records.length === 0 ? (
@@ -144,15 +149,19 @@ function StatusHistoryModal({ data, onClose }: { data: StatusHistoryOut; onClose
             </table>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 function SmsHistoryModal({ data, onClose }: { data: SmsHistoryOut; onClose: () => void }) {
   return (
-    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,0.42)", display: "grid", placeItems: "center", padding: 18 }}>
-      <div style={{ width: "min(860px, 100%)", maxHeight: "min(86vh, 720px)", background: T.cardBg, borderRadius: 8, border: `1px solid ${T.border}`, boxShadow: "0 24px 80px rgba(15,23,42,0.22)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="flex max-h-[min(86vh,720px)] w-[min(860px,100%)] max-w-[min(860px,100%)] flex-col gap-0 overflow-hidden p-0">
+        <DialogTitle className="sr-only">Historial SMS</DialogTitle>
+        <DialogDescription className="sr-only">
+          Tabla completa de mensajes SMS de la suscripción {data.iccid}.
+        </DialogDescription>
         <ModalHeader title="Historial SMS" caption={<span>ICCID <span style={{ fontFamily: T.fontMono }}>{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} registros</span>} onClose={onClose} />
         <div style={{ overflow: "auto", flex: 1 }}>
           {data.records.length === 0 ? (
@@ -174,8 +183,8 @@ function SmsHistoryModal({ data, onClose }: { data: SmsHistoryOut; onClose: () =
             </table>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
