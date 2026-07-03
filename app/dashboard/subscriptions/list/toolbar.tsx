@@ -8,7 +8,7 @@ import type { NativeStatusSelections } from "../filters/status-filter"
 import { KpiStrip } from "./kpi-strip"
 import type { StatusFilter, ViewScope } from "./types"
 import type { SourceId } from "../tokens"
-import { SOURCES, T } from "../tokens"
+import { SOURCES } from "../tokens"
 import type { AdvancedSubscriptionFilters } from "../filters/advanced-filters"
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
 import { AdvancedFiltersButton } from "./toolbar/advanced-filters-button"
@@ -76,26 +76,17 @@ export function SubscriptionsToolbar({
   onOpenAdvancedFilters: () => void
 }) {
   return (
-    <div style={{ padding: "22px 24px 16px", borderBottom: `1px solid ${T.border}`, background: T.cardBg }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
+    <div className="border-b border-border bg-card px-6 pb-4 pt-[22px]">
+      <div className="mb-3.5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div
-            style={{
-              fontSize: 11,
-              letterSpacing: 1.2,
-              color: T.muted,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-[1.2px] text-muted">
             Búsqueda unificada
           </div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: -0.4 }}>
+          <h1 className="m-0 text-[22px] font-bold tracking-[-0.4px] text-title">
             Suscripciones
           </h1>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {isAdmin && (
             <ViewScopeSwitch
               viewScope={viewScope}
@@ -109,9 +100,9 @@ export function SubscriptionsToolbar({
         </div>
       </div>
 
-      <div style={{ display: "grid", gap: 6 }}>
+      <div className="grid gap-1.5">
         <SearchModeControl activeSearchMode={activeSearchMode} onChange={setActiveSearchMode} />
-        <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+        <div className="flex items-stretch gap-2">
           <SearchBox
             activeSearchMode={activeSearchMode}
             draftQ={draftQ}
@@ -134,12 +125,12 @@ export function SubscriptionsToolbar({
       </div>
 
       {isMultiIccid && (
-        <p style={{ fontSize: 12, color: T.muted, margin: "6px 0 0", lineHeight: 1.4 }}>
+        <p className="m-0 mt-1.5 text-xs leading-[1.4] text-muted">
           {iccidList.length} ICCIDs detectados — se consultarán en {activeSrc === "all" ? "todos los proveedores" : SOURCES[activeSrc].name} al buscar.
         </p>
       )}
       {!isMultiIccid && draftQ.trim() && !isExactIccidQuery(draftQ.trim()) && activeSrc === "all" && (
-        <p style={{ fontSize: 12, color: T.muted, margin: "6px 0 0", lineHeight: 1.4 }}>
+        <p className="m-0 mt-1.5 text-xs leading-[1.4] text-muted">
           La búsqueda por texto aplica solo a Kite y Tele2. Moabits no admite filtros de texto — selecciona la fuente Moabits para buscarlo directamente.
         </p>
       )}
@@ -157,7 +148,7 @@ export function SubscriptionsToolbar({
         filters={advancedFilterValues}
       />
 
-      <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+      <div className="mt-3 grid gap-2.5">
         <StatusFilterControls
           activeSrc={activeSrc}
           activeStatus={activeStatus}
@@ -169,8 +160,8 @@ export function SubscriptionsToolbar({
           onClearSelections={onClearStatusSelections}
           onToggleSelection={onToggleStatusSelection}
         />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 12, color: T.muted, fontFamily: T.fontMono }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="font-mono text-xs text-muted">
             {rows.length} resultado{rows.length !== 1 ? "s" : ""}
           </div>
           <AdvancedFiltersButton count={advancedCount} onClick={onOpenAdvancedFilters} />

@@ -10,7 +10,7 @@ import { DetailModal } from "../detail-modal"
 import { PROVIDER_IDS, type SourceFilter } from "../filters/source-filter"
 import { countStatusSelections, toggleStatusSelection } from "../filters/status-filter"
 import { EmptyState, LoadingState } from "../state-views"
-import { type SourceId, T } from "../tokens"
+import type { SourceId } from "../tokens"
 import {
   useFilteredSubscriptionRows,
   useHydrateProviderCaches,
@@ -132,18 +132,7 @@ export function SubscriptionsListShell({
   if (isDataRefreshing) return <LoadingState filters={filters} activeProviders={urlState.activeProviderIds} />
 
   return (
-    <div
-      style={{
-        background: T.pageBg,
-        fontFamily: T.fontBody,
-        color: T.text,
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        minHeight: "calc(100vh - 64px)",
-        overflow: "hidden",
-      }}
-    >
+    <div className="relative flex min-h-[calc(100vh-64px)] flex-col overflow-hidden bg-page text-text">
       <SubscriptionsToolbar
         isAdmin={isAdmin}
         hasCompanyScope={hasCompanyScope}
@@ -175,7 +164,7 @@ export function SubscriptionsListShell({
         onOpenAdvancedFilters={() => setAdvOpen(true)}
       />
 
-      <div style={{ padding: "0 24px 16px", background: T.cardBg, borderBottom: `1px solid ${T.border}`, display: "grid", gap: 10 }}>
+      <div className="grid gap-2.5 border-b border-border bg-card px-6 pb-4">
         {detailsQuery.data && (detailsQuery.data.unresolved.length > 0 || detailsQuery.data.filtered_out.length > 0) && (
           <DetailsResolutionNotice
             unresolved={detailsQuery.data.unresolved}
@@ -195,7 +184,7 @@ export function SubscriptionsListShell({
         {hasPartialProviders && <PartialProvidersNotice failedProviders={failedProviders} />}
       </div>
 
-      <div style={{ flex: 1, overflow: "auto", background: T.cardBg, position: "relative" }}>
+      <div className="relative flex-1 overflow-auto bg-card">
         {urlState.activeSrc === "moabits"
           ? <MoabitsTable
               rows={rows}
@@ -231,15 +220,7 @@ export function SubscriptionsListShell({
         onArrayFilterValueChange={advancedFilters.setArrayFilterValue}
       />
 
-      <div
-        style={{
-          padding: "10px 24px",
-          background: T.cardBg,
-          borderTop: `1px solid ${T.border}`,
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
+      <div className="flex items-center border-t border-border bg-card px-6 py-2.5">
         <SubscriptionsPaginationControls
           page={urlState.page}
           size={urlState.currentPageSize}

@@ -1,14 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Icon } from "../primitives";
 import { SOURCES, SourceId, T } from "../tokens";
-
-const SHIMMER_BG = `linear-gradient(90deg, ${T.divider}, ${T.zebra}, ${T.divider})`;
-
-const DETAIL_LOADING_KEYFRAMES = `
-@keyframes bismark-detail-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-`;
 
 type TabId = "detail" | "usage" | "presence" | "limits" | "actions";
 
@@ -31,31 +26,18 @@ function providerFrom(value: string | null): SourceId | null {
 function SkeletonLine({ width, height = 12 }: { width: number | string; height?: number }) {
   return (
     <div
-      style={{
-        width,
-        maxWidth: "100%",
-        height,
-        borderRadius: 3,
-        background: SHIMMER_BG,
-        backgroundSize: "200% 100%",
-        animation: "bismark-detail-shimmer 1.3s infinite",
-      }}
+      className="skeleton-shimmer rounded-[3px]"
+      style={{ width, maxWidth: "100%", height }}
     />
   );
 }
 
 function LoadingBanner({ label, color }: { label: string; color: string }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 8, color: T.muted, fontSize: 12, fontWeight: 700 }}>
+    <div className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-muted">
       <span
-        style={{
-          width: 13,
-          height: 13,
-          borderRadius: "50%",
-          border: `2px solid ${color}`,
-          borderTopColor: "transparent",
-          animation: "bismark-detail-spin 0.7s linear infinite",
-        }}
+        className="h-[13px] w-[13px] animate-spin rounded-full border-2 border-t-transparent"
+        style={{ borderColor: color, borderTopColor: "transparent" }}
       />
       {label}
     </div>
@@ -70,12 +52,12 @@ function SummarySkeletonField({
   variant?: "line" | "badge" | "pill" | "long";
 }) {
   return (
-    <div style={{ background: T.cardBg, padding: "12px 16px", minWidth: 0 }}>
-      <div style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 7 }}>
+    <div className="min-w-0 bg-card px-4 py-3">
+      <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[1px] text-muted">
         {label}
       </div>
       {variant === "badge" ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="flex items-center gap-2">
           <SkeletonLine width={18} height={18} />
           <SkeletonLine width={64} height={12} />
         </div>
@@ -90,9 +72,9 @@ function SummarySkeletonField({
 
 function ActionRowSkeleton({ danger }: { danger?: boolean }) {
   return (
-    <div style={{ padding: 16, borderTop: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 12 }}>
+    <div className="flex items-center gap-3 border-t border-divider p-4">
       <SkeletonLine width={36} height={36} />
-      <div style={{ display: "grid", gap: 8, flex: 1, minWidth: 0 }}>
+      <div className="grid min-w-0 flex-1 gap-2">
         <SkeletonLine width={danger ? 90 : 132} height={13} />
         <SkeletonLine width="76%" height={10} />
       </div>
@@ -103,7 +85,7 @@ function ActionRowSkeleton({ danger }: { danger?: boolean }) {
 
 function FieldSkeleton() {
   return (
-    <div style={{ borderTop: `1px solid ${T.divider}`, padding: 16, display: "grid", gap: 8, minHeight: 64 }}>
+    <div className="grid min-h-16 gap-2 border-t border-divider p-4">
       <SkeletonLine width={82} height={10} />
       <SkeletonLine width="72%" height={13} />
     </div>
@@ -113,18 +95,18 @@ function FieldSkeleton() {
 function LoadingContent({ tab }: { tab: TabId }) {
   if (tab === "actions") {
     return (
-      <div style={{ display: "grid", gap: 14 }}>
-        <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-          <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>
+      <div className="grid gap-3.5">
+        <section className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="border-b border-divider px-4 py-[13px] text-[13px] font-extrabold text-title">
             Cambiar estado
           </div>
-          <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3 p-4">
             <SkeletonLine width="100%" height={38} />
             <SkeletonLine width={136} height={38} />
           </div>
         </section>
-        <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-          <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>
+        <section className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="border-b border-divider px-4 py-[13px] text-[13px] font-extrabold text-title">
             Acciones disponibles
           </div>
           <ActionRowSkeleton />
@@ -136,13 +118,13 @@ function LoadingContent({ tab }: { tab: TabId }) {
 
   if (tab === "usage") {
     return (
-      <div style={{ display: "grid", gap: 14 }}>
+      <div className="grid gap-3.5">
         <CardSkeleton title="KPIs de consumo" cells={4} />
-        <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-          <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>
+        <section className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="border-b border-divider px-4 py-[13px] text-[13px] font-extrabold text-title">
             Periodo
           </div>
-          <div style={{ padding: 16, display: "grid", gap: 10 }}>
+          <div className="grid gap-2.5 p-4">
             {Array.from({ length: 8 }).map((_, index) => (
               <SkeletonLine key={index} width={`${90 - index * 6}%`} height={18} />
             ))}
@@ -158,7 +140,7 @@ function LoadingContent({ tab }: { tab: TabId }) {
 
   if (tab === "limits") {
     return (
-      <div style={{ display: "grid", gap: 14 }}>
+      <div className="grid gap-3.5">
         <CardSkeleton title="Límites contractuales" cells={2} />
         <CardSkeleton title="Controles diarios" cells={4} />
         <CardSkeleton title="Controles mensuales" cells={4} />
@@ -167,7 +149,7 @@ function LoadingContent({ tab }: { tab: TabId }) {
   }
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="grid gap-3.5">
       <CardSkeleton title="Plan" cells={8} />
       <CardSkeleton title="Cliente" cells={4} />
       <CardSkeleton title="Red" cells={8} />
@@ -180,11 +162,11 @@ function LoadingContent({ tab }: { tab: TabId }) {
 
 function CardSkeleton({ title, cells = 4 }: { title: string; cells?: number }) {
   return (
-    <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-      <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>
+    <section className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="border-b border-divider px-4 py-[13px] text-[13px] font-extrabold text-title">
         {title}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))]">
         {Array.from({ length: cells }).map((_, index) => (
           <FieldSkeleton key={index} />
         ))}
@@ -201,40 +183,36 @@ export default function SubscriptionDetailLoading() {
   const activeTabMeta = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
 
   return (
-    <main style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}>
-      <style>{`${DETAIL_LOADING_KEYFRAMES}
-@keyframes bismark-detail-spin { to { transform: rotate(360deg); } }
-`}</style>
-
-      <div style={{ padding: "10px 24px", background: T.cardBg, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: T.headerBg, fontWeight: 700 }}>
+    <main className="flex min-h-[calc(100vh-64px)] flex-col bg-page font-body text-text">
+      <div className="flex items-center gap-2.5 border-b border-border bg-card px-6 py-2.5 text-xs">
+        <span className="inline-flex items-center gap-[5px] font-bold text-header-bg">
           <Icon.arrowLeft size={12} />
           Suscripciones
         </span>
-        <span style={{ color: T.muted }}>/</span>
-        <span style={{ color: T.title, fontWeight: 600 }}>Suscripción</span>
-        <div style={{ flex: 1 }} />
+        <span className="text-muted">/</span>
+        <span className="font-semibold text-title">Suscripción</span>
+        <div className="flex-1" />
         <SkeletonLine width={112} height={28} />
       </div>
 
-      <section style={{ background: T.cardBg, borderBottom: `1px solid ${T.border}`, padding: "20px 24px 0" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 18, marginBottom: 18, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", marginBottom: 3 }}>
+      <section className="border-b border-border bg-card px-6 pt-5">
+        <div className="mb-[18px] flex flex-wrap items-start gap-[18px]">
+          <div className="min-w-[260px] flex-1">
+            <div className="mb-[3px] text-[10.5px] font-extrabold uppercase tracking-[0.7px] text-muted">
               {activeTab === "detail" ? "Resumen operativo" : activeTabMeta.label}
             </div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: 0 }}>
+            <h1 className="m-0 text-[22px] font-bold text-title">
               Suscripción SIM
             </h1>
             <LoadingBanner label={activeTabMeta.loadingLabel} color={accent} />
           </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+          <div className="flex shrink-0 flex-wrap gap-2">
             <SkeletonLine width={112} height={36} />
             <SkeletonLine width={92} height={36} />
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 1, background: T.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+        <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px overflow-hidden rounded-md bg-border">
           <SummarySkeletonField label="Fuente" variant="badge" />
           <SummarySkeletonField label="Estado" variant="pill" />
           <SummarySkeletonField label="ICCID" variant="long" />
@@ -245,29 +223,26 @@ export default function SubscriptionDetailLoading() {
           <SummarySkeletonField label="Actualizado" />
         </div>
 
-        <nav style={{ display: "flex", gap: 2, marginBottom: -1, overflowX: "auto" }}>
+        <nav className="mb-[-1px] flex gap-0.5 overflow-x-auto">
           {TABS.map((item) => {
             const active = item.id === activeTab;
             return (
-            <div
-              key={item.id}
-              style={{
-                padding: "11px 16px",
-                borderBottom: `2px solid ${active ? accent : "transparent"}`,
-                color: active ? T.title : T.muted,
-                fontSize: 13,
-                fontWeight: active ? 700 : 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {item.label}
-            </div>
+              <div
+                key={item.id}
+                className={cn(
+                  "whitespace-nowrap border-b-2 px-4 py-[11px] text-[13px]",
+                  active ? "font-bold text-title" : "border-transparent font-medium text-muted"
+                )}
+                style={active ? { borderBottomColor: accent } : undefined}
+              >
+                {item.label}
+              </div>
             );
           })}
         </nav>
       </section>
 
-      <div style={{ flex: 1, padding: 24 }}>
+      <div className="flex-1 p-6">
         <LoadingContent tab={activeTab} />
       </div>
     </main>

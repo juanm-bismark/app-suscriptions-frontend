@@ -1,27 +1,18 @@
 "use client"
 
+import type { CSSProperties } from "react"
 import type { FailedProvider } from "@/lib/subscriptions/types"
 import Link from "next/link"
 import { EmptyState } from "../state-views"
 import { Icon } from "../primitives"
 import { PROVIDER_IDS } from "../filters/source-filter"
-import { SOURCES, type SourceId, T } from "../tokens"
+import { SOURCES, type SourceId } from "../tokens"
 
 export function ListEmptyShell({ query }: { query?: string }) {
   return (
-    <div
-      style={{
-        background: T.pageBg,
-        fontFamily: T.fontBody,
-        color: T.text,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "calc(100vh - 64px)",
-      }}
-    >
-      <style>{`@keyframes bismark-inline-spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ padding: "22px 24px 16px", borderBottom: `1px solid ${T.border}`, background: T.cardBg }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title }}>Suscripciones</h1>
+    <div className="flex min-h-[calc(100vh-64px)] flex-col bg-page text-text">
+      <div className="border-b border-border bg-card px-6 pb-4 pt-[22px]">
+        <h1 className="m-0 text-[22px] font-bold text-title">Suscripciones</h1>
       </div>
       <EmptyState query={query || "tus filtros"} />
     </div>
@@ -51,15 +42,8 @@ export function InlineSpinner({ color = "currentColor", size = 12 }: { color?: s
   return (
     <span
       aria-hidden="true"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        border: `2px solid ${color}55`,
-        borderTopColor: color,
-        display: "inline-block",
-        animation: "bismark-inline-spin .7s linear infinite",
-      }}
+      className="inline-block animate-spin rounded-full border-2 border-(--spinner-color)/35 border-t-(--spinner-color)"
+      style={{ width: size, height: size, "--spinner-color": color } as CSSProperties}
     />
   )
 }
@@ -84,22 +68,25 @@ export function DetailsResolutionNotice({
   const busyLabel = activeProvider ? `Reconstruyendo rutas de ${sourceLabel}...` : "Reconstruyendo rutas..."
 
   return (
-    <div style={{ marginTop: 14, border: `1px solid ${T.warning}55`, background: "#FDF4E1", color: "#6B4A0E", borderRadius: 6, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.45, display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
-      <span style={{ color: T.warning, display: "inline-flex", marginTop: 1 }}><Icon.warn size={14} /></span>
-      <div style={{ flex: 1 }}>
-        <div style={{ marginBottom: 3 }}>
-          <strong style={{ fontWeight: 800 }}>Mapa ICCID-fuente</strong>
+    <div
+      role="status"
+      className="mt-3.5 flex flex-wrap items-start gap-2.5 rounded-md border border-warning-action/35 bg-warning-soft px-3 py-2.5 text-[12.5px] leading-[1.45] text-warning-text-soft"
+    >
+      <span className="mt-px inline-flex text-warning-action"><Icon.warn size={14} /></span>
+      <div className="flex-1">
+        <div className="mb-[3px]">
+          <strong className="font-extrabold">Mapa ICCID-fuente</strong>
         </div>
         {unresolved.length > 0 && (
           <div>
-            <strong style={{ fontWeight: 800 }}>{unresolved.length} ICCID sin fuente asignada.</strong>{" "}
+            <strong className="font-extrabold">{unresolved.length} ICCID sin fuente asignada.</strong>{" "}
             {isAdmin
               ? `Reconstruye el mapa de rutas de ${sourceLabel}; al terminar, la lista se actualiza sola.`
               : `Pide a un admin reconstruir el mapa de rutas de ${sourceLabel}.`}
           </div>
         )}
         {filteredOut.length > 0 && (
-          <div style={{ marginTop: unresolved.length ? 3 : 0 }}>
+          <div className={unresolved.length ? "mt-[3px]" : undefined}>
             {filteredOut.length} ICCID pertenecen a otra fuente y quedan fuera del filtro{activeProvider ? ` ${sourceLabel}` : ""}.
           </div>
         )}
@@ -111,9 +98,9 @@ export function DetailsResolutionNotice({
           disabled={isRefreshingRouting}
           aria-busy={isRefreshingRouting || undefined}
           title="Reconstruye el mapa ICCID-fuente."
-          style={{ border: `1px solid ${T.warning}55`, background: "#fff", color: "#6B4A0E", borderRadius: 4, padding: "5px 8px", fontSize: 12, fontWeight: 800, cursor: isRefreshingRouting ? "wait" : "pointer", display: "inline-flex", alignItems: "center", gap: 6, opacity: isRefreshingRouting ? 0.72 : 1, maxWidth: "100%" }}
+          className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded border border-warning-action/35 bg-card px-2 py-[5px] text-xs font-extrabold text-warning-text-soft transition-colors hover:bg-warning-hover-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning-action disabled:cursor-wait disabled:opacity-70"
         >
-          {isRefreshingRouting && <InlineSpinner color="#6B4A0E" size={12} />}
+          {isRefreshingRouting && <InlineSpinner color="var(--color-warning-text-soft)" size={12} />}
           {isRefreshingRouting ? busyLabel : actionLabel}
         </button>
       )}
@@ -123,10 +110,17 @@ export function DetailsResolutionNotice({
 
 export function DetailsQueryNotice({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div style={{ marginTop: 14, border: `1px solid ${T.dangerBorderSoft}`, background: T.dangerTint, color: T.danger, borderRadius: 6, padding: "10px 12px", fontSize: 12.5, display: "flex", alignItems: "center", gap: 10 }}>
+    <div
+      role="alert"
+      className="mt-3.5 flex items-center gap-2.5 rounded-md border border-danger-action/25 bg-danger-tint px-3 py-2.5 text-[12.5px] text-danger-action"
+    >
       <Icon.warn size={14} />
-      <span style={{ flex: 1 }}>{message}</span>
-      <button type="button" onClick={onRetry} style={{ border: `1px solid ${T.dangerBorderSoft}`, background: "#fff", color: T.danger, borderRadius: 4, padding: "5px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+      <span className="flex-1">{message}</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="cursor-pointer rounded border border-danger-action/25 bg-card px-2 py-[5px] text-xs font-extrabold text-danger-action transition-colors hover:bg-danger-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-action"
+      >
         Reintentar
       </button>
     </div>
@@ -137,26 +131,15 @@ export function PartialProvidersNotice({ failedProviders }: { failedProviders: F
   const names = Array.from(new Set(failedProviders.map((f) => sourceName(f.provider)))).join(", ")
   return (
     <div
-      style={{
-        marginTop: 14,
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 9,
-        border: `1px solid ${T.warning}55`,
-        background: "#FDF4E1",
-        color: "#6B4A0E",
-        borderRadius: 6,
-        padding: "10px 12px",
-        fontSize: 12.5,
-        lineHeight: 1.45,
-      }}
+      role="status"
+      className="mt-3.5 flex items-start gap-[9px] rounded-md border border-warning-action/35 bg-warning-soft px-3 py-2.5 text-[12.5px] leading-[1.45] text-warning-text-soft"
     >
-      <span style={{ color: T.warning, display: "inline-flex", marginTop: 1 }}>
+      <span className="mt-px inline-flex text-warning-action">
         <Icon.warn size={14} />
       </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <strong style={{ fontWeight: 800 }}>Vista parcial.</strong> La tabla cargó, pero no se pudo consultar {names}.
-        <div style={{ color: T.muted, fontSize: 11.5, marginTop: 2, fontFamily: T.fontMono }}>
+      <div className="min-w-0 flex-1">
+        <strong className="font-extrabold">Vista parcial.</strong> La tabla cargó, pero no se pudo consultar {names}.
+        <div className="mt-0.5 font-mono text-[11.5px] text-muted">
           {failedProviders.map((f) => `${sourceName(f.provider)}: ${f.title || f.code}`).join(" · ")}
         </div>
       </div>
@@ -177,14 +160,14 @@ export function RoutingMapEmptyState({
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6">
-        <p className="text-sm font-semibold uppercase tracking-wide text-amber-800">Mapa ICCID-fuente pendiente</p>
+      <div className="rounded-lg border border-warning-border-soft bg-warning-soft p-6">
+        <p className="text-sm font-semibold uppercase tracking-wide text-warning-icon-soft">Mapa ICCID-fuente pendiente</p>
         <h1 className="mt-2 text-2xl font-bold text-title">Crea el mapa para activar la vista global</h1>
-        <p className="mt-2 max-w-2xl text-sm text-amber-900">
+        <p className="mt-2 max-w-2xl text-sm text-warning-text-soft">
           La vista global necesita saber en que fuente vive cada ICCID. Importa el CSV inicial para crear ese mapa; si solo quieres consultar ahora, entra por un proveedor especifico.
         </p>
         {failedProviders.length > 0 && (
-          <div className="mt-4 max-w-2xl rounded border border-amber-300 bg-white/70 p-3 text-sm text-amber-950">
+          <div className="mt-4 max-w-2xl rounded border border-warning-border-soft bg-white/70 p-3 text-sm text-warning-text-soft">
             <p className="font-semibold">Fuentes que no respondieron al intentar crear el mapa:</p>
             <ul className="mt-2 space-y-1">
               {failedProviders.map((f, index) => (
@@ -199,7 +182,7 @@ export function RoutingMapEmptyState({
           <Link href="/dashboard/sims/import" className="rounded bg-header-bg px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
             Crear mapa con CSV
           </Link>
-          <Link href={providerHref} className="rounded border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">
+          <Link href={providerHref} className="rounded border border-warning-border-soft bg-card px-4 py-2 text-sm font-semibold text-warning-text-soft hover:bg-warning-hover-bg">
             Consultar una fuente
           </Link>
         </div>

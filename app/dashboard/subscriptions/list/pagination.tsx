@@ -2,7 +2,7 @@
 
 import { useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { T } from "../tokens"
+import { cn } from "@/lib/utils"
 import { dropPaginationParams, PAGE_SIZE_OPTIONS, setParam } from "./url"
 
 export function SubscriptionsPaginationControls({
@@ -72,23 +72,23 @@ export function SubscriptionsPaginationControls({
   }
 
   return (
-    <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", fontSize: 12, color: T.muted }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: T.fontMono }}>
+    <div className="flex w-full flex-wrap items-center justify-between gap-3.5 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="font-mono">
           Página {page} · {rowsShown} SIM{rowsShown !== 1 ? "s" : ""}
         </span>
-        {total !== null && <span style={{ fontFamily: T.fontMono }}>{total} en esta consulta</span>}
+        {total !== null && <span className="font-mono">{total} en esta consulta</span>}
         {partial && <span>{partialLabel}</span>}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap", fontWeight: 600 }}>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-[7px] whitespace-nowrap font-semibold">
           Mostrar
           <select
             value={size}
             disabled={isPending}
             onChange={(event) => go(sizeHref(Number(event.target.value)))}
-            style={{ height: 32, border: `1px solid ${T.border}`, background: "#fff", color: T.text, borderRadius: 5, padding: "0 8px", fontFamily: T.fontBody, fontWeight: 700 }}
+            className="h-8 rounded-[5px] border border-border bg-card px-2 font-bold text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
           >
             {PAGE_SIZE_OPTIONS.map((option) => (
               <option key={option} value={option}>{option}</option>
@@ -99,17 +99,12 @@ export function SubscriptionsPaginationControls({
           type="button"
           disabled={!hasPrevious || isPending}
           onClick={() => go(previousHref())}
-          style={{
-            border: "1px solid transparent",
-            background: hasPrevious ? "#E8EEF2" : "#EEF3F5",
-            color: hasPrevious ? "#334155" : "#64748B99",
-            borderRadius: 5,
-            padding: "7px 10px",
-            cursor: hasPrevious && !isPending ? "pointer" : "not-allowed",
-            fontSize: 12,
-            fontWeight: 800,
-            fontFamily: T.fontBody,
-          }}
+          className={cn(
+            "rounded-[5px] border border-transparent px-2.5 py-[7px] text-xs font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent",
+            hasPrevious
+              ? "cursor-pointer bg-previous-soft text-slate-strong hover:bg-disabled-soft"
+              : "cursor-not-allowed bg-disabled-soft text-slate-muted/60"
+          )}
         >
           {isPending && hasPrevious ? "Cargando..." : "Anterior"}
         </button>
@@ -117,17 +112,12 @@ export function SubscriptionsPaginationControls({
           type="button"
           disabled={!hasNext || isPending}
           onClick={() => go(nextHref())}
-          style={{
-            border: "1px solid transparent",
-            background: hasNext ? "#ECFEFF" : "#E5F0F1",
-            color: hasNext ? "#0E7490" : "#32647288",
-            borderRadius: 5,
-            padding: "7px 10px",
-            cursor: hasNext && !isPending ? "pointer" : "not-allowed",
-            fontSize: 12,
-            fontWeight: 800,
-            fontFamily: T.fontBody,
-          }}
+          className={cn(
+            "rounded-[5px] border border-transparent px-2.5 py-[7px] text-xs font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent",
+            hasNext
+              ? "cursor-pointer bg-next-soft text-action-teal hover:bg-action-teal-soft"
+              : "cursor-not-allowed bg-skeleton-muted text-table-header-text/55"
+          )}
         >
           {isPending && hasNext ? "Cargando..." : "Siguiente"}
         </button>

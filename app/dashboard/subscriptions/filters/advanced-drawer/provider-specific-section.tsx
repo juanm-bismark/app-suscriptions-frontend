@@ -22,7 +22,7 @@ export function ProviderSpecificFilters({
   if (activeSrc === "kite") {
     return (
       <DrawerGroup title="ESPECÍFICOS DEL PROVEEDOR">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           <TextFilterInput label="Alias" value={filters.kiteAlias} onChange={(value) => onFilterChange("kiteAlias", value)} placeholder="Nombre de SIM..." />
           <TextFilterInput label="Commercial group" value={filters.kiteCommercialGroup} onChange={(value) => onFilterChange("kiteCommercialGroup", value)} placeholder="Grupo comercial..." />
           <TextFilterInput label="Supervision group" value={filters.kiteSupervisionGroup} onChange={(value) => onFilterChange("kiteSupervisionGroup", value)} placeholder="Grupo de supervisión..." />
@@ -35,7 +35,7 @@ export function ProviderSpecificFilters({
   if (activeSrc === "tele2") {
     return (
       <DrawerGroup title="ESPECÍFICOS DEL PROVEEDOR">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           <TextFilterInput label="Rate plan" value={filters.tele2RatePlan} onChange={(value) => onFilterChange("tele2RatePlan", value)} placeholder="PAYU, pooled..." />
           <TextFilterInput label="Communication plan" value={filters.tele2CommunicationPlan} onChange={(value) => onFilterChange("tele2CommunicationPlan", value)} placeholder="Data LTE SMS..." />
           <TextFilterInput label="Account ID" value={filters.tele2AccountId} onChange={(value) => onFilterChange("tele2AccountId", value)} placeholder="100020620" />
@@ -48,7 +48,7 @@ export function ProviderSpecificFilters({
   }
   return (
     <DrawerGroup title="ESPECÍFICOS DEL PROVEEDOR">
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex flex-col gap-3">
         <TextFilterInput label="Plan asociado" value={filters.moabitsProductName} onChange={(value) => onFilterChange("moabitsProductName", value)} placeholder="15MB Fixed Plan..." />
         <TextFilterInput label="Código de producto" value={filters.moabitsProductCode} onChange={(value) => onFilterChange("moabitsProductCode", value)} placeholder="FP15M-Z5-01" />
         <TextFilterInput label="Company code" value={filters.moabitsCompanyCode} onChange={(value) => onFilterChange("moabitsCompanyCode", value)} placeholder="48123" />

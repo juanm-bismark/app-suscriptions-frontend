@@ -1,11 +1,12 @@
 "use client"
 
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
+import { cn } from "@/lib/utils"
 import { fmtShortDate } from "../../data"
 import { isStaleLu } from "../kpi-strip"
-import { SOURCES, T } from "../../tokens"
+import { SOURCES } from "../../tokens"
 import { rowKey, secondary } from "../rows"
-import { CELL_STYLE, GRID_COLS_MOABITS } from "./constants"
+import { CELL_CLASS, GRID_COLS_MOABITS } from "./constants"
 import { DetailCellSkeleton, IccidCell, MonoCell, OpenCell, ServicePill, StatusCell, TableRowShell, TextCell } from "./primitives"
 import { RowDetailState } from "./row-detail-state"
 import type { DetailsQueryLike } from "./types"
@@ -46,10 +47,10 @@ export function MoabitsSubscriptionRow({
       <div style={{ background: source.color }} />
       <IccidCell row={row} />
       <StatusCell row={row} />
-      <div style={{ ...CELL_STYLE, display: "flex", alignItems: "center", color: luStale ? T.warning : T.text, fontWeight: luStale ? 700 : 500 }}>
+      <div className={cn(CELL_CLASS, "flex items-center", luStale ? "font-bold text-warning-action" : "font-medium text-text")}>
         {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(row.lastLuAt)}
       </div>
-      <div style={{ ...CELL_STYLE, display: "flex", alignItems: "center", color: T.text }}>
+      <div className={cn(CELL_CLASS, "flex items-center text-text")}>
         {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(row.lastCdrAt)}
       </div>
       <MonoCell>{isDetailPending ? <DetailCellSkeleton /> : secondary(row.imei)}</MonoCell>
@@ -57,7 +58,7 @@ export function MoabitsSubscriptionRow({
         {rowIssue ? <RowDetailState detail={rowIssue} fallbackValue={row.operator ?? "—"} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton /> : (row.operator ?? "—")}
       </TextCell>
       <MonoCell>{isDetailPending ? <DetailCellSkeleton /> : secondary(row.imsi)}</MonoCell>
-      <div style={{ ...CELL_STYLE, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <div className={cn(CELL_CLASS, "flex flex-wrap items-center gap-1.5")}>
         <ServicePill enabled={row.dataService} label="Datos" />
         <ServicePill enabled={row.smsService} label="SMS" />
       </div>
@@ -65,4 +66,3 @@ export function MoabitsSubscriptionRow({
     </TableRowShell>
   )
 }
-

@@ -1,16 +1,9 @@
-import type { CSSProperties } from "react"
 import { countStatusSelections, isSelectedStatus, type NativeStatusSelections } from "../../filters/status-filter"
 import type { SourceFilter } from "../../filters/source-filter"
-import { nativeStatusMeta, PROVIDER_NATIVE_STATUSES, SOURCES, type SourceId, T } from "../../tokens"
+import { nativeStatusMeta, PROVIDER_NATIVE_STATUSES, SOURCES, type SourceId } from "../../tokens"
 
-export const GRID_COLS = "4px minmax(170px,1.15fr) minmax(120px,.75fr) minmax(130px,.8fr) minmax(150px,1fr) 120px 170px 120px 100px"
-export const CELL_STYLE: CSSProperties = { padding: "9px 12px" }
-export const SHIMMER_BG = `linear-gradient(90deg, ${T.divider}, ${T.zebra}, ${T.divider})`
-
-export const STATE_KEYFRAMES = `
-@keyframes bismark-spin { to { transform: rotate(360deg); } }
-@keyframes bismark-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-`
+export const GRID_COLS_CLASS =
+  "grid-cols-[4px_minmax(170px,1.15fr)_minmax(120px,.75fr)_minmax(130px,.8fr)_minmax(150px,1fr)_120px_170px_120px_100px]"
 
 export function providersForLoadingRows(
   activeSource: SourceFilter,

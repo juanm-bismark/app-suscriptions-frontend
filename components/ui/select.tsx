@@ -40,9 +40,6 @@ function Select({ children, className, name, onChange, placeholder, ...props }: 
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           className="z-[80] min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-title shadow-md"
-          style={{
-            opacity: 1,
-          }}
         >
           <SelectPrimitive.Viewport className="bg-card p-1">
             {children}

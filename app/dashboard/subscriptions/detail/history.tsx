@@ -2,15 +2,15 @@
 
 import type { SmsHistoryOut, SmsHistoryRecord, StatusHistoryOut, StatusHistoryRecord, SubscriptionOut } from "@/lib/types/api"
 import { type ReactNode, useState } from "react"
+import { cn } from "@/lib/utils"
 import { fmtDate } from "../data"
 import { Btn, Icon } from "../primitives"
-import { T } from "../tokens"
 import { useSmsHistory, useStatusHistory } from "./hooks"
 import { Card, Empty, KV } from "./primitives"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 
-const smsTh = { textAlign: "left", padding: "8px 12px", color: T.muted, fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 } as const
-const smsTd = { padding: "8px 12px", color: T.text, borderBottom: `1px solid ${T.divider}`, verticalAlign: "top" } as const
+const thClass = "px-3 py-2 text-left text-[11px] font-bold uppercase tracking-[0.5px] text-muted"
+const tdClass = "border-b border-divider px-3 py-2 align-top text-text"
 
 export function SmsHistoryCard({ subscription }: { subscription: SubscriptionOut }) {
   const { state, reload } = useSmsHistory(subscription.iccid)
@@ -38,13 +38,13 @@ export function SmsHistoryCard({ subscription }: { subscription: SubscriptionOut
           <Empty text="Cargando historial SMS..." />
         ) : (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
               <KV label="Último SMS recibido (MO)" value={moLabel} sub={lastMo ? truncate(lastMo.message, 60) : undefined} />
               <KV label="Último SMS enviado (MT)" value={mtLabel} sub={lastMt ? truncate(lastMt.message, 60) : undefined} />
               <KV label="Delivery último MT" value={deliveryLabel} mono />
               <KV label="Total registros" value={state.data.records.length.toLocaleString("es-CO")} sub={`Periodo: ${fmtDate(state.data.period_start)} a ${fmtDate(state.data.period_end)}`} />
             </div>
-            <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.divider}`, display: "flex", gap: 8 }}>
+            <div className="flex gap-2 border-t border-divider px-4 py-3">
               <Btn variant="primary" size="sm" icon={<Icon.refresh size={12} />} onClick={() => setShowModal(true)}>
                 Ver historial SMS
               </Btn>
@@ -76,12 +76,12 @@ export function StatusHistoryCard({ subscription }: { subscription: Subscription
         <Empty text="Sin cambios de estado en el periodo." />
       ) : (
         <>
-          <div style={{ display: "grid" }}>
+          <div className="grid">
             {state.data.records.slice(0, 8).map((record, index) => (
               <StatusHistoryRow key={`${record.time}-${index}`} record={record} />
             ))}
           </div>
-          <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.divider}`, display: "flex", gap: 8 }}>
+          <div className="flex gap-2 border-t border-divider px-4 py-3">
             <Btn variant="primary" size="sm" icon={<Icon.refresh size={12} />} onClick={() => setShowModal(true)}>
               Ver historial completo
             </Btn>
@@ -100,11 +100,11 @@ export function StatusHistoryCard({ subscription }: { subscription: Subscription
 
 function StatusHistoryRow({ record }: { record: StatusHistoryRecord }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 14, padding: "10px 16px", borderTop: `1px solid ${T.divider}` }}>
-      <div style={{ fontFamily: T.fontMono, color: T.muted, fontSize: 12 }}>{fmtDate(record.time)}</div>
+    <div className="grid grid-cols-[150px_1fr] gap-3.5 border-t border-divider px-4 py-2.5">
+      <div className="font-mono text-xs text-muted">{fmtDate(record.time)}</div>
       <div>
-        <div style={{ color: T.title, fontWeight: 750, fontSize: 13 }}>{record.state}</div>
-        <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+        <div className="text-[13px] font-bold text-title">{record.state}</div>
+        <div className="mt-0.5 text-xs text-muted">
           {record.automatic ? "Automático" : "Manual"}{record.reason ? ` · ${record.reason}` : ""}{record.user ? ` · ${record.user}` : ""}
         </div>
       </div>
@@ -120,29 +120,29 @@ function StatusHistoryModal({ data, onClose }: { data: StatusHistoryOut; onClose
         <DialogDescription className="sr-only">
           Tabla completa de cambios de estado de la suscripción {data.iccid}.
         </DialogDescription>
-        <ModalHeader title="Historial de estados" caption={<span>ICCID <span style={{ fontFamily: T.fontMono }}>{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} cambios</span>} onClose={onClose} />
-        <div style={{ overflow: "auto", flex: 1 }}>
+        <ModalHeader title="Historial de estados" caption={<span>ICCID <span className="font-mono">{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} cambios</span>} onClose={onClose} />
+        <div className="flex-1 overflow-auto">
           {data.records.length === 0 ? (
             <Empty text="Sin cambios de estado en el periodo." />
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead style={{ position: "sticky", top: 0, background: T.cardBg, zIndex: 1 }}>
-                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  <th style={smsTh}>Fecha</th>
-                  <th style={smsTh}>Estado</th>
-                  <th style={smsTh}>Origen</th>
-                  <th style={smsTh}>Motivo</th>
-                  <th style={smsTh}>Usuario</th>
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 z-[1] bg-card">
+                <tr className="border-b border-border">
+                  <th className={thClass}>Fecha</th>
+                  <th className={thClass}>Estado</th>
+                  <th className={thClass}>Origen</th>
+                  <th className={thClass}>Motivo</th>
+                  <th className={thClass}>Usuario</th>
                 </tr>
               </thead>
               <tbody>
                 {data.records.map((record, index) => (
                   <tr key={`${record.time}-${index}`}>
-                    <td style={{ ...smsTd, fontFamily: T.fontMono, whiteSpace: "nowrap" }}>{fmtDate(record.time)}</td>
-                    <td style={{ ...smsTd, fontWeight: 700 }}>{record.state}</td>
-                    <td style={smsTd}>{record.automatic ? "Automático" : "Manual"}</td>
-                    <td style={smsTd}>{record.reason || "—"}</td>
-                    <td style={smsTd}>{record.user || "—"}</td>
+                    <td className={cn(tdClass, "whitespace-nowrap font-mono")}>{fmtDate(record.time)}</td>
+                    <td className={cn(tdClass, "font-bold")}>{record.state}</td>
+                    <td className={tdClass}>{record.automatic ? "Automático" : "Manual"}</td>
+                    <td className={tdClass}>{record.reason || "—"}</td>
+                    <td className={tdClass}>{record.user || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -162,19 +162,19 @@ function SmsHistoryModal({ data, onClose }: { data: SmsHistoryOut; onClose: () =
         <DialogDescription className="sr-only">
           Tabla completa de mensajes SMS de la suscripción {data.iccid}.
         </DialogDescription>
-        <ModalHeader title="Historial SMS" caption={<span>ICCID <span style={{ fontFamily: T.fontMono }}>{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} registros</span>} onClose={onClose} />
-        <div style={{ overflow: "auto", flex: 1 }}>
+        <ModalHeader title="Historial SMS" caption={<span>ICCID <span className="font-mono">{data.iccid}</span> · {data.records.length.toLocaleString("es-CO")} registros</span>} onClose={onClose} />
+        <div className="flex-1 overflow-auto">
           {data.records.length === 0 ? (
             <Empty text={`Sin SMS entre ${fmtDate(data.period_start)} y ${fmtDate(data.period_end)}.`} />
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead style={{ position: "sticky", top: 0, background: T.cardBg, zIndex: 1 }}>
-                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-                  <th style={smsTh}>Fecha</th>
-                  <th style={smsTh}>Tipo</th>
-                  <th style={smsTh}>Mensaje</th>
-                  <th style={smsTh}>GW</th>
-                  <th style={smsTh}>SC</th>
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 z-[1] bg-card">
+                <tr className="border-b border-border">
+                  <th className={thClass}>Fecha</th>
+                  <th className={thClass}>Tipo</th>
+                  <th className={thClass}>Mensaje</th>
+                  <th className={thClass}>GW</th>
+                  <th className={thClass}>SC</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,23 +190,29 @@ function SmsHistoryModal({ data, onClose }: { data: SmsHistoryOut; onClose: () =
 
 function ModalHeader({ title, caption, onClose }: { title: string; caption: ReactNode; onClose: () => void }) {
   return (
-    <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 12 }}>
-      <h3 style={{ margin: 0, color: T.title, fontSize: 16, flex: 1 }}>{title}</h3>
-      <span style={{ fontSize: 12, color: T.muted }}>{caption}</span>
-      <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: "transparent", border: "none", cursor: "pointer", color: T.muted, fontSize: 18, padding: "0 6px" }}>×</button>
+    <div className="flex items-center gap-3 border-b border-divider px-[18px] py-3.5">
+      <h3 className="m-0 flex-1 text-base text-title">{title}</h3>
+      <span className="text-xs text-muted">{caption}</span>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Cerrar"
+        className="rounded px-1.5 text-lg text-muted transition-colors hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
+      >
+        ×
+      </button>
     </div>
   )
 }
 
 function SmsRow({ record }: { record: SmsHistoryRecord }) {
-  const typeColor = record.sms_type === "MO" ? T.success : T.headerBg
   return (
     <tr>
-      <td style={{ ...smsTd, fontFamily: T.fontMono, whiteSpace: "nowrap" }}>{fmtDate(record.date)}</td>
-      <td style={{ ...smsTd, fontWeight: 700, color: typeColor }}>{record.sms_type}</td>
-      <td style={{ ...smsTd, maxWidth: 380, wordBreak: "break-word" }}>{record.message || "—"}</td>
-      <td style={{ ...smsTd, fontFamily: T.fontMono }}>{deliveryGlyph(record.gateway_delivered)}</td>
-      <td style={{ ...smsTd, fontFamily: T.fontMono }}>{deliveryGlyph(record.sms_center_delivered)}</td>
+      <td className={cn(tdClass, "whitespace-nowrap font-mono")}>{fmtDate(record.date)}</td>
+      <td className={cn(tdClass, "font-bold", record.sms_type === "MO" ? "text-success-bg" : "text-header-bg")}>{record.sms_type}</td>
+      <td className={cn(tdClass, "max-w-[380px] break-words")}>{record.message || "—"}</td>
+      <td className={cn(tdClass, "font-mono")}>{deliveryGlyph(record.gateway_delivered)}</td>
+      <td className={cn(tdClass, "font-mono")}>{deliveryGlyph(record.sms_center_delivered)}</td>
     </tr>
   )
 }

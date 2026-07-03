@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { cn } from "@/lib/utils";
 import { fmtDate } from "./data";
 import { Btn, Icon, SourceBadge, StatusPillWithNative } from "./primitives";
 import { ActionsTab } from "./detail/actions-tab";
@@ -17,7 +18,7 @@ import { PresenceTab } from "./detail/presence-tab";
 import { SummaryField } from "./detail/primitives";
 import { UsageTab } from "./detail/usage-tab";
 import { clean, planDisplay, subscriptionStatusInfo, value, type TabId } from "./detail/utils";
-import { SOURCES, T } from "./tokens";
+import { SOURCES } from "./tokens";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "detail", label: "Resumen" },
@@ -77,39 +78,38 @@ export function SubscriptionPage({
     <Tabs
       value={tab}
       onValueChange={(value) => setTab(value as TabId)}
-      className="gap-0"
-      style={{ background: T.pageBg, color: T.text, fontFamily: T.fontBody, minHeight: "calc(100vh - 64px)", display: "flex", flexDirection: "column" }}
+      className="flex min-h-[calc(100vh-64px)] flex-col gap-0 bg-page font-body text-text"
     >
       {/* Breadcrumb bar */}
-      <div style={{ padding: "10px 24px", background: T.cardBg, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
+      <div className="flex items-center gap-2.5 border-b border-border bg-card px-6 py-2.5 text-xs">
         <Link
           href="/dashboard/subscriptions"
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, color: T.headerBg, textDecoration: "none", fontWeight: 700 }}
+          className="inline-flex items-center gap-[5px] font-bold text-header-bg no-underline"
         >
           <Icon.arrowLeft size={12} />
           Suscripciones
         </Link>
-        <span style={{ color: T.muted }}>/</span>
-        <span style={{ color: T.title, fontWeight: 600 }}>
+        <span className="text-muted">/</span>
+        <span className="font-semibold text-title">
           Suscripción
         </span>
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         <Btn variant="ghost" size="sm" icon={<Icon.copy size={12} />} onClick={copyIccid}>
           {copiedIccid ? "Copiado" : "Copiar ICCID"}
         </Btn>
       </div>
 
       {/* Hero section */}
-      <div style={{ background: T.cardBg, borderBottom: `1px solid ${T.border}`, padding: "20px 24px 0" }}>
+      <div className="border-b border-border bg-card px-6 pt-5">
         {/* Avatar + info + actions */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 18, marginBottom: 18 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.7, fontWeight: 800, textTransform: "uppercase", marginBottom: 3 }}>Resumen operativo</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.title, letterSpacing: 0 }}>
+        <div className="mb-[18px] flex items-start gap-[18px]">
+          <div className="min-w-0 flex-1">
+            <div className="mb-[3px] text-[10.5px] font-extrabold uppercase tracking-[0.7px] text-muted">Resumen operativo</div>
+            <h1 className="m-0 text-[22px] font-bold text-title">
               Suscripción SIM
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div className="flex shrink-0 gap-2">
             {subscription.provider === "moabits" && (
               <Btn
                 variant="ghost"
@@ -136,7 +136,7 @@ export function SubscriptionPage({
         </div>
 
         {/* Canonical summary strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 1, background: T.border, borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+        <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-px overflow-hidden rounded-md bg-border">
           <SummaryField label="Fuente">
             <SourceBadge source={subscription.provider} size="sm" withName />
           </SummaryField>
@@ -160,29 +160,28 @@ export function SubscriptionPage({
         </div>
 
         {/* Underline tabs */}
-        <TabsList className="flex h-auto items-end gap-0 rounded-none bg-transparent p-0" style={{ marginBottom: -1 }}>
-          {TABS.map((item) => (
-            <TabsTrigger
-              key={item.id}
-              value={item.id}
-              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-[11px] shadow-none ring-offset-card data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-              style={{
-                borderBottom: `2px solid ${tab === item.id ? src.color : "transparent"}`,
-                color: tab === item.id ? T.title : T.muted,
-                fontFamily: T.fontBody,
-                fontSize: 13,
-                fontWeight: tab === item.id ? 700 : 500,
-                letterSpacing: 0,
-              }}
-            >
-              {item.label}
-            </TabsTrigger>
-          ))}
+        <TabsList className="mb-[-1px] flex h-auto items-end gap-0 rounded-none bg-transparent p-0">
+          {TABS.map((item) => {
+            const active = tab === item.id;
+            return (
+              <TabsTrigger
+                key={item.id}
+                value={item.id}
+                className={cn(
+                  "rounded-none border-b-2 bg-transparent px-4 py-[11px] font-body text-[13px] shadow-none ring-offset-card data-[state=active]:bg-transparent data-[state=active]:shadow-none",
+                  active ? "font-bold text-title" : "border-transparent font-medium text-muted"
+                )}
+                style={active ? { borderBottomColor: src.color } : undefined}
+              >
+                {item.label}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, padding: 24 }}>
+      <div className="flex-1 p-6">
         <TabsContent value="detail" className="mt-0 focus-visible:outline-none">
           <DetailTab subscription={subscription} capabilities={capabilities} />
         </TabsContent>

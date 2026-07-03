@@ -41,7 +41,7 @@ export function DetailTab({
   ].filter((row) => row.value !== "—")
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="grid gap-3.5">
       {secondaryIdentityRows.length > 0 && (
         <Card title="Identificadores secundarios">
           <FieldGrid rows={secondaryIdentityRows} />
@@ -129,7 +129,7 @@ export function DetailTab({
 
       <Card title={`Campos avanzados · ${providerName}`}>
         {attrs.length ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
             {attrs.map(([key, v]) => <KV key={key} label={prettyKey(key)} value={formatVal(v)} mono={looksMono(key)} />)}
           </div>
         ) : (

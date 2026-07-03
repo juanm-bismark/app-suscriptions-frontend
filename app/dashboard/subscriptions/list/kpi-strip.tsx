@@ -82,31 +82,26 @@ export function KpiStrip({
     <div
       aria-busy={statsQuery.isFetching || undefined}
       aria-live="polite"
-      style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${displayBuckets.length}, minmax(120px, 1fr))`,
-        gap: 1,
-        background: T.border,
-        borderRadius: 6,
-        overflow: "hidden",
-        marginTop: 16,
-      }}
+      className="mt-4 grid gap-px overflow-hidden rounded-md bg-border"
+      style={{ gridTemplateColumns: `repeat(${displayBuckets.length}, minmax(120px, 1fr))` }}
     >
       {displayBuckets.map((bucket) => (
-        <div key={bucket.key} style={{ background: T.cardBg, padding: "12px 14px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 99, background: bucket.tone, flexShrink: 0 }} />
-            <span style={{ fontSize: 10.5, letterSpacing: 0.7, color: T.muted, fontWeight: 700, textTransform: "uppercase" }}>
+        <div key={bucket.key} className="bg-card px-3.5 py-3">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: bucket.tone }} />
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.7px] text-muted">
               {bucket.label}
             </span>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: T.title, fontFamily: T.fontMono, letterSpacing: -0.3 }}>
+          <div className="font-mono text-[22px] font-bold tracking-[-0.3px] text-title">
             {isInitialStatsLoading ? <KpiCountSkeleton /> : bucket.count.toLocaleString("es-CO")}
           </div>
         </div>
       ))}
       {(isInitialStatsLoading || isRefreshingStats || statsQuery.isError || statsQuery.data?.partial) && (
-        <div style={{ gridColumn: `1 / -1`, background: T.cardBg, color: T.muted, fontSize: 11.5, padding: "7px 12px", borderTop: `1px solid ${T.border}` }}>
+        <div
+          className="col-[1/-1] border-t border-border bg-card px-3 py-[7px] text-[11.5px] text-muted"
+        >
           {isInitialStatsLoading
             ? "Cargando KPIs agregados..."
             : isRefreshingStats
@@ -130,15 +125,7 @@ export function isStaleLu(value: string | null): boolean {
 function KpiCountSkeleton() {
   return (
     <span
-      className="animate-pulse"
-      style={{
-        display: "inline-block",
-        width: 64,
-        height: 25,
-        borderRadius: 4,
-        background: T.zebra,
-        verticalAlign: "middle",
-      }}
+      className="inline-block h-[25px] w-16 animate-pulse rounded bg-zebra align-middle"
     />
   )
 }

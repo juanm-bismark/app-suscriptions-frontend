@@ -23,9 +23,9 @@ export function UsageTab({ subscription }: { subscription: SubscriptionOut }) {
   const hasVoice = usage.voice_seconds > 0 || usage.usage_metrics.some((metric) => /voice|voz/i.test(metric.metric_type))
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="grid gap-3.5">
       <Card title="KPIs de consumo">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
           <KV label="Datos consumidos" value={bytesToDataLabel(usage.data_used_bytes)} />
           <KV label="Cap del plan" value={mbToLabel(subscription.normalized.limits.data)} />
           <KV label="Promedio diario" value={bytesToDataLabel(totalBytes / days)} />
@@ -37,7 +37,7 @@ export function UsageTab({ subscription }: { subscription: SubscriptionOut }) {
       </Card>
       {(hasSms || hasVoice) && (
         <Card title="Otros consumos">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
             {hasSms && <KV label="SMS" value={usage.sms_count.toLocaleString("es-CO")} />}
             {hasVoice && <KV label="Voz" value={`${Math.round(usage.voice_seconds / 60).toLocaleString("es-CO")} min`} />}
           </div>

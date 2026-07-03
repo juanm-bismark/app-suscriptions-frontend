@@ -1,11 +1,12 @@
 "use client"
 
 import type { SubscriptionRow } from "@/lib/api/sim-mapper"
+import { cn } from "@/lib/utils"
 import { fmtShortDate } from "../../data"
 import { SourceBadge } from "../../primitives"
-import { SOURCES, T } from "../../tokens"
+import { SOURCES } from "../../tokens"
 import { rowKey, secondary } from "../rows"
-import { CELL_STYLE, GRID_COLS_DEFAULT } from "./constants"
+import { CELL_CLASS, GRID_COLS_DEFAULT } from "./constants"
 import { DetailCellSkeleton, IccidCell, MonoCell, OpenCell, StatusCell, TableRowShell, TextCell } from "./primitives"
 import { RowDetailState } from "./row-detail-state"
 import type { DetailsQueryLike } from "./types"
@@ -49,16 +50,15 @@ export function DefaultSubscriptionRow({
       <TextCell strong>
         {rowIssue ? <RowDetailState detail={rowIssue} fallbackValue={row.planDisplay} onRetry={() => detailsQuery.refetch()} /> : isDetailPending ? <DetailCellSkeleton wide /> : row.planDisplay}
       </TextCell>
-      <div style={{ ...CELL_STYLE, display: "flex", alignItems: "center", gap: 8 }}>
+      <div className={cn(CELL_CLASS, "flex items-center gap-2")}>
         <SourceBadge source={row.provider} size="sm" />
-        <span style={{ fontSize: 12, color: T.title, fontWeight: 600 }}>{source.shortName}</span>
+        <span className="text-[12px] font-semibold text-title">{source.shortName}</span>
       </div>
       <StatusCell row={row} />
-      <div style={{ ...CELL_STYLE, fontSize: 12, color: T.text, display: "flex", alignItems: "center" }}>
+      <div className={cn(CELL_CLASS, "flex items-center text-[12px] text-text")}>
         {isDetailPending ? <DetailCellSkeleton /> : fmtShortDate(row.updatedAt)}
       </div>
       <OpenCell row={row} isDisabled={isNotFound} onOpen={setOpenRecord} />
     </TableRowShell>
   )
 }
-

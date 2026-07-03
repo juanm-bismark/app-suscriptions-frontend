@@ -66,10 +66,10 @@ export function ActionsTab({
 
   if (!isAdmin) {
     return (
-      <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-        <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>Acciones</div>
-        <div style={{ padding: 16 }}>
-          <div role="note" style={{ border: `1px solid ${T.warning}`, background: "#FBEFD4", color: "#7A4E0B", borderRadius: 6, padding: "10px 12px", fontSize: 13, fontWeight: 700 }}>
+      <section className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="border-b border-divider px-4 py-[13px] text-[13px] font-extrabold text-title">Acciones</div>
+        <div className="p-4">
+          <div role="note" className="rounded-md border border-warning-action bg-warning-soft px-3 py-2.5 text-sm font-bold text-warning-icon-soft">
             Solo un administrador puede ejecutar cambios de estado o purgas.
           </div>
         </div>
@@ -133,15 +133,15 @@ export function ActionsTab({
 
   return (
     <>
-      <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-        <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 3, height: 14, background: src.color, borderRadius: 2, flexShrink: 0 }} />
-          <div style={{ color: T.title, fontWeight: 800, fontSize: 13, flex: 1 }}>Acciones disponibles</div>
-          <span style={{ fontSize: 11, color: T.muted }}>
-            estado: <strong style={{ color: T.title, fontFamily: T.fontMono }}>{currentStatus.value}</strong>
+      <section className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-divider px-4 py-[13px]">
+          <span className="h-3.5 w-[3px] shrink-0 rounded-sm" style={{ background: src.color }} />
+          <div className="flex-1 text-[13px] font-extrabold text-title">Acciones disponibles</div>
+          <span className="text-[11px] text-muted">
+            estado: <strong className="font-mono text-title">{currentStatus.value}</strong>
           </span>
         </div>
-        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5 p-4">
           {canChangeStatus ? (
             <StatusChangeRow
               sourceColor={src.color}
@@ -152,7 +152,7 @@ export function ActionsTab({
               onBegin={beginStatusChange}
             />
           ) : statusCapability?.status && statusCapability.status !== "supported" ? (
-            <div role="note" style={{ border: `1px solid ${T.warning}66`, background: "#FBEFD4", color: "#7A4E0B", borderRadius: 6, padding: "10px 12px", fontSize: 12.5, fontWeight: 700 }}>
+            <div role="note" className="rounded-md border border-warning-action/40 bg-warning-soft px-3 py-2.5 text-[12.5px] font-bold text-warning-icon-soft">
               Cambio de estado no disponible: {statusCapability.reason ?? statusCapability.status}.
             </div>
           ) : null}

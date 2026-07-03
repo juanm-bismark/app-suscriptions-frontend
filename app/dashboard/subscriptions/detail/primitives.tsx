@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useMemo } from "react"
+import { cn } from "@/lib/utils"
 import type { UsageControl } from "@/lib/types/api"
 import { formatVal, prettyKey } from "../data"
 import { T } from "../tokens"
@@ -22,32 +23,27 @@ export function SummaryField({
   preserveValue?: boolean
 }) {
   return (
-    <div style={{ background: T.cardBg, padding: "12px 16px" }}>
-      <div style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
+    <div className="bg-card px-4 py-3">
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-muted">{label}</div>
       <div
-        style={{
-          fontSize: 14,
-          fontWeight: 700,
-          color: T.title,
-          letterSpacing: -0.2,
-          overflow: preserveValue ? "visible" : "hidden",
-          textOverflow: preserveValue ? "clip" : "ellipsis",
-          whiteSpace: preserveValue ? "normal" : "nowrap",
-          overflowWrap: preserveValue ? "anywhere" : undefined,
-          lineHeight: preserveValue ? 1.35 : undefined,
-          fontFamily: mono ? T.fontMono : T.fontBody,
-        }}
+        className={cn(
+          "text-sm font-bold tracking-[-0.2px] text-title",
+          mono ? "font-mono" : "font-body",
+          preserveValue
+            ? "overflow-visible text-clip whitespace-normal [overflow-wrap:anywhere] leading-[1.35]"
+            : "overflow-hidden text-ellipsis whitespace-nowrap"
+        )}
       >
         {children}
       </div>
-      {sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{sub}</div>}
+      {sub && <div className="mt-0.5 text-[11px] text-muted">{sub}</div>}
     </div>
   )
 }
 
 export function FieldGrid({ rows }: { rows: DetailRow[] }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))" }}>
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))]">
       {rows.map((row) => (
         <KV key={row.label} label={row.label} value={row.value} mono={row.mono} sub={row.sub} dot={row.dot} />
       ))}
@@ -57,8 +53,8 @@ export function FieldGrid({ rows }: { rows: DetailRow[] }) {
 
 export function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section style={{ background: T.cardBg, border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
-      <div style={{ padding: "13px 16px", borderBottom: `1px solid ${T.divider}`, color: T.title, fontWeight: 800, fontSize: 13 }}>
+    <section className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="border-b border-divider px-4 py-[13px] text-[13px] font-extrabold text-title">
         {title}
       </div>
       <div>{children}</div>
@@ -68,32 +64,41 @@ export function Card({ title, children }: { title: string; children: ReactNode }
 
 export function KV({ label, value, sub, mono, dot }: { label: string; value: string; sub?: string; mono?: boolean; dot?: string }) {
   return (
-    <div style={{ padding: 16, borderRight: `1px solid ${T.divider}`, borderBottom: `1px solid ${T.divider}`, minWidth: 0 }}>
-      <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.6, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
+    <div className="min-w-0 border-b border-r border-divider p-4">
+      <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.6px] text-muted">
         {label}
       </div>
-      <div style={{ color: T.title, fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: mono ? T.fontMono : T.fontBody, display: "flex", alignItems: "center", gap: 7 }}>
-        {dot && <span style={{ width: 8, height: 8, borderRadius: 99, background: dot, flexShrink: 0 }} />}
+      <div
+        className={cn(
+          "flex items-center gap-[7px] overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold text-title",
+          mono ? "font-mono" : "font-body"
+        )}
+      >
+        {dot && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} />}
         {value}
       </div>
-      {sub && <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{sub}</div>}
+      {sub && <div className="mt-0.5 text-[11px] text-muted">{sub}</div>}
     </div>
   )
 }
 
 export function Empty({ text }: { text: string }) {
-  return <div style={{ padding: 18, color: T.muted, fontSize: 13 }}>{text}</div>
+  return <div className="p-[18px] text-[13px] text-muted">{text}</div>
 }
 
 export function BarChart({ bars }: { bars: { label: string; value: number; unit: string }[] }) {
   const visibleBars = useMemo(() => bars.slice(-30), [bars])
   const max = Math.max(...visibleBars.map((bar) => bar.value), 1)
   return (
-    <div style={{ padding: 18 }}>
-      <div style={{ height: 180, display: "flex", alignItems: "end", gap: 6 }}>
+    <div className="p-[18px]">
+      <div className="flex h-[180px] items-end gap-1.5">
         {visibleBars.map((bar, index) => (
-          <div key={`${bar.label}-${index}`} style={{ flex: 1, minWidth: 8, display: "flex", alignItems: "end" }}>
-            <div title={`${bar.label}: ${bar.value} ${bar.unit}`} style={{ width: "100%", height: `${Math.max(6, (bar.value / max) * 170)}px`, background: T.headerAccent, borderRadius: "3px 3px 0 0" }} />
+          <div key={`${bar.label}-${index}`} className="flex min-w-2 flex-1 items-end">
+            <div
+              title={`${bar.label}: ${bar.value} ${bar.unit}`}
+              className="w-full rounded-t-[3px] bg-header-accent"
+              style={{ height: `${Math.max(6, (bar.value / max) * 170)}px` }}
+            />
           </div>
         ))}
       </div>
@@ -106,7 +111,7 @@ export function LimitGroup({ title, controls }: { title: string; controls: Recor
   return (
     <Card title={title}>
       {entries.length ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
           {entries.map(([metric, control]) => (
             <KV
               key={metric}

@@ -1,8 +1,6 @@
 import type { Provider } from "@/lib/types/api"
 import { PROVIDER_META } from "@/lib/provider-meta"
-
-const FONT_BODY = "Inter, Arial, Helvetica, sans-serif"
-const FONT_MONO = "'JetBrains Mono', 'Courier New', Courier, monospace"
+import { cn } from "@/lib/utils"
 
 export function SourceBadge({
   source,
@@ -24,21 +22,8 @@ export function SourceBadge({
   const glyph = (
     <span
       title={provider.name}
-      style={{
-        width: dim.box,
-        height: dim.box,
-        borderRadius: 4,
-        background: provider.color,
-        color: "#fff",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: FONT_MONO,
-        fontSize: dim.fs,
-        fontWeight: 700,
-        letterSpacing: -0.5,
-        flexShrink: 0,
-      }}
+      className="inline-flex shrink-0 items-center justify-center rounded font-mono font-bold tracking-[-0.5px] text-white"
+      style={{ width: dim.box, height: dim.box, background: provider.color, fontSize: dim.fs }}
     >
       {provider.name[0].toUpperCase()}
     </span>
@@ -48,16 +33,8 @@ export function SourceBadge({
 
   return (
     <span
-      className="text-title"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: dim.gap,
-        fontFamily: FONT_BODY,
-        fontSize: dim.label,
-        fontWeight: 600,
-        whiteSpace: "nowrap",
-      }}
+      className={cn("inline-flex items-center whitespace-nowrap font-body font-semibold text-title")}
+      style={{ gap: dim.gap, fontSize: dim.label }}
     >
       {glyph}
       {provider.name}

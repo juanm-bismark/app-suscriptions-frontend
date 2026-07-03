@@ -7,9 +7,9 @@ import { mbToLabel } from "./utils"
 export function LimitsTab({ subscription }: { subscription: SubscriptionOut }) {
   const limits = subscription.normalized.limits
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="grid gap-3.5">
       <Card title="Límites contractuales">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
           <KV label="Datos por SIM" value={mbToLabel(limits.data)} />
           <KV label="SMS por SIM" value={limits.sms == null ? "Sin límite contractual" : limits.sms.toLocaleString("es-CO")} />
         </div>

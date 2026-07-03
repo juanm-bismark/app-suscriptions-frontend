@@ -9,7 +9,6 @@ import {
   LoadingToolbar,
   loadingLabel,
   providersForLoadingRows,
-  STATE_KEYFRAMES,
 } from "./loading"
 
 type LoadingFilters = {
@@ -45,16 +44,7 @@ export function LoadingState({
   const label = loadingLabel(activeSource, activeStatus, statusSelections, effectiveQuery, displayProviderIds)
 
   return (
-    <div
-      style={{
-        background: T.pageBg,
-        fontFamily: T.fontBody,
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "calc(100vh - 64px)",
-      }}
-    >
-      <style>{STATE_KEYFRAMES}</style>
+    <div className="flex min-h-[calc(100vh-64px)] flex-col bg-page">
       <LoadingToolbar
         effectiveQuery={effectiveQuery}
         hasQuery={hasQuery}

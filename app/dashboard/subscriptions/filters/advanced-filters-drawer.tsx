@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { Btn, Icon } from "../primitives"
-import { T, type SourceId } from "../tokens"
+import type { SourceId } from "../tokens"
 import type {
   AdvancedArrayFilterKey,
   AdvancedFilterSetter,
@@ -46,42 +46,41 @@ export function AdvancedFiltersDrawer({
     if (!open) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", onKeyDown)
     return () => {
       document.body.style.overflow = previousOverflow
+      document.removeEventListener("keydown", onKeyDown)
     }
-  }, [open])
+  }, [open, onClose])
 
   if (!open) return null
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,30,40,.28)", zIndex: 60 }} />
+      <div onClick={onClose} className="fixed inset-0 z-[60] bg-[rgba(15,30,40,.28)]" />
       <aside
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: "min(320px, 92vw)",
-          background: T.cardBg,
-          borderRight: `1px solid ${T.border}`,
-          boxShadow: "12px 0 32px rgba(20,40,50,.10)",
-          zIndex: 61,
-          display: "flex",
-          flexDirection: "column",
-          fontFamily: T.fontBody,
-        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filtros avanzados"
+        className="fixed inset-y-0 left-0 z-[61] flex w-[min(320px,92vw)] flex-col border-r border-border bg-card font-body shadow-[12px_0_32px_rgba(20,40,50,.10)]"
       >
-        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10, background: T.tableHeaderBg }}>
+        <div className="flex items-center gap-2.5 border-b border-border bg-table-header-bg px-[18px] py-3.5">
           <Icon.filter size={14} />
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.title, letterSpacing: -0.1 }}>Filtros avanzados</div>
-          <div style={{ flex: 1 }} />
-          <button onClick={onClose} title="Cerrar" style={{ background: "transparent", border: "none", color: T.muted, cursor: "pointer", padding: 4, lineHeight: 0, borderRadius: 4 }}>
+          <div className="text-[13px] font-bold tracking-[-0.1px] text-title">Filtros avanzados</div>
+          <div className="flex-1" />
+          <button
+            onClick={onClose}
+            title="Cerrar"
+            className="rounded p-1 leading-none text-muted transition-colors hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
+          >
             <Icon.close size={14} />
           </button>
         </div>
 
-        <div style={{ flex: 1, overflow: "auto", padding: "16px 18px" }}>
+        <div className="flex-1 overflow-auto px-[18px] py-4">
           <SourceFilterSection
             activeProviderIds={activeProviderIds}
             filters={filters}
@@ -109,11 +108,11 @@ export function AdvancedFiltersDrawer({
           )}
         </div>
 
-        <div style={{ padding: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, background: T.cardBg }}>
+        <div className="flex gap-2 border-t border-border bg-card p-3">
           <Btn variant="ghost" size="sm" onClick={onReset}>
             Limpiar
           </Btn>
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <Btn variant="primary" size="sm" onClick={onClose}>
             Aplicar · {rowsCount}
           </Btn>
@@ -122,4 +121,3 @@ export function AdvancedFiltersDrawer({
     </>
   )
 }
-

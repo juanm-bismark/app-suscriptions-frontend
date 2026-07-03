@@ -63,6 +63,7 @@
   --color-warning-text-soft: #6D4D16;
   --color-warning-icon-soft: #765315;
   --color-warning-hover-soft: #4A3010;
+  --color-warning-action: #C58A1E;
   --color-success-bg: #16603B;
   --color-success-soft: #DDF4EA;
   --color-success-text-soft: #16603B;
@@ -112,4 +113,25 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans-stack);
+}
+
+@keyframes bismark-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@utility skeleton-shimmer {
+  background: linear-gradient(90deg, var(--color-divider), var(--color-zebra), var(--color-divider));
+  background-size: 200% 100%;
+  animation: bismark-shimmer 1.3s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background: var(--color-divider);
+  }
+  .animate-spin {
+    animation-duration: 1.8s;
+  }
 }

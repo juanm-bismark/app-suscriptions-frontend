@@ -1,7 +1,6 @@
 "use client"
 
 import { Icon } from "../../primitives"
-import { T } from "../../tokens"
 
 export function StatusChangeRow({
   sourceColor,
@@ -19,20 +18,23 @@ export function StatusChangeRow({
   onBegin: () => void
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", border: `1px solid ${T.border}`, borderRadius: 6, background: T.cardBg }}>
-      <div style={{ width: 32, height: 32, borderRadius: 6, background: sourceColor + "22", color: sourceColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    <div className="flex items-center gap-3.5 rounded-md border border-border bg-card p-3">
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+        style={{ background: `${sourceColor}22`, color: sourceColor }}
+      >
         <Icon.chev size={14} />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: T.title, letterSpacing: 0 }}>Cambiar estado</div>
-        <div style={{ fontSize: 12, color: T.muted, marginTop: 2, lineHeight: 1.4 }}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13.5px] font-bold text-title">Cambiar estado</div>
+        <div className="mt-0.5 text-xs leading-[1.4] text-muted">
           Estados permitidos por {sourceName}.
         </div>
       </div>
       <select
         value={effectiveTarget}
         onChange={(event) => onTargetChange(event.target.value)}
-        style={{ minWidth: 170, border: `1px solid ${T.border}`, background: "#fff", color: T.text, borderRadius: 5, padding: "7px 9px", cursor: "pointer", fontSize: 12, fontWeight: 800, flexShrink: 0, fontFamily: T.fontMono }}
+        className="min-w-[170px] shrink-0 cursor-pointer rounded-[5px] border border-border bg-card px-2.5 py-[7px] font-mono text-xs font-extrabold text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
       >
         {targets.map((target) => (
           <option key={target} value={target}>{target}</option>
@@ -42,11 +44,10 @@ export function StatusChangeRow({
         type="button"
         onClick={onBegin}
         disabled={!effectiveTarget}
-        style={{ border: `1px solid ${T.border}`, background: "#fff", color: effectiveTarget ? T.text : T.muted, borderRadius: 5, padding: "7px 10px", cursor: effectiveTarget ? "pointer" : "not-allowed", fontSize: 12, fontWeight: 800, flexShrink: 0, fontFamily: T.fontBody }}
+        className="shrink-0 rounded-[5px] border border-border bg-card px-2.5 py-[7px] text-xs font-extrabold text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent disabled:cursor-not-allowed disabled:text-muted enabled:cursor-pointer enabled:hover:bg-hover-soft"
       >
         Cambiar
       </button>
     </div>
   )
 }
-

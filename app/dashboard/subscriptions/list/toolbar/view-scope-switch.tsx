@@ -1,6 +1,6 @@
 "use client"
 
-import { T } from "../../tokens"
+import { cn } from "@/lib/utils"
 import type { ViewScope } from "../types"
 
 export function ViewScopeSwitch({
@@ -13,45 +13,33 @@ export function ViewScopeSwitch({
   onSwitchViewScope: (scope: ViewScope) => void
 }) {
   return (
-    <div style={{ display: "inline-flex", border: `1px solid ${T.border}`, borderRadius: 4, overflow: "hidden", background: T.pageBg }}>
+    <div className="inline-flex overflow-hidden rounded border border-border bg-page">
       <button
         type="button"
         onClick={() => onSwitchViewScope("company")}
         disabled={!hasCompanyScope}
         title={hasCompanyScope ? undefined : "Admin sin company asignada"}
-        style={{
-          border: "none",
-          borderRight: `1px solid ${T.border}`,
-          background: viewScope === "company" ? T.headerBg : "transparent",
-          color: viewScope === "company" ? "#fff" : hasCompanyScope ? T.text : T.muted,
-          cursor: hasCompanyScope ? "pointer" : "not-allowed",
-          fontSize: 12,
-          fontWeight: 700,
-          fontFamily: T.fontBody,
-          padding: "6px 10px",
-          whiteSpace: "nowrap",
-        }}
+        className={cn(
+          "whitespace-nowrap border-r border-border px-2.5 py-1.5 text-xs font-bold focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent",
+          viewScope === "company"
+            ? "bg-header-bg text-white"
+            : hasCompanyScope
+              ? "cursor-pointer bg-transparent text-text hover:bg-hover-soft"
+              : "cursor-not-allowed bg-transparent text-muted"
+        )}
       >
         Vista mi company
       </button>
       <button
         type="button"
         onClick={() => onSwitchViewScope("global")}
-        style={{
-          border: "none",
-          background: viewScope === "global" ? T.headerBg : "transparent",
-          color: viewScope === "global" ? "#fff" : T.text,
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 700,
-          fontFamily: T.fontBody,
-          padding: "6px 10px",
-          whiteSpace: "nowrap",
-        }}
+        className={cn(
+          "cursor-pointer whitespace-nowrap px-2.5 py-1.5 text-xs font-bold focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent",
+          viewScope === "global" ? "bg-header-bg text-white" : "bg-transparent text-text hover:bg-hover-soft"
+        )}
       >
         Vista global
       </button>
     </div>
   )
 }
-

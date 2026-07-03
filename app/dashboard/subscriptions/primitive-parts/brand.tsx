@@ -19,21 +19,8 @@ export function Avatar({
     .toUpperCase();
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: color + "22",
-        color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: size * 0.42,
-        fontWeight: 700,
-        letterSpacing: 0.2,
-        fontFamily: T.fontBody,
-        flexShrink: 0,
-      }}
+      className="flex shrink-0 items-center justify-center rounded-full font-body font-bold tracking-[0.2px]"
+      style={{ width: size, height: size, background: `${color}22`, color, fontSize: size * 0.42 }}
     >
       {initials}
     </div>
@@ -42,33 +29,16 @@ export function Avatar({
 
 export function BismarkMark({ light = false }: { light?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="flex items-center gap-2">
       <div
-        style={{
-          width: 22,
-          height: 22,
-          borderRadius: 5,
-          background: light ? "#fff" : T.headerAccent,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: light ? T.headerBg : "#fff",
-          fontFamily: T.fontMono,
-          fontSize: 13,
-          fontWeight: 700,
-          letterSpacing: -1,
-        }}
+        className="flex h-[22px] w-[22px] items-center justify-center rounded-[5px] font-mono text-[13px] font-bold tracking-[-1px]"
+        style={{ background: light ? "#fff" : T.headerAccent, color: light ? T.headerBg : "#fff" }}
       >
         b.
       </div>
       <div
-        style={{
-          fontFamily: T.fontBody,
-          fontWeight: 700,
-          fontSize: 15,
-          letterSpacing: -0.3,
-          color: light ? "#fff" : T.title,
-        }}
+        className="font-body text-[15px] font-bold tracking-[-0.3px]"
+        style={{ color: light ? "#fff" : T.title }}
       >
         bismark
       </div>

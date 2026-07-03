@@ -28,9 +28,9 @@ export function PresenceTab({
   if (state.status !== "success") return <Card title="Presencia y red"><Empty text="Consultando presencia..." /></Card>
   const p = state.data
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="grid gap-3.5">
       <Card title="Presencia y red">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
           <KV label="Estado" value={p.state} dot={presenceColor(p.state)} />
           <KV label="Última vez vista" value={fmtDate(p.last_seen_at)} />
           <KV label="País" value={value(p.country_code)} mono />
@@ -55,15 +55,15 @@ function LocationCard({ subscription }: { subscription: SubscriptionOut }) {
   const mapsUrl = hasCoords ? `https://www.google.com/maps?q=${loc.latitude},${loc.longitude}` : null
   return (
     <Card title="Ubicación">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
         <KV label="Latitud" value={formatVal(loc.latitude)} mono />
         <KV label="Longitud" value={formatVal(loc.longitude)} mono />
         <KV label="Fuente" value={value(loc.source)} />
         <KV label="Actualizada" value={fmtDate(loc.timestamp)} />
       </div>
       {mapsUrl && (
-        <div style={{ padding: "12px 16px", borderTop: `1px solid ${T.divider}` }}>
-          <Link href={mapsUrl} target="_blank" rel="noreferrer" style={{ color: T.headerBg, fontWeight: 700, fontSize: 13 }}>
+        <div className="border-t border-divider px-4 py-3">
+          <Link href={mapsUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-header-bg hover:underline">
             Ver en mapa
           </Link>
         </div>
@@ -100,7 +100,7 @@ function MoabitsConnectivityCard({ subscription }: { subscription: SubscriptionO
 
   return (
     <Card title="Connectivity status (Moabits v2)">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
         <KV label="Operador" value={value(operator)} />
         <KV label="País" value={value(country)} mono />
         <KV label="RAT" value={value(rat)} mono />

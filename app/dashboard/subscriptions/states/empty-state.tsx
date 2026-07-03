@@ -3,7 +3,7 @@
 import { Chip, Icon } from "../primitives";
 import { dedupeFailedProviders } from "@/lib/subscriptions/result-utils";
 import type { FailedProvider } from "@/lib/subscriptions/types";
-import { SOURCES, type SourceId, T } from "../tokens";
+import { SOURCES, type SourceId } from "../tokens";
 
 export function EmptyState({
   query,
@@ -34,48 +34,19 @@ export function EmptyState({
       : `en ${sourceName} y no encontramos registros.`;
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-        background: T.cardBg,
-      }}
-    >
-      <div style={{ maxWidth: 420, textAlign: "center" }}>
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 12,
-            background: T.divider,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-            color: T.muted,
-          }}
-        >
+    <div className="flex flex-1 items-center justify-center bg-card p-6">
+      <div className="max-w-[420px] text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-divider text-muted">
           <Icon.search size={28} />
         </div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: T.title, letterSpacing: -0.2, marginBottom: 6 }}>
+        <div className="mb-1.5 text-[17px] font-bold tracking-[-0.2px] text-title">
           {hasProviderErrors ? "No se pudo completar la consulta global" : `No hay coincidencias en ${sourceName}`}
         </div>
-        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
+        <div className="mb-[18px] text-[13px] leading-[1.55] text-muted">
           {emptyPrefix}
           {hasQuery && (
             <>
-              <span
-                style={{
-                  fontFamily: T.fontMono,
-                  color: T.title,
-                  background: T.zebra,
-                  padding: "1px 6px",
-                  borderRadius: 3,
-                }}
-              >
+              <span className="rounded-[3px] bg-zebra px-1.5 py-px font-mono text-title">
                 &quot;{query}&quot;
               </span>{" "}
             </>
@@ -83,25 +54,16 @@ export function EmptyState({
           {(!hasProviderErrors || hasQuery) && emptySuffix}
         </div>
         {hasProviderErrors && (
-          <div
-            style={{
-              background: "#FDF4E1",
-              border: `1px solid ${T.warning}55`,
-              borderRadius: 6,
-              padding: "12px 14px",
-              textAlign: "left",
-              marginBottom: 14,
-            }}
-          >
-            <div style={{ fontSize: 10.5, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>
-              FUENTES CON ERROR
+          <div className="mb-3.5 rounded-md border border-warning-action/35 bg-warning-soft px-3.5 py-3 text-left">
+            <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[1px] text-muted">
+              Fuentes con error
             </div>
             {uniqueFailedProviders.map((f, index) => (
-              <div key={`${f.provider}-${f.code}-${index}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: sourceColorFor(f.provider) }} />
-                <span style={{ color: T.title, fontWeight: 600, flex: 1 }}>{sourceNameFor(f.provider)}</span>
-                <span style={{ color: T.muted, fontFamily: T.fontMono, fontSize: 11 }}>{f.title || f.code}</span>
-                <span style={{ color: T.warning }}>
+              <div key={`${f.provider}-${f.code}-${index}`} className="flex items-center gap-2 py-1 text-xs">
+                <span className="h-[7px] w-[7px] rounded-full" style={{ background: sourceColorFor(f.provider) }} />
+                <span className="flex-1 font-semibold text-title">{sourceNameFor(f.provider)}</span>
+                <span className="font-mono text-[11px] text-muted">{f.title || f.code}</span>
+                <span className="text-warning-action">
                   <Icon.warn size={12} />
                 </span>
               </div>
@@ -109,31 +71,22 @@ export function EmptyState({
           </div>
         )}
         {!isGlobal && (
-          <div
-            style={{
-              background: T.cardBg,
-              border: `1px solid ${T.border}`,
-              borderRadius: 6,
-              padding: "12px 14px",
-              textAlign: "left",
-              marginBottom: 14,
-            }}
-          >
-            <div style={{ fontSize: 10.5, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>
-              FUENTE CONSULTADA
+          <div className="mb-3.5 rounded-md border border-border bg-card px-3.5 py-3 text-left">
+            <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[1px] text-muted">
+              Fuente consultada
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: SOURCES[source].color }} />
-              <span style={{ color: T.title, fontWeight: 600, flex: 1 }}>{sourceName}</span>
-              <span style={{ color: T.muted, fontFamily: T.fontMono, fontSize: 11 }}>0 resultados</span>
-              <span style={{ color: T.success }}>
+            <div className="flex items-center gap-2 py-1 text-xs">
+              <span className="h-[7px] w-[7px] rounded-full" style={{ background: SOURCES[source].color }} />
+              <span className="flex-1 font-semibold text-title">{sourceName}</span>
+              <span className="font-mono text-[11px] text-muted">0 resultados</span>
+              <span className="text-success-bg">
                 <Icon.check size={12} />
               </span>
             </div>
           </div>
         )}
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 14 }}>Prueba con otro criterio:</div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 18 }}>
+        <div className="mb-3.5 text-xs text-muted">Prueba con otro criterio:</div>
+        <div className="mb-[18px] flex flex-wrap justify-center gap-2">
           <Chip>solo ID</Chip>
           <Chip>MSISDN</Chip>
           <Chip>nombre del cliente</Chip>
@@ -149,5 +102,5 @@ function sourceNameFor(provider: string) {
 }
 
 function sourceColorFor(provider: string) {
-  return provider in SOURCES ? SOURCES[provider as SourceId].color : T.muted;
+  return provider in SOURCES ? SOURCES[provider as SourceId].color : "var(--color-muted)";
 }

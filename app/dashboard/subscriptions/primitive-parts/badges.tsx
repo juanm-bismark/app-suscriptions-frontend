@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { STATUS_TONES, type SourceId, T, nativeStatusMeta, statusToneForGroup } from "../tokens";
 
 export { SourceBadge } from "@/app/dashboard/_components/source-badge";
@@ -33,67 +34,43 @@ export function StatusPillWithNative({
   const pad = size === "sm" ? { h: 7, v: 3, fs: 11.5, ctx: 10.5 } : { h: 9, v: 4, fs: 12.5, ctx: 11 };
   return (
     <span
-      style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}
+      className="relative inline-flex min-w-0 items-center gap-[7px]"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
       <span
+        className={cn(
+          "inline-flex items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[3px] border font-bold",
+          size === "sm" ? "max-w-[118px]" : "max-w-[160px]"
+        )}
         style={{
-          display: "inline-flex",
-          alignItems: "center",
           padding: `${pad.v}px ${pad.h}px`,
-          borderRadius: 3,
           background: tone.bg,
           color: tone.color,
           fontSize: pad.fs,
-          fontWeight: 700,
-          letterSpacing: 0,
-          fontFamily: T.fontBody,
-          whiteSpace: "nowrap",
-          border: `1px solid ${tone.dot}33`,
-          maxWidth: size === "sm" ? 118 : 160,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
+          borderColor: `${tone.dot}33`,
         }}
       >
         {label}
       </span>
       {showContext && (
         <span
-          style={{
-            color: T.muted,
-            fontSize: pad.ctx,
-            fontWeight: 700,
-            fontFamily: T.fontBody,
-            whiteSpace: "nowrap",
-            maxWidth: size === "sm" ? 74 : 110,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+          className={cn(
+            "overflow-hidden text-ellipsis whitespace-nowrap font-bold text-muted",
+            size === "sm" ? "max-w-[74px]" : "max-w-[110px]"
+          )}
+          style={{ fontSize: pad.ctx }}
         >
           {context}
         </span>
       )}
       {hov && rawStatus && (
         <span
-          style={{
-            position: "absolute",
-            bottom: "calc(100% + 6px)",
-            left: 0,
-            zIndex: 30,
-            background: T.headerTopBg,
-            color: "#fff",
-            padding: "6px 9px",
-            borderRadius: 4,
-            fontSize: 10.5,
-            fontFamily: T.fontMono,
-            whiteSpace: "nowrap",
-            boxShadow: "0 4px 12px rgba(0,0,0,.18)",
-            pointerEvents: "none",
-          }}
+          className="pointer-events-none absolute bottom-[calc(100%+6px)] left-0 z-30 whitespace-nowrap rounded font-mono text-[10.5px] text-white shadow-[0_4px_12px_rgba(0,0,0,.18)]"
+          style={{ background: T.headerTopBg, padding: "6px 9px" }}
         >
           {context}:{" "}
-          <span style={{ color: T.headerClientText }}>{rawStatus}</span>
+          <span className="text-header-client">{rawStatus}</span>
         </span>
       )}
     </span>
@@ -113,36 +90,35 @@ export function UsageBar({
   width?: number | string;
   compact?: boolean;
 }) {
-  if (used == null) return <span style={{ color: T.muted, fontSize: 11.5 }}>—</span>;
+  if (used == null) return <span className="text-[11.5px] text-muted">—</span>;
   if (total == null) {
     return (
-      <div style={{ width, fontFamily: T.fontMono, fontSize: 11, color: T.muted }}>
-        <div style={{ color: T.title, fontWeight: 600, fontSize: 11.5, marginBottom: 2 }}>
+      <div className="font-mono text-xs text-muted" style={{ width }}>
+        <div className="mb-0.5 text-[11.5px] font-semibold text-title">
           {used.toLocaleString("es-CO")} {unit}
         </div>
-        <div style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.2 }}>sin tope</div>
+        <div className="text-[10.5px] tracking-[0.2px] text-muted">sin tope</div>
       </div>
     );
   }
   const pct = Math.min(100, Math.max(0, (used / total) * 100));
   const color = pct >= 90 ? T.danger : pct >= 70 ? T.warning : T.success;
-  const trackBg = "#E6ECEC";
   return (
-    <div style={{ width, fontFamily: T.fontMono }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
-        <span style={{ color: T.title, fontWeight: 600, fontSize: 11.5 }}>
+    <div className="font-mono" style={{ width }}>
+      <div className="mb-[3px] flex items-baseline justify-between">
+        <span className="text-[11.5px] font-semibold text-title">
           {used.toLocaleString("es-CO")}
-          <span style={{ color: T.muted, fontWeight: 500 }}>
+          <span className="font-medium text-muted">
             {" "}
             / {total} {unit}
           </span>
         </span>
         {!compact && (
-          <span style={{ fontSize: 10, color, fontWeight: 700 }}>{pct.toFixed(0)}%</span>
+          <span className="text-[10px] font-bold" style={{ color }}>{pct.toFixed(0)}%</span>
         )}
       </div>
-      <div style={{ width: "100%", height: 4, borderRadius: 2, background: trackBg, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2 }} />
+      <div className="h-1 w-full overflow-hidden rounded-sm bg-[#E6ECEC]">
+        <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: color }} />
       </div>
     </div>
   );

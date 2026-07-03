@@ -6,43 +6,34 @@ export type { ToneMeta, StatusTone } from "@/lib/status-tones"
 export { PROVIDER_NATIVE_STATUSES, nativeStatusMeta } from "@/lib/subscriptions/filters"
 export type { NativeStatusMeta } from "@/lib/subscriptions/filters"
 
-// Bismark design tokens — ported 1:1 from the design handoff (index.html).
-// Inline styles use these directly; they are NOT meant to be used as Tailwind classes.
+// Bismark design tokens. Single source of truth: app/globals.css (@theme).
+// Every value here MUST be a var(--color-*) / color-mix over those vars so it
+// cannot diverge from the Tailwind classes. Do not add hex literals.
+// These references exist only for the remaining inline styles; migrated code
+// should use Tailwind classes directly.
 export const T = {
-  pageBg: "#EEF4F4",
-  cardBg: "#ffffff",
-  border: "#C8DFE0",
-  text: "#333333",
-  title: "#111111",
-  muted: "#555E6B",
-
-  // Light chrome (final design — chat7)
-  chromeTopBg: "#FAFCFC",
-  chromeBg: "#FFFFFF",
-  chromeBorder: "#DCE7E8",
-  chromeText: "#0F2A2E",
-  chromeMuted: "#5C7178",
+  pageBg: "var(--color-page)",
+  cardBg: "var(--color-card)",
+  border: "var(--color-border)",
+  text: "var(--color-text)",
+  title: "var(--color-title)",
+  muted: "var(--color-muted)",
 
   // Brand (dark teal) — kept for primary buttons / focus states
-  headerTopBg: "#0F202A",
-  headerBg: "#163C41",
-  headerAccent: "#33A6B2",
-  headerText: "#F3F7FA",
-  headerSub: "#8B9AAF",
-  headerClientText: "#62D7C7",
+  headerTopBg: "var(--color-header-top)",
+  headerBg: "var(--color-header-bg)",
+  headerAccent: "var(--color-header-accent)",
+  headerClientText: "var(--color-header-client)",
 
-  divider: "#D4E8EA",
-  zebra: "#F4FAFA",
+  divider: "var(--color-divider)",
+  zebra: "var(--color-zebra)",
 
-  badgeBg: "#C8E8EA",
-  badgeText: "#163C41",
+  tableHeaderBg: "var(--color-table-header-bg)",
+  tableHeaderText: "var(--color-table-header-text)",
+  rowDivider: "var(--color-row-divider)",
 
-  tableHeaderBg: "#F0F8F8",
-  tableHeaderText: "#326472",
-  rowDivider: "#EEF1F6",
-
-  fontBody: "Inter, Arial, Helvetica, sans-serif",
-  fontMono: "'JetBrains Mono', 'Courier New', Courier, monospace",
+  fontBody: "var(--font-sans-stack)",
+  fontMono: "var(--font-mono-stack)",
 
   // Derived semantic
   danger: "var(--color-danger-action)",
@@ -50,8 +41,9 @@ export const T = {
   dangerBorder: "color-mix(in srgb, var(--color-danger-action) 34%, transparent)",
   dangerTint: "var(--color-danger-tint)",
   success: "var(--color-success-bg)",
-  warning: "#C58A1E",
-  info: "#33A6B2",
+  warning: "var(--color-warning-action)",
+  warningBorderSoft: "color-mix(in srgb, var(--color-warning-action) 33%, transparent)",
+  warningBorder: "color-mix(in srgb, var(--color-warning-action) 40%, transparent)",
 } as const;
 
 export type SourceId = Provider;

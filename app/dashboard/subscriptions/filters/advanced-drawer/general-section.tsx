@@ -12,7 +12,7 @@ export function GeneralFiltersSection({
 }) {
   return (
     <DrawerGroup title="GENERALES">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
         <TextFilterInput label="Plan" value={filters.plan} onChange={(value) => onFilterChange("plan", value)} placeholder="Nombre o código..." />
         <TextFilterInput label="Cliente" value={filters.client} onChange={(value) => onFilterChange("client", value)} placeholder="Nombre o scope..." />
         <TextFilterInput label="IMEI" value={filters.imei} onChange={(value) => onFilterChange("imei", value)} placeholder="359000000000001" />

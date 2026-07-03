@@ -1,8 +1,8 @@
 "use client"
 
 import { searchPlaceholder, type SearchMode } from "@/lib/sim-identifiers"
+import { cn } from "@/lib/utils"
 import { Icon } from "../../primitives"
-import { T } from "../../tokens"
 
 export function SearchBox({
   activeSearchMode,
@@ -23,21 +23,16 @@ export function SearchBox({
   isMultiIccid: boolean
   iccidCount: number
 }) {
+  const isDirty = draftQ.trim() !== q.trim()
+
   return (
     <div
-      style={{
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        background: T.pageBg,
-        border: `1px solid ${draftQ.trim() !== q.trim() ? T.headerAccent : T.border}`,
-        borderRadius: 6,
-        padding: "9px 12px",
-        transition: "border-color .15s",
-      }}
+      className={cn(
+        "flex flex-1 items-center gap-2.5 rounded-md border bg-page px-3 py-2.5 transition-colors",
+        isDirty ? "border-header-accent" : "border-border"
+      )}
     >
-      <span style={{ color: T.muted, display: "inline-flex", flexShrink: 0 }}>
+      <span className="inline-flex shrink-0 text-muted">
         <Icon.search size={15} />
       </span>
       <input
@@ -47,31 +42,10 @@ export function SearchBox({
           if (event.key === "Enter") commitSearch()
         }}
         placeholder={searchPlaceholder(activeSearchMode)}
-        style={{
-          flex: 1,
-          border: "none",
-          outline: "none",
-          background: "transparent",
-          fontSize: 13.5,
-          fontFamily: T.fontBody,
-          color: T.text,
-          minWidth: 0,
-        }}
+        className="min-w-0 flex-1 border-none bg-transparent text-[13.5px] text-text outline-none placeholder:text-muted"
       />
       {isMultiIccid && (
-        <span
-          style={{
-            background: T.headerBg,
-            color: "#fff",
-            fontSize: 10.5,
-            fontWeight: 700,
-            padding: "2px 8px",
-            borderRadius: 10,
-            fontFamily: T.fontMono,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-header-bg px-2 py-0.5 font-mono text-[10.5px] font-bold text-white">
           {iccidCount} ICCIDs
         </span>
       )}
@@ -80,16 +54,7 @@ export function SearchBox({
           type="button"
           onClick={clearSearch}
           title="Limpiar busqueda"
-          style={{
-            border: "none",
-            background: "transparent",
-            color: T.muted,
-            cursor: "pointer",
-            lineHeight: 0,
-            padding: 4,
-            borderRadius: 4,
-            flexShrink: 0,
-          }}
+          className="shrink-0 rounded p-1 leading-none text-muted transition-colors hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent"
         >
           <Icon.close size={14} />
         </button>
@@ -97,4 +62,3 @@ export function SearchBox({
     </div>
   )
 }
-

@@ -1,9 +1,10 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import type { SourceFilter } from "../../filters/source-filter"
 import { isSelectedStatus, type NativeStatusSelections } from "../../filters/status-filter"
-import { SOURCES, type SourceId, STATUS_TONES, T } from "../../tokens"
-import { SHIMMER_BG, statusesForProvider } from "./utils"
+import { SOURCES, type SourceId, STATUS_TONES } from "../../tokens"
+import { statusesForProvider } from "./utils"
 
 export function LoadingSourceSummary({
   activeSource,
@@ -18,22 +19,20 @@ export function LoadingSourceSummary({
 }) {
   return (
     <div
-      style={{
-        display: "grid",
-        gap: 10,
-        gridTemplateColumns: activeSource === "all" ? "repeat(auto-fit, minmax(min(100%, 260px), 1fr))" : "1fr",
-        alignItems: "start",
-      }}
+      className={cn(
+        "grid items-start gap-2.5",
+        activeSource === "all" ? "grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))]" : "grid-cols-1"
+      )}
     >
       {(activeSource === "all" ? displayProviderIds : [activeSource]).map((provider) => {
         const source = SOURCES[provider]
         return (
-          <div key={provider} style={{ display: "grid", gap: 7, minWidth: 0, alignContent: "start" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: source.color }} />
-              <span style={{ fontSize: 11.5, color: T.title, fontWeight: 800 }}>{source.name}</span>
+          <div key={provider} className="grid min-w-0 content-start gap-[7px]">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="h-[7px] w-[7px] rounded-full" style={{ background: source.color }} />
+              <span className="text-[11.5px] font-extrabold text-title">{source.name}</span>
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", minWidth: 0 }}>
+            <div className="flex min-w-0 flex-wrap gap-1.5">
               {statusesForProvider(provider, activeSource === provider ? activeStatus : undefined).map((status) => {
                 const palette = STATUS_TONES[status.tone]
                 const active =
@@ -44,34 +43,15 @@ export function LoadingSourceSummary({
                   <span
                     key={status.value}
                     title={status.value}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      minHeight: 28,
-                      padding: "5px 8px",
-                      borderRadius: 4,
-                      border: `1px solid ${active ? palette.dot : T.border}`,
-                      background: active ? palette.bg : "#fff",
-                      color: active ? palette.color : T.text,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      fontFamily: T.fontBody,
-                      whiteSpace: "nowrap",
-                    }}
+                    className={cn(
+                      "inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded border px-2 py-[5px] text-xs font-bold",
+                      !active && "border-border bg-card text-text"
+                    )}
+                    style={active ? { borderColor: palette.dot, background: palette.bg, color: palette.color } : undefined}
                   >
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: palette.dot, flexShrink: 0 }} />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: palette.dot }} />
                     <span>{status.label}</span>
-                    <span
-                      style={{
-                        width: 14,
-                        height: 8,
-                        borderRadius: 2,
-                        background: SHIMMER_BG,
-                        backgroundSize: "200% 100%",
-                        animation: "bismark-shimmer 1.3s infinite",
-                      }}
-                    />
+                    <span className="skeleton-shimmer h-2 w-3.5 rounded-xs" />
                   </span>
                 )
               })}
@@ -82,4 +62,3 @@ export function LoadingSourceSummary({
     </div>
   )
 }
-

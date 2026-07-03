@@ -1,7 +1,5 @@
 "use client"
 
-import { T } from "../../tokens"
-
 export function LoadingFooter({
   cursor,
   label,
@@ -10,30 +8,21 @@ export function LoadingFooter({
   label: string
 }) {
   return (
-    <div
-      style={{
-        padding: "10px 24px",
-        background: T.cardBg,
-        borderTop: `1px solid ${T.border}`,
-        display: "flex",
-        alignItems: "center",
-      }}
-    >
-      <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", fontSize: 12, color: T.muted }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontFamily: T.fontMono }}>
+    <div className="flex items-center border-t border-border bg-card px-6 py-2.5">
+      <div className="flex w-full flex-wrap items-center justify-between gap-3.5 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-2.5 font-mono">
           <span>{cursor ? "Cargando página" : "Página 1"} · {label}</span>
           <span>consulta en curso</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 600 }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-[7px] font-semibold">
             Mostrar
-            <span style={{ height: 32, width: 62, border: `1px solid ${T.border}`, background: "#fff", borderRadius: 5 }} />
+            <span className="h-8 w-[62px] rounded-[5px] border border-border bg-card" />
           </span>
-          <span style={{ height: 32, width: 72, borderRadius: 5, background: "#E8EEF2", border: "1px solid #CBD5E1" }} />
-          <span style={{ height: 32, width: 78, borderRadius: 5, background: "#D8F0F2", border: "1px solid #B8DDE1" }} />
+          <span className="h-8 w-[72px] rounded-[5px] border border-slate-border/45 bg-previous-soft" />
+          <span className="h-8 w-[78px] rounded-[5px] border border-soft-focus bg-next-soft" />
         </div>
       </div>
     </div>
   )
 }
-

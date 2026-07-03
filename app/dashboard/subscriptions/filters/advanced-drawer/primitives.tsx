@@ -1,18 +1,19 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { cn } from "@/lib/utils"
 import { Icon } from "../../primitives"
 import { T } from "../../tokens"
 import type { TristateFilter } from "../advanced-filters"
 
 export function Divider() {
-  return <div style={{ height: 1, background: T.divider, margin: "16px 0" }} />
+  return <div className="my-4 h-px bg-divider" />
 }
 
 export function DrawerGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <div style={{ fontSize: 10, letterSpacing: 1, color: T.muted, fontWeight: 700, marginBottom: 8 }}>{title}</div>
+      <div className="mb-2 text-[10px] font-bold tracking-[1px] text-muted">{title}</div>
       {children}
     </div>
   )
@@ -54,18 +55,27 @@ export function TextFilterInput({
   placeholder: string
 }) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, background: T.pageBg, border: `1px solid ${value.trim() ? T.headerBg : T.border}`, borderRadius: 4, padding: "6px 9px" }}>
-        <span style={{ color: T.muted, display: "inline-flex", flexShrink: 0 }}><Icon.search size={13} /></span>
+    <label className="flex flex-col gap-[5px]">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-muted">{label}</span>
+      <div
+        className={cn(
+          "flex items-center gap-1.5 rounded border bg-page px-2.5 py-1.5",
+          value.trim() ? "border-header-bg" : "border-border"
+        )}
+      >
+        <span className="inline-flex shrink-0 text-muted"><Icon.search size={13} /></span>
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, fontFamily: T.fontBody, color: T.text, minWidth: 0 }}
+          className="min-w-0 flex-1 border-none bg-transparent text-[12.5px] text-text outline-none"
         />
         {value && (
-          <button type="button" onClick={() => onChange("")} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", lineHeight: 0, padding: 2, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="shrink-0 p-0.5 leading-none text-muted transition-colors hover:text-title"
+          >
             <Icon.close size={11} />
           </button>
         )}
@@ -89,9 +99,9 @@ export function TristateRow({
     { key: "off", label: "Inactivo", tone: T.danger },
   ]
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <span style={{ fontSize: 11, color: T.muted, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</span>
-      <div style={{ display: "flex", gap: 4 }}>
+    <div className="flex flex-col gap-[5px]">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-muted">{label}</span>
+      <div className="flex gap-1">
         {options.map((option) => {
           const active = value === option.key
           return (
@@ -99,18 +109,11 @@ export function TristateRow({
               key={option.key}
               type="button"
               onClick={() => onChange(option.key)}
-              style={{
-                flex: 1,
-                padding: "5px 8px",
-                border: `1px solid ${active ? option.tone : T.border}`,
-                background: active ? option.tone : "#fff",
-                color: active ? "#fff" : T.text,
-                borderRadius: 4,
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: T.fontBody,
-              }}
+              className={cn(
+                "flex-1 rounded border px-2 py-[5px] text-[11.5px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent",
+                active ? "text-white" : "border-border bg-card text-text hover:bg-hover-soft"
+              )}
+              style={active ? { borderColor: option.tone, background: option.tone } : undefined}
             >
               {option.label}
             </button>
@@ -120,4 +123,3 @@ export function TristateRow({
     </div>
   )
 }
-

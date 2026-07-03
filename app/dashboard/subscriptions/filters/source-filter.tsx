@@ -3,7 +3,8 @@
 import type { ReactNode } from "react"
 import { PROVIDER_IDS as SHARED_PROVIDER_IDS } from "@/lib/provider-meta"
 import { isProvider } from "@/lib/subscriptions/filters"
-import { SOURCES, type SourceId, T } from "../tokens"
+import { cn } from "@/lib/utils"
+import { SOURCES, type SourceId } from "../tokens"
 
 export type SourceFilter = SourceId | "all"
 
@@ -53,15 +54,23 @@ export function SourceFilterTabs({
   const interactive = Boolean(onChange)
 
   return (
-    <div style={{ display: "flex", gap: 6, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
-      <div style={{ fontSize: 11, color: T.muted, marginRight: 4, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase" }}>
+    <div className="mt-4 flex flex-wrap items-center gap-1.5">
+      <div className="mr-1 text-[11px] font-semibold uppercase tracking-[0.6px] text-muted">
         Fuente
       </div>
       {canSelectAllSources(providerIds) && (
         <SourceTabButton
           active={activeSource === "all"}
-          color={T.headerBg}
-          icon={<span style={{ width: 14, height: 14, borderRadius: "50%", backgroundImage: activeSource === "all" ? undefined : conicGradient, backgroundColor: activeSource === "all" ? "rgba(255,255,255,.18)" : undefined, display: "inline-flex" }} />}
+          color="var(--color-header-bg)"
+          icon={
+            <span
+              className="inline-flex h-3.5 w-3.5 rounded-full"
+              style={{
+                backgroundImage: activeSource === "all" ? undefined : conicGradient,
+                backgroundColor: activeSource === "all" ? "rgba(255,255,255,.18)" : undefined,
+              }}
+            />
+          }
           label="Todas"
           onClick={interactive ? () => onChange?.("all") : undefined}
         />
@@ -74,7 +83,12 @@ export function SourceFilterTabs({
             key={source.id}
             active={active}
             color={source.color}
-            icon={<span style={{ width: 14, height: 14, borderRadius: 3, background: active ? "rgba(255,255,255,.18)" : source.color }} />}
+            icon={
+              <span
+                className="h-3.5 w-3.5 rounded-[3px]"
+                style={{ background: active ? "rgba(255,255,255,.18)" : source.color }}
+              />
+            }
             label={source.name}
             onClick={interactive ? () => onChange?.(source.id) : undefined}
           />
@@ -101,21 +115,12 @@ function SourceTabButton({
     <button
       type="button"
       onClick={onClick}
-      style={{
-        padding: "6px 11px 6px 9px",
-        background: active ? color : "#fff",
-        border: `1px solid ${active ? color : T.border}`,
-        borderRadius: 4,
-        color: active ? "#fff" : T.title,
-        fontSize: 12.5,
-        fontWeight: 600,
-        cursor: onClick ? "pointer" : "default",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        fontFamily: T.fontBody,
-        letterSpacing: -0.1,
-      }}
+      className={cn(
+        "inline-flex items-center gap-2 rounded border py-1.5 pl-2.5 pr-[11px] text-[12.5px] font-semibold tracking-[-0.1px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-header-accent",
+        active ? "text-white" : "border-border bg-card text-title",
+        onClick ? "cursor-pointer" : "cursor-default"
+      )}
+      style={active ? { background: color, borderColor: color } : undefined}
     >
       {icon}
       {label}

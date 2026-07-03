@@ -1,8 +1,8 @@
 "use client"
 
 import type { SimDetailsResult } from "@/lib/types/api"
+import { cn } from "@/lib/utils"
 import { Icon } from "../../primitives"
-import { T } from "../../tokens"
 import { stringOrNull } from "../rows"
 
 export function RowDetailState({ detail, fallbackValue, onRetry }: { detail: SimDetailsResult; fallbackValue?: string | null; onRetry: () => void }) {
@@ -18,9 +18,9 @@ export function RowDetailState({ detail, fallbackValue, onRetry }: { detail: Sim
 
   if (fallback) {
     return (
-      <span title={title} style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fallback}</span>
-        <span style={{ color: T.warning, display: "inline-flex", flexShrink: 0 }}>
+      <span title={title} className="inline-flex min-w-0 items-center gap-[7px]">
+        <span className="truncate">{fallback}</span>
+        <span className="inline-flex shrink-0 text-warning-action">
           <Icon.warn size={13} />
         </span>
         {canRetry && <RetryButton onRetry={onRetry} />}
@@ -29,8 +29,11 @@ export function RowDetailState({ detail, fallbackValue, onRetry }: { detail: Sim
   }
 
   return (
-    <span title={title} style={{ display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0, color: detail.status === "not_found" ? T.muted : T.danger }}>
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+    <span
+      title={title}
+      className={cn("inline-flex min-w-0 items-center gap-[7px]", detail.status === "not_found" ? "text-muted" : "text-danger-action")}
+    >
+      <span className="truncate">{label}</span>
       {canRetry && <RetryButton onRetry={onRetry} />}
     </span>
   )
@@ -44,10 +47,9 @@ function RetryButton({ onRetry }: { onRetry: () => void }) {
         event.stopPropagation()
         onRetry()
       }}
-      style={{ border: `1px solid ${T.border}`, background: "#fff", color: T.headerBg, borderRadius: 4, padding: "2px 5px", fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}
+      className="shrink-0 cursor-pointer rounded border border-border bg-white px-[5px] py-0.5 text-[11px] font-extrabold text-header-bg"
     >
       Reintentar
     </button>
   )
 }
-
